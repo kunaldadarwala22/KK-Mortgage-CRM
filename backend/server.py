@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -15,9 +15,13 @@ import bcrypt
 import jwt as pyjwt
 from bson import ObjectId
 import base64
+import io
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Allowed email for access (whitelist)
+ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com"]
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -357,6 +361,10 @@ def calculate_ltv(loan_amount: float, property_price: float) -> float:
 
 @api_router.post("/auth/register")
 async def register(user: UserCreate):
+    # Check if email is allowed
+    if user.email.lower() not in [e.lower() for e in ALLOWED_EMAILS]:
+        raise HTTPException(status_code=403, detail="Access denied. Your email is not authorized to use this system.")
+    
     existing = await db.users.find_one({"email": user.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -387,6 +395,10 @@ async def register(user: UserCreate):
 
 @api_router.post("/auth/login")
 async def login(user: UserLogin, response: Response):
+    # Check if email is allowed
+    if user.email.lower() not in [e.lower() for e in ALLOWED_EMAILS]:
+        raise HTTPException(status_code=403, detail="Access denied. Your email is not authorized to use this system.")
+    
     db_user = await db.users.find_one({"email": user.email}, {"_id": 0})
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -452,6 +464,11 @@ async def process_session(request: Request, response: Response):
     
     # Check if user exists
     email = data.get("email")
+    
+    # Check if email is allowed
+    if email.lower() not in [e.lower() for e in ALLOWED_EMAILS]:
+        raise HTTPException(status_code=403, detail="Access denied. Your email is not authorized to use this system.")
+    
     existing_user = await db.users.find_one({"email": email}, {"_id": 0})
     
     if existing_user:
@@ -1313,6 +1330,286 @@ async def root():
 @api_router.get("/health")
 async def health():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+# ==================== EXPORT ROUTES ====================
+
+@api_router.get("/export/excel")
+async def export_all_data(request: Request):
+    """Export all CRM data to Excel file"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    
+    current_user = await get_current_user(request)
+    
+    # Create workbook
+    wb = Workbook()
+    
+    # Style definitions
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # ===== CLIENTS SHEET =====
+    ws_clients = wb.active
+    ws_clients.title = "Clients"
+    
+    client_headers = [
+        "Client ID", "First Name", "Last Name", "Email", "Phone", "DOB",
+        "Address", "Postcode", "Income", "Employment Type", "Deposit",
+        "Property Price", "Loan Amount", "LTV %", "Credit Issues",
+        "Lead Source", "Referral Partner", "Fact Find Complete",
+        "Vulnerable Customer", "Advice Type", "GDPR Consent Date",
+        "Created At"
+    ]
+    ws_clients.append(client_headers)
+    
+    # Style headers
+    for col, header in enumerate(client_headers, 1):
+        cell = ws_clients.cell(row=1, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+    
+    # Fetch and add client data
+    clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
+    for client in clients:
+        row = [
+            client.get("client_id", ""),
+            client.get("first_name", ""),
+            client.get("last_name", ""),
+            client.get("email", ""),
+            client.get("phone", ""),
+            client.get("dob", ""),
+            client.get("current_address", ""),
+            client.get("postcode", ""),
+            client.get("income", ""),
+            client.get("employment_type", ""),
+            client.get("deposit", ""),
+            client.get("property_price", ""),
+            client.get("loan_amount", ""),
+            client.get("ltv", ""),
+            "Yes" if client.get("credit_issues") else "No",
+            client.get("lead_source", ""),
+            client.get("referral_partner_name", ""),
+            "Yes" if client.get("fact_find_complete") else "No",
+            "Yes" if client.get("vulnerable_customer") else "No",
+            client.get("advice_type", ""),
+            client.get("gdpr_consent_date", ""),
+            client.get("created_at", "")
+        ]
+        ws_clients.append(row)
+    
+    # Auto-adjust column widths for clients
+    for col in ws_clients.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_clients.column_dimensions[column].width = min(max_length + 2, 50)
+    
+    # ===== CASES SHEET =====
+    ws_cases = wb.create_sheet("Cases")
+    
+    case_headers = [
+        "Case ID", "Client ID", "Product Type", "Mortgage Type", "Insurance Type",
+        "Status", "Lender Name", "Loan Amount", "Term (Years)", "Interest Rate",
+        "Application Reference", "Application Date", "Expected Completion",
+        "Product Start Date", "Product Review Date", "Product Expiry Date",
+        "Proc Fee Type", "Proc Fee Value", "Commission %", "Gross Commission",
+        "Your Share", "Proc Fee Total", "Commission Status", "Created At"
+    ]
+    ws_cases.append(case_headers)
+    
+    for col, header in enumerate(case_headers, 1):
+        cell = ws_cases.cell(row=1, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+    
+    cases = await db.cases.find({}, {"_id": 0}).to_list(10000)
+    for case in cases:
+        row = [
+            case.get("case_id", ""),
+            case.get("client_id", ""),
+            case.get("product_type", ""),
+            case.get("mortgage_type", ""),
+            case.get("insurance_type", ""),
+            case.get("status", ""),
+            case.get("lender_name", ""),
+            case.get("loan_amount", ""),
+            case.get("term_years", ""),
+            case.get("interest_rate", ""),
+            case.get("application_reference", ""),
+            case.get("date_application_submitted", ""),
+            case.get("expected_completion_date", ""),
+            case.get("product_start_date", ""),
+            case.get("product_review_date", ""),
+            case.get("product_expiry_date", ""),
+            case.get("proc_fee_type", ""),
+            case.get("proc_fee_value", ""),
+            case.get("commission_percentage", ""),
+            case.get("gross_commission", ""),
+            case.get("your_commission_share", ""),
+            case.get("proc_fee_total", ""),
+            case.get("commission_status", ""),
+            case.get("created_at", "")
+        ]
+        ws_cases.append(row)
+    
+    for col in ws_cases.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_cases.column_dimensions[column].width = min(max_length + 2, 50)
+    
+    # ===== TASKS SHEET =====
+    ws_tasks = wb.create_sheet("Tasks")
+    
+    task_headers = [
+        "Task ID", "Title", "Description", "Due Date", "Priority",
+        "Client ID", "Case ID", "Assigned To", "Completed", "Completed At", "Created At"
+    ]
+    ws_tasks.append(task_headers)
+    
+    for col, header in enumerate(task_headers, 1):
+        cell = ws_tasks.cell(row=1, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+    
+    tasks = await db.tasks.find({}, {"_id": 0}).to_list(10000)
+    for task in tasks:
+        row = [
+            task.get("task_id", ""),
+            task.get("title", ""),
+            task.get("description", ""),
+            task.get("due_date", ""),
+            task.get("priority", ""),
+            task.get("client_id", ""),
+            task.get("case_id", ""),
+            task.get("assigned_to", ""),
+            "Yes" if task.get("completed") else "No",
+            task.get("completed_at", ""),
+            task.get("created_at", "")
+        ]
+        ws_tasks.append(row)
+    
+    for col in ws_tasks.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_tasks.column_dimensions[column].width = min(max_length + 2, 50)
+    
+    # ===== DOCUMENTS SHEET =====
+    ws_docs = wb.create_sheet("Documents")
+    
+    doc_headers = ["Document ID", "Client ID", "Document Type", "File Name", "Notes", "Uploaded By", "Uploaded At"]
+    ws_docs.append(doc_headers)
+    
+    for col, header in enumerate(doc_headers, 1):
+        cell = ws_docs.cell(row=1, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+    
+    documents = await db.documents.find({}, {"_id": 0, "file_data": 0}).to_list(10000)
+    for doc in documents:
+        row = [
+            doc.get("document_id", ""),
+            doc.get("client_id", ""),
+            doc.get("document_type", ""),
+            doc.get("file_name", ""),
+            doc.get("notes", ""),
+            doc.get("uploaded_by", ""),
+            doc.get("uploaded_at", "")
+        ]
+        ws_docs.append(row)
+    
+    for col in ws_docs.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_docs.column_dimensions[column].width = min(max_length + 2, 50)
+    
+    # ===== USERS SHEET =====
+    ws_users = wb.create_sheet("Users")
+    
+    user_headers = ["User ID", "Name", "Email", "Role", "Created At"]
+    ws_users.append(user_headers)
+    
+    for col, header in enumerate(user_headers, 1):
+        cell = ws_users.cell(row=1, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+    
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(10000)
+    for user in users:
+        row = [
+            user.get("user_id", ""),
+            user.get("name", ""),
+            user.get("email", ""),
+            user.get("role", ""),
+            user.get("created_at", "")
+        ]
+        ws_users.append(row)
+    
+    for col in ws_users.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_users.column_dimensions[column].width = min(max_length + 2, 50)
+    
+    # Create audit log
+    await create_audit_log("export", "all_data", "excel", current_user["user_id"])
+    
+    # Save to bytes
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Generate filename with timestamp
+    filename = f"KK_Mortgage_CRM_Export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 # Include the router in the main app
 app.include_router(api_router)

@@ -27,6 +27,7 @@ import {
   Bell,
   ChevronDown,
   Search,
+  Download,
 } from 'lucide-react';
 import { Input } from './ui/input';
 
@@ -41,6 +42,7 @@ const navItems = [
   { path: '/tasks', label: 'Tasks', icon: CheckSquare },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/documents', label: 'Documents', icon: FileText },
+  { path: '/export', label: 'Export', icon: Download },
 ];
 
 const Layout = ({ children }) => {
