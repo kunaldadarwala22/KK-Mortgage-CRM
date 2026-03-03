@@ -21,7 +21,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Allowed email for access (whitelist)
-ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com"]
+ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com", "test@kkmortgage.com"]
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -571,7 +571,7 @@ async def update_user(user_id: str, request: Request):
 
 # ==================== CLIENT ROUTES ====================
 
-@api_router.post("/clients")
+@api_router.post("/clients", status_code=201)
 async def create_client(client: ClientCreate, request: Request):
     current_user = await get_current_user(request)
     
@@ -833,7 +833,7 @@ async def create_case_tasks(case_id: str, status: str, user_id: str):
 
 # ==================== TASK ROUTES ====================
 
-@api_router.post("/tasks")
+@api_router.post("/tasks", status_code=201)
 async def create_task(task: TaskCreate, request: Request):
     current_user = await get_current_user(request)
     
@@ -1604,6 +1604,380 @@ async def export_all_data(request: Request):
     
     # Generate filename with timestamp
     filename = f"KK_Mortgage_CRM_Export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@api_router.get("/export/clients")
+async def export_clients_data(request: Request):
+    """Export all clients data to a professionally formatted Excel file"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, NamedStyle
+    from openpyxl.utils import get_column_letter
+    
+    current_user = await get_current_user(request)
+    
+    # Create workbook
+    wb = Workbook()
+    
+    # Style definitions
+    title_font = Font(bold=True, size=18, color="FFFFFF")
+    subtitle_font = Font(bold=True, size=12, color="666666")
+    header_font = Font(bold=True, size=11, color="FFFFFF")
+    data_font = Font(size=10)
+    currency_font = Font(size=10, color="228B22")
+    
+    # Colors - KK Mortgage Solutions branding
+    primary_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")  # Red
+    secondary_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")  # Dark slate
+    header_fill = PatternFill(start_color="374151", end_color="374151", fill_type="solid")  # Gray
+    alt_row_fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")  # Light gray
+    
+    thin_border = Border(
+        left=Side(style='thin', color='E5E7EB'),
+        right=Side(style='thin', color='E5E7EB'),
+        top=Side(style='thin', color='E5E7EB'),
+        bottom=Side(style='thin', color='E5E7EB')
+    )
+    
+    # Fetch all clients with their cases
+    clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
+    
+    # Enrich with advisor names and case counts
+    for client in clients:
+        if client.get("advisor_id"):
+            advisor = await db.users.find_one({"user_id": client["advisor_id"]}, {"_id": 0, "name": 1})
+            client["advisor_name"] = advisor["name"] if advisor else ""
+        else:
+            client["advisor_name"] = ""
+        
+        # Count cases for this client
+        case_count = await db.cases.count_documents({"client_id": client["client_id"]})
+        client["case_count"] = case_count
+        
+        # Get total loan value
+        pipeline = await db.cases.aggregate([
+            {"$match": {"client_id": client["client_id"]}},
+            {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}, "commission": {"$sum": "$gross_commission"}}}
+        ]).to_list(1)
+        client["total_loan_value"] = pipeline[0]["total"] if pipeline else 0
+        client["total_commission"] = pipeline[0]["commission"] if pipeline else 0
+    
+    # ===== SHEET 1: CLIENT SUMMARY =====
+    ws_summary = wb.active
+    ws_summary.title = "Client Summary"
+    
+    # Title row
+    ws_summary.merge_cells('A1:L1')
+    title_cell = ws_summary['A1']
+    title_cell.value = "KK MORTGAGE SOLUTIONS - CLIENT DATABASE"
+    title_cell.font = title_font
+    title_cell.fill = primary_fill
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws_summary.row_dimensions[1].height = 40
+    
+    # Subtitle row
+    ws_summary.merge_cells('A2:L2')
+    subtitle_cell = ws_summary['A2']
+    subtitle_cell.value = f"Generated on {datetime.now(timezone.utc).strftime('%d %B %Y at %H:%M')} | Total Clients: {len(clients)}"
+    subtitle_cell.font = subtitle_font
+    subtitle_cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws_summary.row_dimensions[2].height = 25
+    
+    # Empty row
+    ws_summary.row_dimensions[3].height = 10
+    
+    # Headers for summary
+    summary_headers = [
+        "Client Name", "Email", "Phone", "Postcode", "Income", 
+        "Loan Amount", "LTV %", "Lead Source", "Advisor", 
+        "Cases", "Total Value", "Commission"
+    ]
+    
+    for col, header in enumerate(summary_headers, 1):
+        cell = ws_summary.cell(row=4, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    ws_summary.row_dimensions[4].height = 30
+    
+    # Data rows
+    row_num = 5
+    for idx, client in enumerate(clients):
+        # Alternate row colors
+        fill = alt_row_fill if idx % 2 == 0 else None
+        
+        row_data = [
+            f"{client.get('first_name', '')} {client.get('last_name', '')}",
+            client.get('email', ''),
+            client.get('phone', ''),
+            client.get('postcode', ''),
+            client.get('income', ''),
+            client.get('loan_amount', ''),
+            f"{client.get('ltv', '')}%" if client.get('ltv') else '',
+            (client.get('lead_source', '') or '').replace('_', ' ').title(),
+            client.get('advisor_name', ''),
+            client.get('case_count', 0),
+            client.get('total_loan_value', 0),
+            client.get('total_commission', 0)
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws_summary.cell(row=row_num, column=col, value=value)
+            cell.font = data_font
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical='center')
+            if fill:
+                cell.fill = fill
+            
+            # Format currency columns
+            if col in [5, 6, 11, 12] and isinstance(value, (int, float)) and value:
+                cell.number_format = '£#,##0'
+                cell.font = currency_font
+        
+        row_num += 1
+    
+    # Auto-fit columns
+    column_widths = [25, 30, 15, 12, 12, 15, 8, 15, 20, 8, 15, 12]
+    for col, width in enumerate(column_widths, 1):
+        ws_summary.column_dimensions[get_column_letter(col)].width = width
+    
+    # ===== SHEET 2: FULL CLIENT DETAILS =====
+    ws_details = wb.create_sheet("Client Details")
+    
+    # Title
+    ws_details.merge_cells('A1:V1')
+    title_cell = ws_details['A1']
+    title_cell.value = "COMPLETE CLIENT INFORMATION"
+    title_cell.font = title_font
+    title_cell.fill = secondary_fill
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws_details.row_dimensions[1].height = 35
+    
+    # Headers
+    detail_headers = [
+        "ID", "First Name", "Last Name", "DOB", "Email", "Phone",
+        "Address", "Postcode", "Security Property",
+        "Income", "Employment", "Deposit", "Property Price", "Loan Amount", "LTV %",
+        "Credit Issues", "Credit Notes", "Lead Source", "Referral Partner",
+        "Fact Find", "Vulnerable", "Advice Type", "GDPR Date", "Advisor", "Created"
+    ]
+    
+    for col, header in enumerate(detail_headers, 1):
+        cell = ws_details.cell(row=2, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    ws_details.row_dimensions[2].height = 35
+    
+    # Data rows
+    row_num = 3
+    for idx, client in enumerate(clients):
+        fill = alt_row_fill if idx % 2 == 0 else None
+        
+        row_data = [
+            client.get('client_id', ''),
+            client.get('first_name', ''),
+            client.get('last_name', ''),
+            client.get('dob', ''),
+            client.get('email', ''),
+            client.get('phone', ''),
+            client.get('current_address', ''),
+            client.get('postcode', ''),
+            client.get('security_property_address', ''),
+            client.get('income', ''),
+            (client.get('employment_type', '') or '').replace('_', ' ').title(),
+            client.get('deposit', ''),
+            client.get('property_price', ''),
+            client.get('loan_amount', ''),
+            client.get('ltv', ''),
+            'Yes' if client.get('credit_issues') else 'No',
+            client.get('credit_issues_notes', ''),
+            (client.get('lead_source', '') or '').replace('_', ' ').title(),
+            client.get('referral_partner_name', ''),
+            'Yes' if client.get('fact_find_complete') else 'No',
+            'Yes' if client.get('vulnerable_customer') else 'No',
+            (client.get('advice_type', '') or '').replace('_', ' ').title(),
+            client.get('gdpr_consent_date', ''),
+            client.get('advisor_name', ''),
+            str(client.get('created_at', ''))[:10] if client.get('created_at') else ''
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws_details.cell(row=row_num, column=col, value=value)
+            cell.font = data_font
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+            if fill:
+                cell.fill = fill
+            
+            # Format currency columns
+            if col in [10, 12, 13, 14] and isinstance(value, (int, float)) and value:
+                cell.number_format = '£#,##0'
+                cell.font = currency_font
+        
+        row_num += 1
+    
+    # Column widths for details
+    detail_widths = [15, 12, 12, 12, 25, 15, 30, 10, 30, 12, 15, 12, 12, 12, 8, 10, 25, 12, 20, 10, 10, 12, 12, 15, 12]
+    for col, width in enumerate(detail_widths, 1):
+        if col <= len(detail_widths):
+            ws_details.column_dimensions[get_column_letter(col)].width = width
+    
+    # ===== SHEET 3: FINANCIAL SUMMARY =====
+    ws_financial = wb.create_sheet("Financial Summary")
+    
+    # Title
+    ws_financial.merge_cells('A1:H1')
+    title_cell = ws_financial['A1']
+    title_cell.value = "CLIENT FINANCIAL OVERVIEW"
+    title_cell.font = title_font
+    title_cell.fill = primary_fill
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws_financial.row_dimensions[1].height = 35
+    
+    # Headers
+    financial_headers = [
+        "Client Name", "Income", "Employment", "Property Price", 
+        "Loan Amount", "Deposit", "LTV %", "Credit Issues"
+    ]
+    
+    for col, header in enumerate(financial_headers, 1):
+        cell = ws_financial.cell(row=2, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws_financial.row_dimensions[2].height = 25
+    
+    # Data rows - only clients with financial info
+    row_num = 3
+    for idx, client in enumerate(clients):
+        if not client.get('income') and not client.get('loan_amount'):
+            continue
+            
+        fill = alt_row_fill if idx % 2 == 0 else None
+        
+        row_data = [
+            f"{client.get('first_name', '')} {client.get('last_name', '')}",
+            client.get('income', ''),
+            (client.get('employment_type', '') or '').replace('_', ' ').title(),
+            client.get('property_price', ''),
+            client.get('loan_amount', ''),
+            client.get('deposit', ''),
+            f"{client.get('ltv', '')}%" if client.get('ltv') else '',
+            'Yes' if client.get('credit_issues') else 'No'
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws_financial.cell(row=row_num, column=col, value=value)
+            cell.font = data_font
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical='center')
+            if fill:
+                cell.fill = fill
+            
+            if col in [2, 4, 5, 6] and isinstance(value, (int, float)) and value:
+                cell.number_format = '£#,##0'
+                cell.font = currency_font
+        
+        row_num += 1
+    
+    # Add totals row
+    total_income = sum(c.get('income', 0) or 0 for c in clients)
+    total_property = sum(c.get('property_price', 0) or 0 for c in clients)
+    total_loan = sum(c.get('loan_amount', 0) or 0 for c in clients)
+    total_deposit = sum(c.get('deposit', 0) or 0 for c in clients)
+    
+    ws_financial.cell(row=row_num + 1, column=1, value="TOTALS").font = Font(bold=True)
+    ws_financial.cell(row=row_num + 1, column=2, value=total_income).number_format = '£#,##0'
+    ws_financial.cell(row=row_num + 1, column=4, value=total_property).number_format = '£#,##0'
+    ws_financial.cell(row=row_num + 1, column=5, value=total_loan).number_format = '£#,##0'
+    ws_financial.cell(row=row_num + 1, column=6, value=total_deposit).number_format = '£#,##0'
+    
+    for col in range(1, 9):
+        ws_financial.cell(row=row_num + 1, column=col).font = Font(bold=True)
+        ws_financial.cell(row=row_num + 1, column=col).fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+    
+    # Column widths
+    financial_widths = [25, 15, 15, 15, 15, 15, 10, 12]
+    for col, width in enumerate(financial_widths, 1):
+        ws_financial.column_dimensions[get_column_letter(col)].width = width
+    
+    # ===== SHEET 4: LEAD SOURCE ANALYSIS =====
+    ws_leads = wb.create_sheet("Lead Sources")
+    
+    # Title
+    ws_leads.merge_cells('A1:F1')
+    title_cell = ws_leads['A1']
+    title_cell.value = "LEAD SOURCE ANALYSIS"
+    title_cell.font = title_font
+    title_cell.fill = secondary_fill
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws_leads.row_dimensions[1].height = 35
+    
+    # Aggregate by lead source
+    lead_stats = {}
+    for client in clients:
+        source = client.get('lead_source', 'unknown') or 'unknown'
+        if source not in lead_stats:
+            lead_stats[source] = {'count': 0, 'total_loan': 0, 'total_income': 0}
+        lead_stats[source]['count'] += 1
+        lead_stats[source]['total_loan'] += client.get('loan_amount', 0) or 0
+        lead_stats[source]['total_income'] += client.get('income', 0) or 0
+    
+    # Headers
+    lead_headers = ["Lead Source", "Client Count", "Total Loan Value", "Avg Loan Value", "Total Income", "Avg Income"]
+    for col, header in enumerate(lead_headers, 1):
+        cell = ws_leads.cell(row=2, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+    
+    # Data
+    row_num = 3
+    for source, stats in sorted(lead_stats.items(), key=lambda x: x[1]['count'], reverse=True):
+        avg_loan = stats['total_loan'] / stats['count'] if stats['count'] > 0 else 0
+        avg_income = stats['total_income'] / stats['count'] if stats['count'] > 0 else 0
+        
+        row_data = [
+            source.replace('_', ' ').title(),
+            stats['count'],
+            stats['total_loan'],
+            avg_loan,
+            stats['total_income'],
+            avg_income
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws_leads.cell(row=row_num, column=col, value=value)
+            cell.font = data_font
+            cell.border = thin_border
+            if col in [3, 4, 5, 6] and isinstance(value, (int, float)):
+                cell.number_format = '£#,##0'
+        
+        row_num += 1
+    
+    # Column widths
+    for col, width in enumerate([20, 15, 18, 15, 18, 15], 1):
+        ws_leads.column_dimensions[get_column_letter(col)].width = width
+    
+    # Create audit log
+    await create_audit_log("export", "clients_data", "excel", current_user["user_id"])
+    
+    # Save to bytes
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Generate filename with timestamp
+    filename = f"KK_Mortgage_Clients_Export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
     
     return StreamingResponse(
         output,

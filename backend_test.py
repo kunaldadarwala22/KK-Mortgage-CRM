@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import uuid
 
 class KKMortgageCRMTester:
-    def __init__(self, base_url="https://broker-crm-uk.preview.emergentagent.com"):
+    def __init__(self, base_url="https://mortgage-crm-preview.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.session_token = None

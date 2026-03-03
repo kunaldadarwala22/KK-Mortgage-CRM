@@ -52,18 +52,19 @@ import {
   Filter,
   Download,
   X,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const LEAD_SOURCES = ['walk_in', 'cold_call', 'referral', 'online', 'other'];
 const EMPLOYMENT_TYPES = ['employed', 'self_employed', 'contractor', 'retired', 'unemployed'];
-const ADVICE_TYPES = ['advised', 'execution_only'];
 
 const Clients = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({
     advisor_id: '',
@@ -184,6 +185,51 @@ const Clients = () => {
     }
   };
 
+  const handleExportClients = async () => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/export/clients`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'KK_Mortgage_Clients_Export.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Client data exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export client data');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const formatCurrency = (value) => {
     if (!value) return '-';
     return new Intl.NumberFormat('en-GB', {
@@ -223,228 +269,24 @@ const Clients = () => {
           </h1>
           <p className="text-slate-500 mt-1">Manage your client database</p>
         </div>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-red-600 hover:bg-red-700" data-testid="add-client-btn">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
-              <DialogDescription>Enter the client's details below.</DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <div className="space-y-2">
-                <Label>First Name *</Label>
-                <Input
-                  value={newClient.first_name}
-                  onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })}
-                  placeholder="John"
-                  data-testid="client-first-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Last Name *</Label>
-                <Input
-                  value={newClient.last_name}
-                  onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })}
-                  placeholder="Smith"
-                  data-testid="client-last-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={newClient.email}
-                  onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                  placeholder="john@example.com"
-                  data-testid="client-email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input
-                  value={newClient.phone}
-                  onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                  placeholder="07700 900000"
-                  data-testid="client-phone"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Date of Birth</Label>
-                <Input
-                  type="date"
-                  value={newClient.dob}
-                  onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })}
-                  data-testid="client-dob"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Postcode</Label>
-                <Input
-                  value={newClient.postcode}
-                  onChange={(e) => setNewClient({ ...newClient, postcode: e.target.value })}
-                  placeholder="SW1A 1AA"
-                  data-testid="client-postcode"
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                <Label>Current Address</Label>
-                <Textarea
-                  value={newClient.current_address}
-                  onChange={(e) => setNewClient({ ...newClient, current_address: e.target.value })}
-                  placeholder="123 Main Street, London"
-                  data-testid="client-address"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Income (£)</Label>
-                <Input
-                  type="number"
-                  value={newClient.income}
-                  onChange={(e) => setNewClient({ ...newClient, income: e.target.value })}
-                  placeholder="50000"
-                  data-testid="client-income"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Employment Type</Label>
-                <Select
-                  value={newClient.employment_type}
-                  onValueChange={(value) => setNewClient({ ...newClient, employment_type: value })}
-                >
-                  <SelectTrigger data-testid="client-employment-type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EMPLOYMENT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Property Price (£)</Label>
-                <Input
-                  type="number"
-                  value={newClient.property_price}
-                  onChange={(e) => setNewClient({ ...newClient, property_price: e.target.value })}
-                  placeholder="350000"
-                  data-testid="client-property-price"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Loan Amount (£)</Label>
-                <Input
-                  type="number"
-                  value={newClient.loan_amount}
-                  onChange={(e) => setNewClient({ ...newClient, loan_amount: e.target.value })}
-                  placeholder="280000"
-                  data-testid="client-loan-amount"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Deposit (£)</Label>
-                <Input
-                  type="number"
-                  value={newClient.deposit}
-                  onChange={(e) => setNewClient({ ...newClient, deposit: e.target.value })}
-                  placeholder="70000"
-                  data-testid="client-deposit"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Lead Source</Label>
-                <Select
-                  value={newClient.lead_source}
-                  onValueChange={(value) => setNewClient({ ...newClient, lead_source: value })}
-                >
-                  <SelectTrigger data-testid="client-lead-source">
-                    <SelectValue placeholder="Select source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LEAD_SOURCES.map((source) => (
-                      <SelectItem key={source} value={source}>
-                        {formatLeadSource(source)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {newClient.lead_source === 'referral' && (
-                <div className="space-y-2">
-                  <Label>Referral Partner Name</Label>
-                  <Input
-                    value={newClient.referral_partner_name}
-                    onChange={(e) => setNewClient({ ...newClient, referral_partner_name: e.target.value })}
-                    placeholder="Partner name"
-                    data-testid="client-referral-partner"
-                  />
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>Assigned Advisor</Label>
-                <Select
-                  value={newClient.advisor_id}
-                  onValueChange={(value) => setNewClient({ ...newClient, advisor_id: value })}
-                >
-                  <SelectTrigger data-testid="client-advisor">
-                    <SelectValue placeholder="Select advisor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.user_id} value={user.user_id}>
-                        {user.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-2 space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="credit_issues"
-                    checked={newClient.credit_issues}
-                    onCheckedChange={(checked) => setNewClient({ ...newClient, credit_issues: checked })}
-                  />
-                  <Label htmlFor="credit_issues">Credit Issues</Label>
-                </div>
-                {newClient.credit_issues && (
-                  <Textarea
-                    value={newClient.credit_issues_notes}
-                    onChange={(e) => setNewClient({ ...newClient, credit_issues_notes: e.target.value })}
-                    placeholder="Describe credit issues..."
-                    data-testid="client-credit-notes"
-                  />
-                )}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="vulnerable"
-                    checked={newClient.vulnerable_customer}
-                    onCheckedChange={(checked) => setNewClient({ ...newClient, vulnerable_customer: checked })}
-                  />
-                  <Label htmlFor="vulnerable">Vulnerable Customer</Label>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
-              <Button 
-                className="bg-red-600 hover:bg-red-700"
-                onClick={handleAddClient}
-                disabled={!newClient.first_name || !newClient.last_name}
-                data-testid="save-client-btn"
-              >
-                Save Client
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportClients}
+            disabled={exporting}
+            data-testid="export-clients-btn"
+          >
+            {exporting ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Exporting...</>
+            ) : (
+              <><Download className="h-4 w-4 mr-2" />Export to Excel</>
+            )}
+          </Button>
+          <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowAddDialog(true)} data-testid="add-client-btn">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Client
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -663,6 +505,224 @@ const Clients = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Client Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+            <DialogDescription>Enter the client details below.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label>First Name *</Label>
+              <Input
+                value={newClient.first_name}
+                onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })}
+                placeholder="John"
+                data-testid="client-first-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Last Name *</Label>
+              <Input
+                value={newClient.last_name}
+                onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })}
+                placeholder="Smith"
+                data-testid="client-last-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={newClient.email}
+                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                placeholder="john@example.com"
+                data-testid="client-email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input
+                value={newClient.phone}
+                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                placeholder="07700 900000"
+                data-testid="client-phone"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Date of Birth</Label>
+              <Input
+                type="date"
+                value={newClient.dob}
+                onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })}
+                data-testid="client-dob"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Postcode</Label>
+              <Input
+                value={newClient.postcode}
+                onChange={(e) => setNewClient({ ...newClient, postcode: e.target.value })}
+                placeholder="SW1A 1AA"
+                data-testid="client-postcode"
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label>Current Address</Label>
+              <Textarea
+                value={newClient.current_address}
+                onChange={(e) => setNewClient({ ...newClient, current_address: e.target.value })}
+                placeholder="123 Main Street, London"
+                data-testid="client-address"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Income (GBP)</Label>
+              <Input
+                type="number"
+                value={newClient.income}
+                onChange={(e) => setNewClient({ ...newClient, income: e.target.value })}
+                placeholder="50000"
+                data-testid="client-income"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Employment Type</Label>
+              <Select
+                value={newClient.employment_type}
+                onValueChange={(value) => setNewClient({ ...newClient, employment_type: value })}
+              >
+                <SelectTrigger data-testid="client-employment-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMPLOYMENT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Property Price (GBP)</Label>
+              <Input
+                type="number"
+                value={newClient.property_price}
+                onChange={(e) => setNewClient({ ...newClient, property_price: e.target.value })}
+                placeholder="350000"
+                data-testid="client-property-price"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Loan Amount (GBP)</Label>
+              <Input
+                type="number"
+                value={newClient.loan_amount}
+                onChange={(e) => setNewClient({ ...newClient, loan_amount: e.target.value })}
+                placeholder="280000"
+                data-testid="client-loan-amount"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Deposit (GBP)</Label>
+              <Input
+                type="number"
+                value={newClient.deposit}
+                onChange={(e) => setNewClient({ ...newClient, deposit: e.target.value })}
+                placeholder="70000"
+                data-testid="client-deposit"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lead Source</Label>
+              <Select
+                value={newClient.lead_source}
+                onValueChange={(value) => setNewClient({ ...newClient, lead_source: value })}
+              >
+                <SelectTrigger data-testid="client-lead-source">
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_SOURCES.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {formatLeadSource(source)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {newClient.lead_source === 'referral' && (
+              <div className="space-y-2">
+                <Label>Referral Partner Name</Label>
+                <Input
+                  value={newClient.referral_partner_name}
+                  onChange={(e) => setNewClient({ ...newClient, referral_partner_name: e.target.value })}
+                  placeholder="Partner name"
+                  data-testid="client-referral-partner"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Assigned Advisor</Label>
+              <Select
+                value={newClient.advisor_id}
+                onValueChange={(value) => setNewClient({ ...newClient, advisor_id: value })}
+              >
+                <SelectTrigger data-testid="client-advisor">
+                  <SelectValue placeholder="Select advisor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.user_id} value={user.user_id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="credit_issues"
+                  checked={newClient.credit_issues}
+                  onCheckedChange={(checked) => setNewClient({ ...newClient, credit_issues: checked })}
+                />
+                <Label htmlFor="credit_issues">Credit Issues</Label>
+              </div>
+              {newClient.credit_issues && (
+                <Textarea
+                  value={newClient.credit_issues_notes}
+                  onChange={(e) => setNewClient({ ...newClient, credit_issues_notes: e.target.value })}
+                  placeholder="Describe credit issues..."
+                  data-testid="client-credit-notes"
+                />
+              )}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="vulnerable"
+                  checked={newClient.vulnerable_customer}
+                  onCheckedChange={(checked) => setNewClient({ ...newClient, vulnerable_customer: checked })}
+                />
+                <Label htmlFor="vulnerable">Vulnerable Customer</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
+            <Button 
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleAddClient}
+              disabled={!newClient.first_name || !newClient.last_name}
+              data-testid="save-client-btn"
+            >
+              Save Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
