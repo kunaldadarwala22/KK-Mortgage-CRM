@@ -1,0 +1,150 @@
+{
+  "project_name": "KK Mortgage Solutions",
+  "version": "1.0",
+  "design_philosophy": {
+    "theme": "Modern Fintech Professional",
+    "emotional_tone": "Trustworthy, Efficient, Clear, Authoritative",
+    "visual_style": "Clean Light Theme with High Contrast Red Accents",
+    "core_principles": [
+      "Clarity over Decoration: Data must be readable at a glance.",
+      "Density with Breathing Room: High information density (Mode B Grid) but with distinct separation.",
+      "Trust through Consistency: Uniform spacing, consistent red accents for actions.",
+      "Swiss Grid Alignment: Strong vertical and horizontal alignment."
+    ]
+  },
+  "color_palette": {
+    "primary": {
+      "name": "Mortgage Red",
+      "hex": "#DC2626",
+      "tailwind": "red-600",
+      "usage": "Primary CTA buttons, active states, critical alerts, logo accents"
+    },
+    "secondary": {
+      "name": "Obsidian Black",
+      "hex": "#0F172A",
+      "tailwind": "slate-900",
+      "usage": "Headings, heavy structural elements, sidebar background (optional)"
+    },
+    "background": {
+      "default": "#FFFFFF",
+      "surface": "#F8FAFC",
+      "surface_highlight": "#F1F5F9"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#64748B",
+      "muted": "#94A3B8",
+      "inverse": "#FFFFFF"
+    },
+    "status": {
+      "success": "#16A34A",
+      "warning": "#D97706",
+      "error": "#DC2626",
+      "info": "#2563EB"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "headings": {
+        "name": "Plus Jakarta Sans",
+        "fallback": "sans-serif",
+        "google_font_url": "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap",
+        "usage": "Page titles, card headers, dashboard metrics"
+      },
+      "body": {
+        "name": "Inter",
+        "fallback": "sans-serif",
+        "google_font_url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap",
+        "usage": "General text, data tables, inputs, labels"
+      }
+    },
+    "scaling": {
+      "h1": "text-4xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold",
+      "body_lg": "text-lg leading-relaxed",
+      "body_base": "text-base leading-relaxed",
+      "caption": "text-sm text-muted-foreground",
+      "tiny": "text-xs font-medium uppercase tracking-wider"
+    }
+  },
+  "layout_spacing": {
+    "container_width": "max-w-7xl mx-auto",
+    "page_padding": "p-6 md:p-8",
+    "grid_system": {
+      "dashboard_mode": "Mode B (High Density)",
+      "columns": "grid-cols-1 md:grid-cols-12",
+      "gap": "gap-4 md:gap-6"
+    },
+    "border_radius": {
+      "default": "rounded-md",
+      "card": "rounded-lg",
+      "button": "rounded-md"
+    },
+    "shadows": {
+      "card": "shadow-sm border border-slate-200",
+      "dropdown": "shadow-md border border-slate-100",
+      "hover": "shadow-md transition-shadow duration-200"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-red-600 hover:bg-red-700 text-white shadow-sm font-medium",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-sm",
+      "ghost": "hover:bg-slate-100 text-slate-700",
+      "destructive": "bg-red-600 hover:bg-red-700 text-white"
+    },
+    "cards": {
+      "style": "bg-white border border-slate-200 shadow-sm rounded-lg",
+      "header": "p-6 border-b border-slate-100",
+      "content": "p-6"
+    },
+    "inputs": {
+      "style": "border-slate-300 focus:ring-red-600 focus:border-red-600 rounded-md bg-white",
+      "label": "text-sm font-medium text-slate-700 mb-1.5 block"
+    },
+    "badges": {
+      "base": "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+      "success": "bg-green-100 text-green-800",
+      "warning": "bg-yellow-100 text-yellow-800",
+      "error": "bg-red-100 text-red-800",
+      "neutral": "bg-slate-100 text-slate-800"
+    },
+    "kanban": {
+      "column": "bg-slate-50/50 rounded-lg border border-slate-200/60 p-4",
+      "card": "bg-white p-3 rounded shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
+    }
+  },
+  "assets": {
+    "logo_url": "https://customer-assets.emergentagent.com/job_broker-crm-uk/artifacts/fwvsstux_LOOGOO.png",
+    "images": {
+      "login_background": {
+        "url": "https://images.unsplash.com/photo-1673551799304-b81cce68c308?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjBvZmZpY2UlMjBhcmNoaXRlY3R1cmUlMjBza3lzY3JhcGVyfGVufDB8fHx8MTc3MjU0MDk0OHww&ixlib=rb-4.1.0&q=85",
+        "alt": "Modern Skyscraper Architecture",
+        "usage": "Login page background with white/90 overlay"
+      },
+      "dashboard_welcome": {
+        "url": "https://images.unsplash.com/photo-1634547487344-c3aa2e1aacdf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjBhcmNoaXRlY3R1cmUlMjBza3lzY3JhcGVyfGVufDB8fHx8MTc3MjU0MDk0OHww&ixlib=rb-4.1.0&q=85",
+        "alt": "Modern Office Detail",
+        "usage": "Welcome widget background"
+      }
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px or 2px, default color slate-500"
+    }
+  },
+  "universal_guidelines": [
+    "Always use 'lucide-react' for icons.",
+    "Do not use generic gradients. Use solid colors or very subtle mesh gradients only if requested.",
+    "Ensure all text has a contrast ratio of at least 4.5:1 against its background.",
+    "Use 'sonner' for all toast notifications.",
+    "All interactive elements must have a :hover and :focus state.",
+    "Use data-testid attributes on all interactive elements (buttons, inputs, links) for testing.",
+    "For the Kanban board, ensure drag-and-drop feeling is smooth (use @hello-pangea/dnd or similar if implementing from scratch, but stick to Shadcn pattern if available).",
+    "Charts should use 'Recharts' via the Shadcn Chart component.",
+    "Date pickers must use the Shadcn Calendar component.",
+    "Navigation should be a sidebar on desktop and a drawer on mobile."
+  ],
+  "instructions_to_main_agent": "You are building a Mortgage CRM. Strict adherence to the 'Fintech Professional' look is required. Do not make it look like a playful startup. It should look like a bank's internal tool but modernized. Use the Red (#DC2626) sparingly for impact - do not flood the UI with red. Use Slate greys for structure."
+}
