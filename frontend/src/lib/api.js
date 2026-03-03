@@ -263,6 +263,53 @@ export const auditAPI = {
   },
 };
 
+// Commission Analytics API
+export const commissionAPI = {
+  getMonthly: (params = {}) => {
+    const searchParams = new URLSearchParams(params);
+    return fetch(`${API_URL}/api/commission/monthly?${searchParams}`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    }).then(handleResponse);
+  },
+  getAnalytics: (params = {}) => {
+    const searchParams = new URLSearchParams(params);
+    return fetch(`${API_URL}/api/commission/analytics?${searchParams}`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    }).then(handleResponse);
+  },
+};
+
+// Analytics API
+export const analyticsAPI = {
+  getMortgageTypes: () =>
+    fetch(`${API_URL}/api/analytics/mortgage-types`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    }).then(handleResponse),
+};
+
+// Reports API
+export const reportsAPI = {
+  getCasesCompleted: (startDate, endDate) =>
+    fetch(`${API_URL}/api/reports/cases-completed?start_date=${startDate}&end_date=${endDate}`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    }).then(handleResponse),
+  getCommissionPaid: (startDate, endDate) =>
+    fetch(`${API_URL}/api/reports/commission-paid?start_date=${startDate}&end_date=${endDate}`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    }).then(handleResponse),
+  exportReport: (reportType, startDate, endDate, format = 'xlsx') => {
+    return fetch(`${API_URL}/api/reports/export?report_type=${reportType}&start_date=${startDate}&end_date=${endDate}&format=${format}`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    });
+  },
+};
+
 export default {
   auth: authAPI,
   users: usersAPI,
@@ -272,4 +319,7 @@ export default {
   documents: documentsAPI,
   dashboard: dashboardAPI,
   audit: auditAPI,
+  commission: commissionAPI,
+  analytics: analyticsAPI,
+  reports: reportsAPI,
 };

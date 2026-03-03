@@ -28,6 +28,7 @@ import {
   ChevronDown,
   Search,
   Download,
+  ClipboardList,
 } from 'lucide-react';
 import { Input } from './ui/input';
 
@@ -41,6 +42,7 @@ const navItems = [
   { path: '/commission', label: 'Commission', icon: PoundSterling },
   { path: '/tasks', label: 'Tasks', icon: CheckSquare },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { path: '/reports', label: 'Reports', icon: ClipboardList },
   { path: '/documents', label: 'Documents', icon: FileText },
   { path: '/export', label: 'Export', icon: Download },
 ];

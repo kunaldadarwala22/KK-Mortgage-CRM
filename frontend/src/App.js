@@ -17,6 +17,7 @@ import Commission from './pages/Commission';
 import Analytics from './pages/Analytics';
 import Documents from './pages/Documents';
 import Export from './pages/Export';
+import Reports from './pages/Reports';
 import './App.css';
 
 // Router component that handles auth callback detection
@@ -130,6 +131,16 @@ const AppRouter = () => {
           <ProtectedRoute>
             <Layout>
               <Documents />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Reports />
             </Layout>
           </ProtectedRoute>
         }

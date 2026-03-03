@@ -6,53 +6,22 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../components/ui/select';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Checkbox } from '../components/ui/checkbox';
 import {
-  Search,
-  Plus,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  Phone,
-  Mail,
-  MapPin,
-  Users,
-  Filter,
-  Download,
-  X,
-  Loader2,
+  Search, Plus, MoreHorizontal, Eye, Trash2, Phone, Mail, MapPin, Users, Filter, Download, X, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -66,42 +35,21 @@ const Clients = () => {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({
-    advisor_id: '',
-    lead_source: '',
-    postcode: '',
-  });
+  const [filters, setFilters] = useState({ advisor_id: '', lead_source: '', postcode: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newClient, setNewClient] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    dob: '',
-    current_address: '',
-    postcode: '',
-    income: '',
-    employment_type: '',
-    deposit: '',
-    property_price: '',
-    loan_amount: '',
-    credit_issues: false,
-    credit_issues_notes: '',
-    lead_source: '',
-    referral_partner_name: '',
-    fact_find_complete: false,
-    vulnerable_customer: false,
-    advice_type: '',
-    advisor_id: '',
+    first_name: '', last_name: '', email: '', phone: '', dob: '',
+    current_address: '', postcode: '', security_property_address: '',
+    income: '', employment_type: '', deposit: '', property_price: '',
+    loan_amount: '', credit_issues: false, credit_issues_notes: '',
+    lead_source: '', referral_partner_name: '', fact_find_complete: false,
+    vulnerable_customer: false, advice_type: '', advisor_id: '',
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
 
-  useEffect(() => {
-    loadClients();
-    loadUsers();
-  }, [filters]);
+  useEffect(() => { loadClients(); loadUsers(); }, [filters]);
 
   const loadClients = async () => {
     try {
@@ -110,8 +58,8 @@ const Clients = () => {
       if (search) params.search = search;
       const data = await clientsAPI.getAll(params);
       setClients(data.clients || []);
-    } catch (error) {
-      console.error('Failed to load clients:', error);
+    } catch (err) {
+      console.error('Failed to load clients:', err);
       toast.error('Failed to load clients');
     } finally {
       setLoading(false);
@@ -122,15 +70,12 @@ const Clients = () => {
     try {
       const data = await usersAPI.getAll();
       setUsers(data || []);
-    } catch (error) {
-      console.error('Failed to load users:', error);
+    } catch (err) {
+      console.error('Failed to load users:', err);
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    loadClients();
-  };
+  const handleSearch = () => loadClients();
 
   const handleAddClient = async () => {
     try {
@@ -144,31 +89,10 @@ const Clients = () => {
       await clientsAPI.create(clientData);
       toast.success('Client created successfully');
       setShowAddDialog(false);
-      setNewClient({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        dob: '',
-        current_address: '',
-        postcode: '',
-        income: '',
-        employment_type: '',
-        deposit: '',
-        property_price: '',
-        loan_amount: '',
-        credit_issues: false,
-        credit_issues_notes: '',
-        lead_source: '',
-        referral_partner_name: '',
-        fact_find_complete: false,
-        vulnerable_customer: false,
-        advice_type: '',
-        advisor_id: '',
-      });
+      setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', security_property_address: '', income: '', employment_type: '', deposit: '', property_price: '', loan_amount: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '', advisor_id: '' });
       loadClients();
-    } catch (error) {
-      toast.error(error.message || 'Failed to create client');
+    } catch (err) {
+      toast.error(err.message || 'Failed to create client');
     }
   };
 
@@ -176,115 +100,83 @@ const Clients = () => {
     if (!clientToDelete) return;
     try {
       await clientsAPI.delete(clientToDelete.client_id);
-      toast.success('Client deleted successfully');
+      toast.success('Client deleted');
       setDeleteDialogOpen(false);
       setClientToDelete(null);
       loadClients();
-    } catch (error) {
-      toast.error(error.message || 'Failed to delete client');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete client');
     }
   };
 
   const handleExportClients = async () => {
     setExporting(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/export/clients`, {
-        method: 'GET',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
-
-      if (!response.ok) {
-        throw new Error('Export failed');
-      }
-
+      if (!response.ok) throw new Error('Export failed');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      
-      const contentDisposition = response.headers.get('Content-Disposition');
       let filename = 'KK_Mortgage_Clients_Export.xlsx';
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename=(.+)/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
-        }
-      }
-      
+      const cd = response.headers.get('content-disposition');
+      if (cd) { const match = cd.match(/filename=(.+)/); if (match) filename = match[1]; }
+      link.href = url;
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      
       toast.success('Client data exported successfully!');
-    } catch (error) {
-      console.error('Export error:', error);
+    } catch (err) {
+      console.error('Export error:', err);
       toast.error('Failed to export client data');
     } finally {
       setExporting(false);
     }
   };
 
-  const formatCurrency = (value) => {
-    if (!value) return '-';
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-      minimumFractionDigits: 0,
-    }).format(value);
+  const formatCurrency = (v) => v ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v) : '-';
+  const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
+  const getStatusColor = (s) => ({
+    new_lead: 'bg-blue-100 text-blue-800', fact_find_complete: 'bg-purple-100 text-purple-800',
+    application_submitted: 'bg-yellow-100 text-yellow-800', valuation_booked: 'bg-orange-100 text-orange-800',
+    offer_issued: 'bg-indigo-100 text-indigo-800', completed: 'bg-green-100 text-green-800',
+    lost_case: 'bg-red-100 text-red-800',
+  }[s] || 'bg-slate-100 text-slate-800');
+
+  const getRowBg = (client) => {
+    if (client.case_status === 'completed') return 'bg-green-50 hover:bg-green-100';
+    if (client.case_status === 'lost_case') return 'bg-red-50 hover:bg-red-100';
+    if (client.expiring_soon) return 'bg-amber-50 hover:bg-amber-100';
+    return 'hover:bg-slate-50';
   };
 
-  const getLeadSourceBadge = (source) => {
-    const colors = {
-      walk_in: 'bg-blue-100 text-blue-800',
-      cold_call: 'bg-purple-100 text-purple-800',
-      referral: 'bg-green-100 text-green-800',
-      online: 'bg-orange-100 text-orange-800',
-      other: 'bg-slate-100 text-slate-800',
-    };
-    return colors[source] || 'bg-slate-100 text-slate-800';
-  };
+  const clearFilters = () => setFilters({ advisor_id: '', lead_source: '', postcode: '' });
 
-  const formatLeadSource = (source) => {
-    return source?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
-  };
-
-  const clearFilters = () => {
-    setFilters({ advisor_id: '', lead_source: '', postcode: '' });
-    setSearch('');
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin h-8 w-8 border-4 border-red-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="clients-page">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
-            Clients
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Clients</h1>
           <p className="text-slate-500 mt-1">Manage your client database</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleExportClients}
-            disabled={exporting}
-            data-testid="export-clients-btn"
-          >
-            {exporting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Exporting...</>
-            ) : (
-              <><Download className="h-4 w-4 mr-2" />Export to Excel</>
-            )}
+          <Button variant="outline" onClick={handleExportClients} disabled={exporting} data-testid="export-clients-btn">
+            {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Exporting...</> : <><Download className="h-4 w-4 mr-2" />Export to Excel</>}
           </Button>
           <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowAddDialog(true)} data-testid="add-client-btn">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Client
+            <Plus className="h-4 w-4 mr-2" />Add Client
           </Button>
         </div>
       </div>
@@ -293,215 +185,131 @@ const Clients = () => {
       <Card className="border-slate-200">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
-            <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  type="search"
-                  placeholder="Search clients by name, email, phone..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                  data-testid="client-search"
-                />
-              </div>
-              <Button type="submit" variant="secondary">Search</Button>
-            </form>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                data-testid="toggle-filters-btn"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
+            <div className="flex-1 flex gap-2">
+              <Input placeholder="Search clients by name, email, phone..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} className="flex-1" data-testid="client-search-input" />
+              <Button onClick={handleSearch}><Search className="h-4 w-4 mr-2" />Search</Button>
+              <Button variant="outline" onClick={() => setShowFilters(!showFilters)}><Filter className="h-4 w-4 mr-2" />Filters</Button>
             </div>
           </div>
-
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Advisor</Label>
-                <Select
-                  value={filters.advisor_id}
-                  onValueChange={(value) => setFilters({ ...filters, advisor_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All advisors" />
-                  </SelectTrigger>
+                <Select value={filters.advisor_id || 'all'} onValueChange={(v) => setFilters({ ...filters, advisor_id: v === 'all' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="All advisors" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All advisors</SelectItem>
-                    {users.map((user) => (
-                      <SelectItem key={user.user_id} value={user.user_id}>
-                        {user.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">All Advisors</SelectItem>
+                    {users.map((u) => <SelectItem key={u.user_id} value={u.user_id}>{u.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Lead Source</Label>
-                <Select
-                  value={filters.lead_source}
-                  onValueChange={(value) => setFilters({ ...filters, lead_source: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All sources" />
-                  </SelectTrigger>
+                <Select value={filters.lead_source || 'all'} onValueChange={(v) => setFilters({ ...filters, lead_source: v === 'all' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="All sources" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All sources</SelectItem>
-                    {LEAD_SOURCES.map((source) => (
-                      <SelectItem key={source} value={source}>
-                        {formatLeadSource(source)}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">All Sources</SelectItem>
+                    {LEAD_SOURCES.map((s) => <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Postcode</Label>
-                <Input
-                  value={filters.postcode}
-                  onChange={(e) => setFilters({ ...filters, postcode: e.target.value })}
-                  placeholder="SW1A"
-                />
+                <Input placeholder="e.g. SW1A" value={filters.postcode} onChange={(e) => setFilters({ ...filters, postcode: e.target.value })} />
               </div>
-              <div className="col-span-3">
-                <Button variant="ghost" onClick={clearFilters} className="text-slate-500">
-                  <X className="h-4 w-4 mr-1" />
-                  Clear Filters
-                </Button>
+              <div className="flex items-end">
+                <Button variant="ghost" onClick={clearFilters} className="text-slate-500"><X className="h-4 w-4 mr-1" />Clear</Button>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Clients Table */}
+      {/* Row Legend */}
+      <div className="flex gap-4 text-xs text-slate-500">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-200 inline-block" /> Completed</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block" /> Lost Case</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 inline-block" /> Expiring Soon (90 days)</span>
+      </div>
+
+      {/* Client Table */}
       <Card className="border-slate-200">
         <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin h-8 w-8 border-4 border-red-600 border-t-transparent rounded-full" />
-            </div>
-          ) : clients.length === 0 ? (
-            <div className="text-center py-12">
+          {clients.length === 0 ? (
+            <div className="text-center py-12" data-testid="no-clients-message">
               <Users className="h-12 w-12 mx-auto text-slate-300 mb-4" />
               <h3 className="text-lg font-medium text-slate-700 mb-2">No clients found</h3>
               <p className="text-slate-500 mb-4">Get started by adding your first client.</p>
-              <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Client
-              </Button>
+              <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowAddDialog(true)}><Plus className="h-4 w-4 mr-2" />Add Client</Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Loan Amount</TableHead>
-                  <TableHead>Lead Source</TableHead>
-                  <TableHead>Advisor</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client) => (
-                  <TableRow 
-                    key={client.client_id} 
-                    className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => navigate(`/clients/${client.client_id}`)}
-                    data-testid={`client-row-${client.client_id}`}
-                  >
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {client.first_name} {client.last_name}
-                        </p>
-                        {client.vulnerable_customer && (
-                          <Badge variant="outline" className="mt-1 text-orange-600 border-orange-300">
-                            Vulnerable
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {client.email && (
-                          <div className="flex items-center gap-1 text-sm text-slate-500">
-                            <Mail className="h-3 w-3" />
-                            {client.email}
-                          </div>
-                        )}
-                        {client.phone && (
-                          <div className="flex items-center gap-1 text-sm text-slate-500">
-                            <Phone className="h-3 w-3" />
-                            {client.phone}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {client.postcode && (
-                        <div className="flex items-center gap-1 text-sm text-slate-500">
-                          <MapPin className="h-3 w-3" />
-                          {client.postcode}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <p className="font-medium">{formatCurrency(client.loan_amount)}</p>
-                      {client.ltv && (
-                        <p className="text-sm text-slate-500">LTV: {client.ltv}%</p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {client.lead_source && (
-                        <Badge className={getLeadSourceBadge(client.lead_source)}>
-                          {formatLeadSource(client.lead_source)}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm text-slate-600">{client.advisor_name || '-'}</p>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.client_id}`); }}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.client_id}/edit`); }}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-red-600"
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setClientToDelete(client); 
-                              setDeleteDialogOpen(true); 
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Client Name</TableHead>
+                    <TableHead>Security Address</TableHead>
+                    <TableHead>Postcode</TableHead>
+                    <TableHead>Loan Amount</TableHead>
+                    <TableHead>Property Value</TableHead>
+                    <TableHead>LTV</TableHead>
+                    <TableHead>Case Status</TableHead>
+                    <TableHead>Commission Status</TableHead>
+                    <TableHead>Completion Date</TableHead>
+                    <TableHead>Lead Source</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {clients.map((c) => (
+                    <TableRow key={c.client_id} className={`cursor-pointer transition-colors ${getRowBg(c)}`} onClick={() => navigate(`/clients/${c.client_id}`)} data-testid={`client-row-${c.client_id}`}>
+                      <TableCell>
+                        <p className="font-medium">{c.first_name} {c.last_name}</p>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                          {c.email && <span className="flex items-center gap-0.5"><Mail className="h-3 w-3" />{c.email}</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{c.security_property_address || c.current_address ? (c.security_property_address || c.current_address).split(',')[0] : '-'}</TableCell>
+                      <TableCell>{c.postcode || '-'}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(c.case_loan_amount || c.loan_amount)}</TableCell>
+                      <TableCell>{formatCurrency(c.property_price)}</TableCell>
+                      <TableCell>
+                        {c.ltv ? (
+                          <Badge className={c.ltv > 90 ? 'bg-red-100 text-red-800' : c.ltv > 75 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
+                            {c.ltv}%
+                          </Badge>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {c.case_status ? <Badge className={getStatusColor(c.case_status)}>{formatStatus(c.case_status)}</Badge> : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {c.commission_status ? <Badge className={getStatusColor(c.commission_status)}>{formatStatus(c.commission_status)}</Badge> : '-'}
+                      </TableCell>
+                      <TableCell className="text-sm">{c.expected_completion_date || '-'}</TableCell>
+                      <TableCell>
+                        {c.lead_source ? <Badge variant="outline" className="text-xs">{formatStatus(c.lead_source)}</Badge> : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/clients/${c.client_id}`); }}>
+                              <Eye className="h-4 w-4 mr-2" />View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600" onClick={(e) => { e.stopPropagation(); setClientToDelete(c); setDeleteDialogOpen(true); }}>
+                              <Trash2 className="h-4 w-4 mr-2" />Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -511,238 +319,85 @@ const Clients = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
-            <DialogDescription>Enter the client details below.</DialogDescription>
+            <DialogDescription>Enter the client's details below.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-              <Label>First Name *</Label>
-              <Input
-                value={newClient.first_name}
-                onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })}
-                placeholder="John"
-                data-testid="client-first-name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Last Name *</Label>
-              <Input
-                value={newClient.last_name}
-                onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })}
-                placeholder="Smith"
-                data-testid="client-last-name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={newClient.email}
-                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                placeholder="john@example.com"
-                data-testid="client-email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input
-                value={newClient.phone}
-                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                placeholder="07700 900000"
-                data-testid="client-phone"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Date of Birth</Label>
-              <Input
-                type="date"
-                value={newClient.dob}
-                onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })}
-                data-testid="client-dob"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Postcode</Label>
-              <Input
-                value={newClient.postcode}
-                onChange={(e) => setNewClient({ ...newClient, postcode: e.target.value })}
-                placeholder="SW1A 1AA"
-                data-testid="client-postcode"
-              />
-            </div>
-            <div className="col-span-2 space-y-2">
-              <Label>Current Address</Label>
-              <Textarea
-                value={newClient.current_address}
-                onChange={(e) => setNewClient({ ...newClient, current_address: e.target.value })}
-                placeholder="123 Main Street, London"
-                data-testid="client-address"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Income (GBP)</Label>
-              <Input
-                type="number"
-                value={newClient.income}
-                onChange={(e) => setNewClient({ ...newClient, income: e.target.value })}
-                placeholder="50000"
-                data-testid="client-income"
-              />
-            </div>
+            <div className="space-y-2"><Label>First Name *</Label><Input value={newClient.first_name} onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })} data-testid="client-first-name" /></div>
+            <div className="space-y-2"><Label>Last Name *</Label><Input value={newClient.last_name} onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })} data-testid="client-last-name" /></div>
+            <div className="space-y-2"><Label>Email</Label><Input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Phone</Label><Input value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" value={newClient.dob} onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Postcode</Label><Input value={newClient.postcode} onChange={(e) => setNewClient({ ...newClient, postcode: e.target.value })} /></div>
+            <div className="col-span-2 space-y-2"><Label>Current Address</Label><Input value={newClient.current_address} onChange={(e) => setNewClient({ ...newClient, current_address: e.target.value })} /></div>
+            <div className="col-span-2 space-y-2"><Label>Security Property Address</Label><Input value={newClient.security_property_address} onChange={(e) => setNewClient({ ...newClient, security_property_address: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Income</Label><Input type="number" value={newClient.income} onChange={(e) => setNewClient({ ...newClient, income: e.target.value })} /></div>
             <div className="space-y-2">
               <Label>Employment Type</Label>
-              <Select
-                value={newClient.employment_type}
-                onValueChange={(value) => setNewClient({ ...newClient, employment_type: value })}
-              >
-                <SelectTrigger data-testid="client-employment-type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
+              <Select value={newClient.employment_type || 'none'} onValueChange={(v) => setNewClient({ ...newClient, employment_type: v === 'none' ? '' : v })}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
-                  {EMPLOYMENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="none">Select...</SelectItem>
+                  {EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{formatStatus(t)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Property Price (GBP)</Label>
-              <Input
-                type="number"
-                value={newClient.property_price}
-                onChange={(e) => setNewClient({ ...newClient, property_price: e.target.value })}
-                placeholder="350000"
-                data-testid="client-property-price"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Loan Amount (GBP)</Label>
-              <Input
-                type="number"
-                value={newClient.loan_amount}
-                onChange={(e) => setNewClient({ ...newClient, loan_amount: e.target.value })}
-                placeholder="280000"
-                data-testid="client-loan-amount"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Deposit (GBP)</Label>
-              <Input
-                type="number"
-                value={newClient.deposit}
-                onChange={(e) => setNewClient({ ...newClient, deposit: e.target.value })}
-                placeholder="70000"
-                data-testid="client-deposit"
-              />
-            </div>
+            <div className="space-y-2"><Label>Property Price</Label><Input type="number" value={newClient.property_price} onChange={(e) => setNewClient({ ...newClient, property_price: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Loan Amount</Label><Input type="number" value={newClient.loan_amount} onChange={(e) => setNewClient({ ...newClient, loan_amount: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Deposit</Label><Input type="number" value={newClient.deposit} onChange={(e) => setNewClient({ ...newClient, deposit: e.target.value })} /></div>
             <div className="space-y-2">
               <Label>Lead Source</Label>
-              <Select
-                value={newClient.lead_source}
-                onValueChange={(value) => setNewClient({ ...newClient, lead_source: value })}
-              >
-                <SelectTrigger data-testid="client-lead-source">
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
+              <Select value={newClient.lead_source || 'none'} onValueChange={(v) => setNewClient({ ...newClient, lead_source: v === 'none' ? '' : v })}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
-                  {LEAD_SOURCES.map((source) => (
-                    <SelectItem key={source} value={source}>
-                      {formatLeadSource(source)}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="none">Select...</SelectItem>
+                  {LEAD_SOURCES.map((s) => <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             {newClient.lead_source === 'referral' && (
-              <div className="space-y-2">
-                <Label>Referral Partner Name</Label>
-                <Input
-                  value={newClient.referral_partner_name}
-                  onChange={(e) => setNewClient({ ...newClient, referral_partner_name: e.target.value })}
-                  placeholder="Partner name"
-                  data-testid="client-referral-partner"
-                />
-              </div>
+              <div className="space-y-2"><Label>Referral Partner</Label><Input value={newClient.referral_partner_name} onChange={(e) => setNewClient({ ...newClient, referral_partner_name: e.target.value })} /></div>
             )}
             <div className="space-y-2">
-              <Label>Assigned Advisor</Label>
-              <Select
-                value={newClient.advisor_id}
-                onValueChange={(value) => setNewClient({ ...newClient, advisor_id: value })}
-              >
-                <SelectTrigger data-testid="client-advisor">
-                  <SelectValue placeholder="Select advisor" />
-                </SelectTrigger>
+              <Label>Advisor</Label>
+              <Select value={newClient.advisor_id || 'none'} onValueChange={(v) => setNewClient({ ...newClient, advisor_id: v === 'none' ? '' : v })}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.user_id} value={user.user_id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="none">Select...</SelectItem>
+                  {users.map((u) => <SelectItem key={u.user_id} value={u.user_id}>{u.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="credit_issues"
-                  checked={newClient.credit_issues}
-                  onCheckedChange={(checked) => setNewClient({ ...newClient, credit_issues: checked })}
-                />
-                <Label htmlFor="credit_issues">Credit Issues</Label>
-              </div>
-              {newClient.credit_issues && (
-                <Textarea
-                  value={newClient.credit_issues_notes}
-                  onChange={(e) => setNewClient({ ...newClient, credit_issues_notes: e.target.value })}
-                  placeholder="Describe credit issues..."
-                  data-testid="client-credit-notes"
-                />
-              )}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="vulnerable"
-                  checked={newClient.vulnerable_customer}
-                  onCheckedChange={(checked) => setNewClient({ ...newClient, vulnerable_customer: checked })}
-                />
-                <Label htmlFor="vulnerable">Vulnerable Customer</Label>
-              </div>
+            <div className="col-span-2 flex items-center space-x-2">
+              <Checkbox id="credit" checked={newClient.credit_issues} onCheckedChange={(c) => setNewClient({ ...newClient, credit_issues: c })} />
+              <Label htmlFor="credit">Credit Issues</Label>
+            </div>
+            {newClient.credit_issues && (
+              <div className="col-span-2 space-y-2"><Label>Credit Issue Notes</Label><Textarea value={newClient.credit_issues_notes} onChange={(e) => setNewClient({ ...newClient, credit_issues_notes: e.target.value })} data-testid="client-credit-notes" /></div>
+            )}
+            <div className="flex items-center space-x-2">
+              <Checkbox id="vulnerable" checked={newClient.vulnerable_customer} onCheckedChange={(c) => setNewClient({ ...newClient, vulnerable_customer: c })} />
+              <Label htmlFor="vulnerable">Vulnerable Customer</Label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
-            <Button 
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleAddClient}
-              disabled={!newClient.first_name || !newClient.last_name}
-              data-testid="save-client-btn"
-            >
-              Save Client
-            </Button>
+            <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddClient} disabled={!newClient.first_name || !newClient.last_name} data-testid="save-client-btn">Save Client</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Client</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {clientToDelete?.first_name} {clientToDelete?.last_name}? 
-              This will also delete all associated cases, documents, and tasks. This action cannot be undone.
+              Are you sure you want to delete {clientToDelete?.first_name} {clientToDelete?.last_name}? This will also delete all associated cases, documents, and tasks.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteClient}
-              data-testid="confirm-delete-btn"
-            >
-              Delete
-            </Button>
+            <Button variant="destructive" onClick={handleDeleteClient} data-testid="confirm-delete-btn">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

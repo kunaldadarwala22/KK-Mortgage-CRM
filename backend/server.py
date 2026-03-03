@@ -21,7 +21,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Allowed email for access (whitelist)
-ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com"]
+ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com", "test@kkmortgage.com"]
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -605,6 +605,7 @@ async def get_clients(
     advisor_id: Optional[str] = None,
     lead_source: Optional[str] = None,
     postcode: Optional[str] = None,
+    enrich_cases: bool = True,
     skip: int = 0,
     limit: int = 100
 ):
@@ -628,11 +629,36 @@ async def get_clients(
     clients = await db.clients.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     total = await db.clients.count_documents(query)
     
-    # Enrich with advisor names
     for client in clients:
         if client.get("advisor_id"):
             advisor = await db.users.find_one({"user_id": client["advisor_id"]}, {"_id": 0, "name": 1})
             client["advisor_name"] = advisor["name"] if advisor else None
+        
+        if enrich_cases:
+            cases = await db.cases.find({"client_id": client["client_id"]}, {"_id": 0}).to_list(50)
+            if cases:
+                latest = max(cases, key=lambda c: c.get("created_at", ""))
+                client["case_status"] = latest.get("status")
+                client["commission_status"] = latest.get("commission_status")
+                client["expected_completion_date"] = latest.get("expected_completion_date")
+                client["case_property_value"] = latest.get("loan_amount")
+                client["case_lender"] = latest.get("lender_name")
+                client["case_loan_amount"] = latest.get("loan_amount")
+                # Check expiry within 90 days
+                for c in cases:
+                    expiry = c.get("product_expiry_date")
+                    if expiry:
+                        try:
+                            exp_date = datetime.strptime(expiry, "%Y-%m-%d")
+                            days_until = (exp_date - datetime.now()).days
+                            if 0 <= days_until <= 90:
+                                client["expiring_soon"] = True
+                                break
+                        except:
+                            pass
+            # Recalculate LTV from client data
+            if client.get("loan_amount") and client.get("property_price") and client["property_price"] > 0:
+                client["ltv"] = round((client["loan_amount"] / client["property_price"]) * 100, 2)
     
     return {"clients": clients, "total": total}
 
@@ -1330,6 +1356,388 @@ async def root():
 @api_router.get("/health")
 async def health():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+# ==================== COMMISSION ANALYTICS ROUTES ====================
+
+@api_router.get("/commission/monthly")
+async def get_commission_monthly(
+    request: Request,
+    year: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Monthly commission breakdown with status grouping"""
+    await get_current_user(request)
+    
+    match_stage = {}
+    if start_date and end_date:
+        match_stage["expected_completion_date"] = {"$gte": start_date, "$lte": end_date}
+    elif year:
+        match_stage["expected_completion_date"] = {"$regex": f"^{year}"}
+    
+    pipeline = [
+        {"$match": match_stage} if match_stage else {"$match": {}},
+        {"$addFields": {
+            "month": {"$cond": {
+                "if": {"$and": [{"$ne": ["$expected_completion_date", None]}, {"$ne": ["$expected_completion_date", ""]}]},
+                "then": {"$substr": ["$expected_completion_date", 0, 7]},
+                "else": "unknown"
+            }}
+        }},
+        {"$group": {
+            "_id": {"month": "$month", "commission_status": "$commission_status", "product_type": "$product_type"},
+            "total_commission": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
+            "total_proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "case_count": {"$sum": 1}
+        }},
+        {"$sort": {"_id.month": 1}}
+    ]
+    
+    results = await db.cases.aggregate(pipeline).to_list(500)
+    
+    months = {}
+    for r in results:
+        month = r["_id"]["month"]
+        status = r["_id"]["commission_status"] or "pending"
+        ptype = r["_id"]["product_type"] or "mortgage"
+        
+        if month not in months:
+            months[month] = {
+                "month": month,
+                "pending": 0, "submitted": 0, "paid": 0, "clawed_back": 0,
+                "mortgage_commission": 0, "insurance_commission": 0,
+                "proc_fees": 0, "total_commission": 0, "case_count": 0
+            }
+        
+        commission = r["total_commission"]
+        proc = r["total_proc_fees"]
+        
+        status_key = {"pending": "pending", "submitted_to_lender": "submitted", "paid": "paid", "clawed_back": "clawed_back"}.get(status, "pending")
+        months[month][status_key] += commission
+        
+        if ptype == "mortgage":
+            months[month]["mortgage_commission"] += commission
+        else:
+            months[month]["insurance_commission"] += commission
+        
+        months[month]["proc_fees"] += proc
+        months[month]["total_commission"] += commission
+        months[month]["case_count"] += r["case_count"]
+    
+    monthly_data = sorted(months.values(), key=lambda x: x["month"])
+    
+    totals = {
+        "total_pending": sum(m["pending"] for m in monthly_data),
+        "total_submitted": sum(m["submitted"] for m in monthly_data),
+        "total_paid": sum(m["paid"] for m in monthly_data),
+        "total_clawed_back": sum(m["clawed_back"] for m in monthly_data),
+        "total_mortgage": sum(m["mortgage_commission"] for m in monthly_data),
+        "total_insurance": sum(m["insurance_commission"] for m in monthly_data),
+        "total_proc_fees": sum(m["proc_fees"] for m in monthly_data),
+        "grand_total": sum(m["total_commission"] for m in monthly_data),
+    }
+    
+    return {"monthly": monthly_data, "totals": totals}
+
+@api_router.get("/commission/analytics")
+async def get_commission_analytics(
+    request: Request,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    product_filter: Optional[str] = None,
+    commission_status: Optional[str] = None
+):
+    """Comprehensive commission analytics"""
+    await get_current_user(request)
+    
+    match_stage = {}
+    if start_date:
+        match_stage.setdefault("expected_completion_date", {})["$gte"] = start_date
+    if end_date:
+        match_stage.setdefault("expected_completion_date", {})["$lte"] = end_date
+    if product_filter and product_filter != "all":
+        match_stage["product_type"] = product_filter
+    if commission_status and commission_status != "all":
+        match_stage["commission_status"] = commission_status
+    
+    base_match = [{"$match": match_stage}] if match_stage else [{"$match": {}}]
+    
+    # By month
+    by_month = await db.cases.aggregate(base_match + [
+        {"$addFields": {"month": {"$cond": {
+            "if": {"$and": [{"$ne": ["$expected_completion_date", None]}, {"$ne": ["$expected_completion_date", ""]}]},
+            "then": {"$substr": ["$expected_completion_date", 0, 7]},
+            "else": "unknown"
+        }}}},
+        {"$group": {"_id": "$month", "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}}, "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}}, "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}}, {"$limit": 24}
+    ]).to_list(24)
+    
+    # By lender
+    by_lender = await db.cases.aggregate(base_match + [
+        {"$match": {"lender_name": {"$ne": None}}},
+        {"$group": {"_id": "$lender_name", "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}}, "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}}, "count": {"$sum": 1}}},
+        {"$sort": {"total": -1}}, {"$limit": 15}
+    ]).to_list(15)
+    
+    # By product type
+    by_product = await db.cases.aggregate(base_match + [
+        {"$group": {"_id": "$product_type", "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}}, "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}}, "count": {"$sum": 1}}}
+    ]).to_list(10)
+    
+    # By lead source
+    by_lead_source = await db.cases.aggregate(base_match + [
+        {"$lookup": {"from": "clients", "localField": "client_id", "foreignField": "client_id", "as": "client"}},
+        {"$unwind": "$client"},
+        {"$group": {"_id": "$client.lead_source", "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}}, "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}}, "count": {"$sum": 1}}},
+        {"$sort": {"total": -1}}
+    ]).to_list(20)
+    
+    # By advisor
+    by_advisor = await db.cases.aggregate(base_match + [
+        {"$match": {"advisor_id": {"$ne": None}}},
+        {"$lookup": {"from": "users", "localField": "advisor_id", "foreignField": "user_id", "as": "advisor"}},
+        {"$unwind": "$advisor"},
+        {"$group": {"_id": {"id": "$advisor_id", "name": "$advisor.name"}, "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}}, "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}}, "count": {"$sum": 1}}},
+        {"$sort": {"total": -1}}
+    ]).to_list(20)
+    
+    # Summary totals
+    summary = await db.cases.aggregate(base_match + [
+        {"$group": {
+            "_id": None,
+            "total_commission": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
+            "total_paid": {"$sum": {"$cond": [{"$eq": ["$commission_status", "paid"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
+            "total_pending": {"$sum": {"$cond": [{"$eq": ["$commission_status", "pending"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
+            "total_clawbacks": {"$sum": {"$cond": [{"$eq": ["$commission_status", "clawed_back"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
+            "total_proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "case_count": {"$sum": 1},
+            "avg_commission": {"$avg": {"$ifNull": ["$gross_commission", 0]}}
+        }}
+    ]).to_list(1)
+    
+    summary_data = summary[0] if summary else {
+        "total_commission": 0, "total_paid": 0, "total_pending": 0,
+        "total_clawbacks": 0, "total_proc_fees": 0, "case_count": 0, "avg_commission": 0
+    }
+    if "_id" in summary_data:
+        del summary_data["_id"]
+    
+    return {
+        "by_month": by_month,
+        "by_lender": by_lender,
+        "by_product": by_product,
+        "by_lead_source": by_lead_source,
+        "by_advisor": [{"name": r["_id"]["name"], "advisor_id": r["_id"]["id"], "total": r["total"], "proc_fees": r["proc_fees"], "count": r["count"]} for r in by_advisor],
+        "summary": summary_data
+    }
+
+@api_router.get("/analytics/mortgage-types")
+async def get_mortgage_type_analytics(request: Request):
+    """Mortgage type breakdown analytics"""
+    await get_current_user(request)
+    
+    pipeline = [
+        {"$match": {"product_type": "mortgage", "mortgage_type": {"$ne": None}}},
+        {"$group": {
+            "_id": "$mortgage_type",
+            "case_count": {"$sum": 1},
+            "total_commission": {"$sum": {"$cond": [{"$eq": ["$commission_status", "paid"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
+            "total_loan": {"$sum": {"$ifNull": ["$loan_amount", 0]}},
+            "avg_loan": {"$avg": {"$ifNull": ["$loan_amount", 0]}}
+        }}
+    ]
+    
+    results = await db.cases.aggregate(pipeline).to_list(10)
+    total_cases = sum(r["case_count"] for r in results) or 1
+    
+    types = []
+    for r in results:
+        types.append({
+            "mortgage_type": r["_id"],
+            "case_count": r["case_count"],
+            "percentage": round((r["case_count"] / total_cases) * 100, 1),
+            "total_commission": r["total_commission"],
+            "total_loan": r["total_loan"],
+            "avg_loan": round(r["avg_loan"], 2) if r["avg_loan"] else 0
+        })
+    
+    return {"types": types, "total_cases": total_cases}
+
+# ==================== CUSTOM REPORTS ROUTES ====================
+
+@api_router.get("/reports/cases-completed")
+async def get_cases_completed_report(
+    request: Request,
+    start_date: str = Query(...),
+    end_date: str = Query(...)
+):
+    """Cases completed within a date range"""
+    await get_current_user(request)
+    
+    cases = await db.cases.find({
+        "status": CaseStatus.COMPLETED,
+        "expected_completion_date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(1000)
+    
+    for case in cases:
+        client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1, "property_price": 1})
+        case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
+        case["property_value"] = client.get("property_price") if client else None
+        if case.get("loan_amount") and case.get("property_value") and case["property_value"] > 0:
+            case["ltv"] = round((case["loan_amount"] / case["property_value"]) * 100, 2)
+        else:
+            case["ltv"] = None
+    
+    total_loan = sum(c.get("loan_amount", 0) or 0 for c in cases)
+    total_commission = sum(c.get("gross_commission", 0) or 0 for c in cases)
+    
+    return {
+        "cases": cases,
+        "summary": {
+            "total_cases": len(cases),
+            "total_loan_value": total_loan,
+            "total_commission": total_commission
+        }
+    }
+
+@api_router.get("/reports/commission-paid")
+async def get_commission_paid_report(
+    request: Request,
+    start_date: str = Query(...),
+    end_date: str = Query(...)
+):
+    """Commission paid within a date range"""
+    await get_current_user(request)
+    
+    cases = await db.cases.find({
+        "commission_status": CommissionStatus.PAID,
+        "expected_completion_date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(1000)
+    
+    for case in cases:
+        client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+        case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
+    
+    total_commission = sum(c.get("gross_commission", 0) or 0 for c in cases)
+    total_proc_fees = sum(c.get("proc_fee_total", 0) or 0 for c in cases)
+    
+    return {
+        "cases": cases,
+        "summary": {
+            "total_cases": len(cases),
+            "total_commission_paid": total_commission,
+            "total_proc_fees": total_proc_fees,
+            "total_combined_revenue": total_commission + total_proc_fees
+        }
+    }
+
+@api_router.get("/reports/export")
+async def export_report(
+    request: Request,
+    report_type: str = Query(...),
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    format: str = Query(default="xlsx")
+):
+    """Export report to Excel or CSV"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+    import csv
+    
+    current_user = await get_current_user(request)
+    
+    if report_type == "cases_completed":
+        data = await get_cases_completed_report(request, start_date, end_date)
+        cases = data["cases"]
+        summary = data["summary"]
+        title = "Cases Completed Report"
+        headers = ["Client Name", "Loan Amount", "Property Value", "LTV %", "Lender", "Product Type", "Mortgage Type", "Completion Date", "Commission"]
+        
+        def row_fn(c):
+            return [
+                c.get("client_name", ""), c.get("loan_amount", ""), c.get("property_value", ""),
+                f"{c.get('ltv', '')}%" if c.get('ltv') else "", c.get("lender_name", ""),
+                (c.get("product_type", "") or "").replace("_", " ").title(),
+                (c.get("mortgage_type", "") or "").replace("_", " ").title(),
+                c.get("expected_completion_date", ""), c.get("gross_commission", "")
+            ]
+    else:
+        data = await get_commission_paid_report(request, start_date, end_date)
+        cases = data["cases"]
+        summary = data["summary"]
+        title = "Commission Paid Report"
+        headers = ["Client Name", "Loan Amount", "Lender", "Product Type", "Commission Amount", "Proc Fee", "Payment Date"]
+        
+        def row_fn(c):
+            return [
+                c.get("client_name", ""), c.get("loan_amount", ""), c.get("lender_name", ""),
+                (c.get("product_type", "") or "").replace("_", " ").title(),
+                c.get("gross_commission", ""), c.get("proc_fee_total", ""),
+                c.get("expected_completion_date", "")
+            ]
+    
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        for c in cases:
+            writer.writerow(row_fn(c))
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={title.replace(' ', '_')}_{start_date}_to_{end_date}.csv"}
+        )
+    
+    # Excel format
+    wb = Workbook()
+    ws = wb.active
+    ws.title = title
+    
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
+    
+    ws.merge_cells(f'A1:{get_column_letter(len(headers))}1')
+    title_cell = ws['A1']
+    title_cell.value = f"{title} ({start_date} to {end_date})"
+    title_cell.font = Font(bold=True, size=14, color="FFFFFF")
+    title_cell.fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    title_cell.alignment = Alignment(horizontal='center')
+    
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=2, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+    
+    for idx, c in enumerate(cases):
+        for col, val in enumerate(row_fn(c), 1):
+            cell = ws.cell(row=3 + idx, column=col, value=val)
+            if isinstance(val, (int, float)) and val:
+                cell.number_format = '£#,##0'
+    
+    # Summary row
+    sum_row = 3 + len(cases) + 1
+    ws.cell(row=sum_row, column=1, value="TOTALS").font = Font(bold=True)
+    for key, val in summary.items():
+        if key != "total_cases":
+            ws.cell(row=sum_row + list(summary.keys()).index(key), column=1, value=key.replace("_", " ").title()).font = Font(bold=True)
+            ws.cell(row=sum_row + list(summary.keys()).index(key), column=2, value=val).number_format = '£#,##0' if isinstance(val, (int, float)) else ''
+    
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 30)
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={title.replace(' ', '_')}_{start_date}_to_{end_date}.xlsx"}
+    )
 
 # ==================== EXPORT ROUTES ====================
 
