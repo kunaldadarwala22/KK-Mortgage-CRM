@@ -38,12 +38,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip the /me check.
-    // AuthCallback will exchange the session_id and establish the session first.
-    if (window.location.hash?.includes('session_id=')) {
-      setLoading(false);
-      return;
-    }
     checkAuth();
   }, [checkAuth]);
 
@@ -64,7 +58,6 @@ export const AuthProvider = ({ children }) => {
 
       const userData = await response.json();
       setUser(userData);
-      // Store token for API calls
       localStorage.setItem('token', userData.token);
       return userData;
     } catch (err) {
@@ -98,34 +91,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + '/dashboard';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-  };
-
-  const processSession = async (sessionId) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ session_id: sessionId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Session processing failed');
-      }
-
-      const userData = await response.json();
-      setUser(userData);
-      return userData;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  };
-
   const logout = async () => {
     try {
       await fetch(`${API_URL}/api/auth/logout`, {
@@ -146,8 +111,6 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     register,
-    loginWithGoogle,
-    processSession,
     logout,
     checkAuth,
     isAuthenticated: !!user,

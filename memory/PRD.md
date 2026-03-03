@@ -7,17 +7,18 @@ Build a comprehensive, web-based CRM system for a UK Mortgage & Insurance Broker
 - **Single advisor:** Kunal Kapadia is the sole account manager
 - **Commission:** Bank pays Proc Fee → user enters Proc Fee + Commission % → system auto-calculates Commission
 - **Date format:** UK format dd/mm/yyyy throughout
-- **Access:** Restricted to kunalkapadia2212@gmail.com only
+- **Access:** Email/password login only (Google OAuth removed). Default credentials: `kunal@kkmortgage.com` / `KKMortgage2024!`
 - **Multi-application clients:** One client can have multiple linked mortgage/insurance applications. Client info (address, income, employment) is shared across all their applications — no re-entry needed.
 
 ## Architecture
 - **Backend:** FastAPI + MongoDB
 - **Frontend:** React + Tailwind CSS + shadcn/ui + Recharts
-- **Auth:** JWT + Emergent-managed Google OAuth
+- **Auth:** JWT (email/password only)
 
 ## What's Been Implemented
 - [x] Full-stack CRM with branded UI (KK Mortgage logo, red/white theme)
-- [x] Auth (JWT & Google OAuth), access restricted to Kunal's account
+- [x] Auth (JWT email/password login), default credentials seeded for Kunal Kapadia
+- [x] Google OAuth removed — clean email/password only login
 - [x] Dashboard: Expiring Soon, Contact This Month, Recent Clients, Upcoming Tasks, KPIs, Forecasts, Charts
 - [x] Client management with row highlighting, enriched columns, LTV auto-calc
 - [x] **Client profile as central hub**: Summary banner (total apps, active cases, commission, proc fees, documents)

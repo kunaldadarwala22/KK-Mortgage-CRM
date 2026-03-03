@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone, timedelta
-import httpx
 import bcrypt
 import jwt as pyjwt
 from bson import ObjectId
@@ -21,7 +20,9 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Allowed email for access (whitelist)
-ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com"]
+DEFAULT_ADMIN_EMAIL = "kunal@kkmortgage.com"
+DEFAULT_ADMIN_PASSWORD = "KKMortgage2024!"
+DEFAULT_ADMIN_NAME = "Kunal Kapadia"
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -361,10 +362,6 @@ def calculate_ltv(loan_amount: float, property_price: float) -> float:
 
 @api_router.post("/auth/register")
 async def register(user: UserCreate):
-    # Check if email is allowed
-    if user.email.lower() not in [e.lower() for e in ALLOWED_EMAILS]:
-        raise HTTPException(status_code=403, detail="Access denied. Your email is not authorized to use this system.")
-    
     existing = await db.users.find_one({"email": user.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -395,10 +392,6 @@ async def register(user: UserCreate):
 
 @api_router.post("/auth/login")
 async def login(user: UserLogin, response: Response):
-    # Check if email is allowed
-    if user.email.lower() not in [e.lower() for e in ALLOWED_EMAILS]:
-        raise HTTPException(status_code=403, detail="Access denied. Your email is not authorized to use this system.")
-    
     db_user = await db.users.find_one({"email": user.email}, {"_id": 0})
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -437,84 +430,6 @@ async def login(user: UserLogin, response: Response):
         "picture": db_user.get("picture"),
         "token": token
     }
-
-@api_router.post("/auth/session")
-async def process_session(request: Request, response: Response):
-    """Process Emergent OAuth session_id and create local session"""
-    body = await request.json()
-    session_id = body.get("session_id")
-    
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id required")
-    
-    # Call Emergent Auth to get user data
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": session_id}
-            )
-            if resp.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session")
-            
-            data = resp.json()
-        except Exception as e:
-            logger.error(f"Error fetching session data: {e}")
-            raise HTTPException(status_code=401, detail="Failed to verify session")
-    
-    # Check if user exists
-    email = data.get("email")
-    
-    # Check if email is allowed
-    if email.lower() not in [e.lower() for e in ALLOWED_EMAILS]:
-        raise HTTPException(status_code=403, detail="Access denied. Your email is not authorized to use this system.")
-    
-    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
-    
-    if existing_user:
-        user_id = existing_user["user_id"]
-        # Update user data
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {"name": data.get("name"), "picture": data.get("picture")}}
-        )
-    else:
-        # Create new user
-        user_id = generate_id("user_")
-        user_doc = {
-            "user_id": user_id,
-            "email": email,
-            "name": data.get("name"),
-            "picture": data.get("picture"),
-            "role": UserRole.ADVISOR,  # Default role for OAuth users
-            "password": None,  # OAuth users don't have password
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.users.insert_one(user_doc)
-    
-    # Create session
-    session_token = data.get("session_token") or f"session_{uuid.uuid4().hex}"
-    session_doc = {
-        "session_id": generate_id("sess_"),
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.user_sessions.insert_one(session_doc)
-    
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password": 0})
-    return user
 
 @api_router.get("/auth/me")
 async def get_me(request: Request):
@@ -2403,6 +2318,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def seed_default_user():
+    """Seed the default admin user if not already present."""
+    existing = await db.users.find_one({"email": DEFAULT_ADMIN_EMAIL})
+    if not existing:
+        user_doc = {
+            "user_id": generate_id("user_"),
+            "email": DEFAULT_ADMIN_EMAIL,
+            "name": DEFAULT_ADMIN_NAME,
+            "password": hash_password(DEFAULT_ADMIN_PASSWORD),
+            "role": UserRole.ADVISOR,
+            "picture": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(user_doc)
+        logger.info(f"Default admin user created: {DEFAULT_ADMIN_EMAIL}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

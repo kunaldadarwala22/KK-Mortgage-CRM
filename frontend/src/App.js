@@ -1,11 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from './components/ui/sonner';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
-import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
@@ -22,14 +21,6 @@ import './App.css';
 
 // Router component that handles auth callback detection
 const AppRouter = () => {
-  const location = useLocation();
-  
-  // Check URL fragment for session_id synchronously during render
-  // This prevents race conditions by processing new session_id FIRST
-  if (location.hash?.includes('session_id=')) {
-    return <AuthCallback />;
-  }
-
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
