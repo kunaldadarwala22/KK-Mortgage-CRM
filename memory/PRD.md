@@ -9,12 +9,17 @@ Build a comprehensive, web-based CRM system for a UK Mortgage & Insurance Broker
 - **Auth:** JWT + Emergent-managed Google OAuth (restricted to kunalkapadia2212@gmail.com)
 - **Deployment:** Docker/Kubernetes, Supervisor-managed
 
+## Key Business Rules
+- **Single advisor:** Kunal Kapadia is the sole account manager. No multi-advisor features.
+- **Commission structure:** Bank pays a Proc Fee → user enters Proc Fee amount + their Commission Percentage → system auto-calculates: `Commission = Proc Fee × Percentage / 100`
+- **Date format:** UK format dd/mm/yyyy throughout the app
+- **Access:** Restricted to kunalkapadia2212@gmail.com only
+
 ## Architecture
 ```
 /app/
 ├── backend/
 │   ├── server.py        # Monolithic FastAPI app (all routes)
-│   ├── tests/
 │   ├── .env
 │   └── requirements.txt
 ├── frontend/src/
@@ -28,9 +33,9 @@ Build a comprehensive, web-based CRM system for a UK Mortgage & Insurance Broker
 
 ## DB Schema (MongoDB)
 - **users:** {email, hashed_password, name, role}
-- **clients:** {client_id, firstName, lastName, email, phone, address, property_price, loan_amount, financial_snapshot, lead_source, ...}
-- **cases:** {case_id, client_id, status, productType, mortgageType, lender, loanAmount, gross_commission, proc_fee_total, commission_status, expected_completion_date, product_expiry_date, ...}
-- **tasks:** {task_id, case_id, description, due_date, status, assigned_to, completed}
+- **clients:** {client_id, firstName, lastName, email, phone, address, property_price, loan_amount, lead_source, ...}
+- **cases:** {case_id, client_id, status, productType, mortgageType, lender, loanAmount, proc_fee_total, commission_percentage, gross_commission (auto-calc), commission_status, expected_completion_date, product_expiry_date, ...}
+- **tasks:** {task_id, case_id, description, due_date, status, completed}
 - **documents:** {document_id, client_id, document_type, file_path}
 
 ## Key API Endpoints
@@ -39,49 +44,38 @@ Build a comprehensive, web-based CRM system for a UK Mortgage & Insurance Broker
 - `/api/cases` (GET w/ filters, POST), `/api/cases/<id>` (GET, PUT)
 - `/api/tasks` (GET, POST 201), `/api/tasks/<id>` (PUT)
 - `/api/dashboard-stats`, `/api/export/clients`, `/api/export/all`
-- `/api/commission/monthly` (GET w/ year, start_date, end_date)
-- `/api/commission/analytics` (GET w/ date range, product_filter, commission_status)
-- `/api/analytics/mortgage-types` (GET)
-- `/api/reports/cases-completed` (GET w/ start_date, end_date)
-- `/api/reports/commission-paid` (GET w/ start_date, end_date)
-- `/api/reports/export` (GET w/ report_type, start_date, end_date, format)
+- `/api/commission/monthly`, `/api/commission/analytics`
+- `/api/analytics/mortgage-types`
+- `/api/reports/cases-completed`, `/api/reports/commission-paid`, `/api/reports/export`
 
-## What's Been Implemented (as of 2026-03-03)
-- [x] Full-stack CRM foundation with branded UI (KK Mortgage logo, red/white theme)
-- [x] Role-based authentication (JWT & Google OAuth)
-- [x] Access restriction to kunalkapadia2212@gmail.com
-- [x] Dashboard with KPI cards, revenue charts, pipeline distribution
-- [x] Client management (CRUD, search, filters, list view)
-- [x] **Client list with row highlighting** (green=completed, red=lost, amber=expiring 90d)
-- [x] **Client list new columns**: Security Address, Postcode, Loan Amount, Property Value, auto-calc LTV, Case Status, Commission Status, Completion Date, Lead Source
-- [x] Case management (CRUD, detail page with full editing)
-- [x] **Cases filter bug fixed** (was crashing from empty SelectItem values)
+## What's Been Implemented
+- [x] Full-stack CRM with branded UI (KK Mortgage logo, red/white theme)
+- [x] Role-based auth (JWT & Google OAuth), access restricted to Kunal's account
+- [x] Dashboard with KPI cards, revenue charts, pipeline distribution, working "Add New Client" button
+- [x] Client management with row highlighting (green=completed, red=lost, amber=expiring 90d)
+- [x] Client table: Name, Security Address, Postcode, Loan Amount, Property Value, LTV, Case Status, Commission Status, Completion Date, Lead Source
+- [x] Case management with filters (status, product type, commission status, lender)
+- [x] Case detail with Proc Fee + Commission % auto-calc structure
 - [x] Pipeline Kanban board
-- [x] **Commission module enhanced**: Monthly breakdown (Pending/Submitted/Paid/Clawed Back), Mortgage vs Insurance split, Proc Fees, Monthly/YTD/Custom Range toggle, stacked bar charts, detail table with totals
-- [x] Commission tracker with inline status updates
-- [x] Task management (CRUD)
-- [x] **Analytics page with 6 tabs**: Lead Analytics, Mortgage Types, Commission Analytics, Revenue, Pipeline, Retention
-- [x] **Mortgage Type Analytics**: Case count, percentage, commission, avg loan per type; Pie chart + Bar chart
-- [x] **Commission Analytics module**: By Month, Lender, Product Type, Lead Source, Advisor; with date range/product/status filters
-- [x] **Custom Business Reports page**: Cases Completed + Commission Paid within date range, with CSV/Excel export
-- [x] Documents page (UI only)
-- [x] Generic data export page
-- [x] Formatted Client Excel Export
+- [x] Commission module: Monthly breakdown, toggle (Monthly/YTD/Custom), stacked charts, detail table
+- [x] Task management
+- [x] Analytics: 6 tabs (Lead, Mortgage Types, Commission Analytics, Revenue, Pipeline, Retention)
+- [x] Custom Business Reports: Cases Completed + Commission Paid with CSV/Excel export
+- [x] UK date format (dd/mm/yyyy) throughout all pages
+- [x] Single advisor: Kunal Kapadia hardcoded, no multi-advisor dropdowns
 
 ## Prioritized Backlog
 
 ### P1 — Upcoming
-- Document Management: File upload for client documents (object storage integration)
-- Task Automation: Auto-generate tasks based on product expiry dates
+- Document Management: File upload for client documents (object storage)
+- Task Automation: Auto-generate tasks from product expiry dates
 - Retention Dashboards: "Products Expiring This Year" & "Clients To Contact This Month"
 
 ### P2 — Future
-- Advanced Analytics: More granular revenue per referral partner charts
 - Audit Log: Track all data modifications
-- Email Automation: Templates & daily summary email
+- Email Automation: Templates & daily summary
 - Backend Refactoring: Break monolithic server.py into /routes/ modules
 
 ## Testing
-- Backend: 21/21 tests pass (100%) across all iterations
-- Frontend: All pages and flows verified (100%)
-- Test reports: /app/test_reports/iteration_1.json, iteration_2.json, iteration_3.json
+- All tests pass (100%) across iterations 1-4
+- Test reports: /app/test_reports/iteration_{1-4}.json
