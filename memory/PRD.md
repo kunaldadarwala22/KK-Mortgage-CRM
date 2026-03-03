@@ -7,7 +7,9 @@ Build a comprehensive, web-based CRM system for a UK Mortgage & Insurance Broker
 - **Single advisor:** Kunal Kapadia is the sole account manager
 - **Commission:** Bank pays Proc Fee → user enters Proc Fee + Commission % → system auto-calculates Commission
 - **Date format:** UK format dd/mm/yyyy throughout
-- **Access:** Email/password login only (Google OAuth removed). Default credentials: `kunal@kkmortgage.com` / `KKMortgage2024!`
+- **Access:** Email/password login only (Google OAuth removed). Two users seeded:
+  - `kunalkapadia2212@gmail.com` / `Admin2468!!!`
+  - `kunal.dadarwala22@gmail.com` / `Admin2468!!!`
 - **Multi-application clients:** One client can have multiple linked mortgage/insurance applications. Client info (address, income, employment) is shared across all their applications — no re-entry needed.
 
 ## Architecture

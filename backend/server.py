@@ -20,9 +20,13 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Allowed email for access (whitelist)
-DEFAULT_ADMIN_EMAIL = "kunal@kkmortgage.com"
-DEFAULT_ADMIN_PASSWORD = "KKMortgage2024!"
+DEFAULT_ADMIN_EMAIL = "kunalkapadia2212@gmail.com"
+DEFAULT_ADMIN_PASSWORD = "Admin2468!!!"
 DEFAULT_ADMIN_NAME = "Kunal Kapadia"
+
+SECOND_USER_EMAIL = "kunal.dadarwala22@gmail.com"
+SECOND_USER_PASSWORD = "Admin2468!!!"
+SECOND_USER_NAME = "Kunal Dadarwala"
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -2321,20 +2325,27 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def seed_default_user():
-    """Seed the default admin user if not already present."""
-    existing = await db.users.find_one({"email": DEFAULT_ADMIN_EMAIL})
-    if not existing:
-        user_doc = {
-            "user_id": generate_id("user_"),
-            "email": DEFAULT_ADMIN_EMAIL,
-            "name": DEFAULT_ADMIN_NAME,
-            "password": hash_password(DEFAULT_ADMIN_PASSWORD),
-            "role": UserRole.ADVISOR,
-            "picture": None,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.users.insert_one(user_doc)
-        logger.info(f"Default admin user created: {DEFAULT_ADMIN_EMAIL}")
+    """Seed default users if not already present, or fix missing passwords."""
+    for email, name, password in [
+        (DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD),
+        (SECOND_USER_EMAIL, SECOND_USER_NAME, SECOND_USER_PASSWORD),
+    ]:
+        existing = await db.users.find_one({"email": email})
+        if not existing:
+            user_doc = {
+                "user_id": generate_id("user_"),
+                "email": email,
+                "name": name,
+                "password": hash_password(password),
+                "role": UserRole.ADVISOR,
+                "picture": None,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(user_doc)
+            logger.info(f"Default user created: {email}")
+        elif not existing.get("password"):
+            await db.users.update_one({"email": email}, {"$set": {"password": hash_password(password)}})
+            logger.info(f"Fixed missing password for: {email}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
