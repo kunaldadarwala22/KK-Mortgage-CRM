@@ -1,124 +1,83 @@
-# KK Mortgage Solutions CRM - Product Requirements Document
-
-## Project Overview
-A comprehensive UK Mortgage & Insurance Broker CRM System built for KK Mortgage Solutions.
+# KK Mortgage Solutions — CRM System PRD
 
 ## Original Problem Statement
-Build a secure, scalable, web-based CRM system designed specifically for a UK Mortgage & Insurance Broker business with:
-- Lead Management System
-- Case Pipeline Tracker (Kanban)
-- Revenue & Commission Engine
-- Retention & Re-Fix System
-- KPI & Analytics Dashboard
-- Task & Automation Manager
-- Compliance & Document Management Tool
+Build a comprehensive, web-based CRM system for a UK Mortgage & Insurance Broker business named "KK Mortgage Solutions". Features include authentication, client/case management, pipeline Kanban, commission/revenue engine, task management, analytics, retention automation, document management, GDPR compliance, and a CEO dashboard.
 
-## User Choices
-- Authentication: Both JWT + Google OAuth
-- Email: Mocked for now (integration skipped)
-- 2FA: Skipped for initial build
-- Theme: Clean light theme with white/red accents
-- Branding: KK Mortgage Solutions logo and colors
+## Tech Stack
+- **Backend:** FastAPI, MongoDB (pymongo), Pandas, XlsxWriter
+- **Frontend:** React, Tailwind CSS, shadcn/ui, Recharts
+- **Auth:** JWT + Emergent-managed Google OAuth (restricted to kunalkapadia2212@gmail.com)
+- **Deployment:** Docker/Kubernetes, Supervisor-managed
 
-## Core Requirements (Static)
-1. Authentication & Security
-   - JWT-based login
-   - Emergent Google OAuth
-   - Role-based access (Admin, Advisor, Admin Staff)
-   - Audit logging
+## Architecture
+```
+/app/
+├── backend/
+│   ├── server.py        # Monolithic FastAPI app (all routes)
+│   ├── tests/
+│   │   └── test_crm_api.py
+│   ├── .env
+│   └── requirements.txt
+├── frontend/src/
+│   ├── pages/           # Dashboard, Clients, Cases, Pipeline, Commission, Tasks, Analytics, Documents, Export, Login
+│   ├── components/      # Layout, Sidebar, ProtectedRoute, ui/
+│   ├── context/         # AuthContext
+│   ├── lib/             # api.js
+│   └── App.js
+└── memory/PRD.md
+```
 
-2. Client Management
-   - Personal & financial information
-   - LTV auto-calculation
-   - Lead source tracking
-   - Compliance flags
+## DB Schema (MongoDB)
+- **users:** {email, hashed_password, name, role}
+- **clients:** {client_id, firstName, lastName, email, phone, address, financial_snapshot, lead_source, ...}
+- **cases:** {case_id, client_id, status, productType, lender, loanAmount, commission_details, dates, ...}
+- **tasks:** {task_id, case_id, description, due_date, status, assigned_to, completed}
+- **documents:** {document_id, client_id, document_type, file_path}
 
-3. Case/Pipeline Management
-   - 7 status stages (Kanban)
-   - Mortgage & Insurance products
-   - Commission tracking
+## Key API Endpoints
+- `/api/auth/login`, `/api/auth/register`, `/api/auth/google/callback`
+- `/api/clients` (GET, POST 201), `/api/clients/<id>` (GET, PUT, DELETE)
+- `/api/cases` (GET, POST), `/api/cases/<id>` (GET, PUT)
+- `/api/tasks` (GET, POST 201), `/api/tasks/<id>` (PUT)
+- `/api/dashboard-stats`, `/api/export/clients`, `/api/export/all`
+- `/api/lead-analytics`, `/api/retention`
 
-4. Task System
-   - Manual + auto-generated tasks
-   - Due dates and priorities
-   - Assignment to users
-
-5. Document Management
-   - File upload with types
-   - Client association
-
-6. Analytics & Reporting
-   - KPI dashboard
-   - Revenue forecasting (30/60/90 days)
-   - Lead source analytics
-   - Retention tracking
-
-## What's Been Implemented (March 3, 2026)
-### Backend (FastAPI + MongoDB)
-- [x] User authentication (JWT + Google OAuth)
-- [x] Client CRUD with all required fields
-- [x] Case management with 7 status stages
-- [x] Task system with auto-generation
-- [x] Document upload and management
-- [x] Dashboard statistics API
-- [x] Revenue and forecast analytics
-- [x] Lead source analytics
-- [x] Retention tracking
-- [x] Audit logging
-
-### Frontend (React + Tailwind + shadcn)
-- [x] Login page with branding
-- [x] Dashboard with KPIs and charts
-- [x] Clients list with search/filter
-- [x] Client detail with tabs
-- [x] Pipeline Kanban board (drag-drop)
-- [x] Cases list view
-- [x] Tasks management
-- [x] Commission tracker
-- [x] Analytics with visualizations
-- [x] Documents management
-- [x] Responsive sidebar navigation
+## What's Been Implemented (as of 2026-03-03)
+- [x] Full-stack CRM foundation with branded UI (KK Mortgage logo, red/white theme)
+- [x] Role-based authentication (JWT & Google OAuth)
+- [x] Access restriction to kunalkapadia2212@gmail.com
+- [x] Dashboard with KPI cards, revenue charts, pipeline distribution
+- [x] Client management (CRUD, search, filters, list view)
+- [x] Case management (CRUD, detail page with full editing)
+- [x] Pipeline Kanban board
+- [x] Commission tracking with charts and forecast (30/60/90 days)
+- [x] Task management (CRUD)
+- [x] Analytics page (Lead Analytics, Revenue, Pipeline, Retention tabs)
+- [x] Documents page (UI only)
+- [x] Generic data export page
+- [x] **Formatted Client Excel Export** (backend + frontend "Export to Excel" button)
+- [x] POST /api/clients returns 201, POST /api/tasks returns 201
+- [x] Chart container sizing fix (minWidth/minHeight on ResponsiveContainer)
 
 ## Prioritized Backlog
 
-### P0 (Critical - Done)
-- [x] Core authentication
-- [x] Client management
-- [x] Case pipeline
-- [x] Basic dashboard
+### P1 — Upcoming
+- Document Management: File upload for client documents (object storage integration)
+- Task Automation: Auto-generate tasks based on product expiry dates
+- Retention Dashboards: "Products Expiring This Year" & "Clients To Contact This Month"
 
-### P1 (High Priority - Pending)
-- [ ] Email automation integration (SendGrid/Resend)
-- [ ] Case detail page (full view/edit)
-- [ ] Retention reminder automation (6/3/1 month)
-- [ ] Data export (CSV/Excel)
-- [ ] Settings page
+### P2 — Future
+- Advanced Analytics: Conversion rate per lead source, revenue per referral partner, dedicated chart pages
+- Audit Log: Track all data modifications
+- Email Automation: Templates & daily summary email
+- Backend Refactoring: Break monolithic server.py into /routes/ modules
 
-### P2 (Medium Priority - Pending)
-- [ ] Two-factor authentication
-- [ ] Multi-branch support
-- [ ] Advisor commission splits
-- [ ] Advanced search filters
-- [ ] Bulk operations
+## Testing
+- Backend: 21/21 tests pass (100%)
+- Frontend: All pages and flows verified (100%)
+- Test reports: /app/test_reports/iteration_1.json, /app/test_reports/iteration_2.json
+- Test file: /app/backend/tests/test_crm_api.py
 
-### P3 (Low Priority - Future)
-- [ ] API integrations (lenders, marketing)
-- [ ] Custom report builder
-- [ ] Mobile app
-- [ ] AI lead scoring
-
-## Technical Stack
-- Backend: FastAPI, MongoDB, PyJWT, bcrypt
-- Frontend: React 18, Tailwind CSS, shadcn/ui, Recharts
-- Auth: JWT + Emergent Google OAuth
-
-## Test Credentials
-- Email: admin@kkmortgage.co.uk
-- Password: Admin123!
-- Role: Admin
-
-## Next Tasks
-1. Add retention reminder automation
-2. Implement email templates
-3. Add case detail page
-4. Export functionality
+## Notes
+- Email sending is NOT implemented (user deferred)
+- Console warnings for Recharts container dimensions are cosmetic only
