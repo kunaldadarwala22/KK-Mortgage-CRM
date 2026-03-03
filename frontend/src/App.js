@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
 import Cases from './pages/Cases';
+import CaseDetail from './pages/CaseDetail';
 import Pipeline from './pages/Pipeline';
 import Tasks from './pages/Tasks';
 import Commission from './pages/Commission';
@@ -78,7 +79,7 @@ const AppRouter = () => {
         element={
           <ProtectedRoute>
             <Layout>
-              <ClientDetail />
+              <CaseDetail />
             </Layout>
           </ProtectedRoute>
         }
