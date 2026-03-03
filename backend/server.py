@@ -21,7 +21,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Allowed email for access (whitelist)
-ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com"]
+ALLOWED_EMAILS = ["kunalkapadia2212@gmail.com", "test@kkmortgage.com"]
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']

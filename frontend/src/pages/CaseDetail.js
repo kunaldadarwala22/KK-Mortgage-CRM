@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { casesAPI, clientsAPI, usersAPI, tasksAPI } from '../lib/api';
+import { casesAPI, clientsAPI, tasksAPI } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -87,7 +87,6 @@ const CaseDetail = () => {
   const navigate = useNavigate();
   const [caseData, setCaseData] = useState(null);
   const [client, setClient] = useState(null);
-  const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -99,7 +98,6 @@ const CaseDetail = () => {
     description: '',
     due_date: '',
     priority: 'medium',
-    assigned_to: '',
   });
 
   useEffect(() => {
@@ -109,15 +107,13 @@ const CaseDetail = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [caseResponse, usersResponse, tasksResponse] = await Promise.all([
+      const [caseResponse, tasksResponse] = await Promise.all([
         casesAPI.get(caseId),
-        usersAPI.getAll(),
         tasksAPI.getAll({ case_id: caseId }),
       ]);
       
       setCaseData(caseResponse);
       setEditedCase(caseResponse);
-      setUsers(usersResponse || []);
       setTasks(tasksResponse.tasks || []);
       
       // Load client data
@@ -135,17 +131,19 @@ const CaseDetail = () => {
 
   const handleSaveCase = async () => {
     try {
+      const procFee = editedCase.proc_fee_total ? parseFloat(editedCase.proc_fee_total) : null;
+      const commPct = editedCase.commission_percentage ? parseFloat(editedCase.commission_percentage) : null;
+      const grossComm = (procFee && commPct) ? Math.round((procFee * commPct / 100) * 100) / 100 : null;
+
       const updateData = {
         ...editedCase,
         loan_amount: editedCase.loan_amount ? parseFloat(editedCase.loan_amount) : null,
         term_years: editedCase.term_years ? parseInt(editedCase.term_years) : null,
         fixed_rate_period: editedCase.fixed_rate_period ? parseInt(editedCase.fixed_rate_period) : null,
         interest_rate: editedCase.interest_rate ? parseFloat(editedCase.interest_rate) : null,
-        commission_percentage: editedCase.commission_percentage ? parseFloat(editedCase.commission_percentage) : null,
-        gross_commission: editedCase.gross_commission ? parseFloat(editedCase.gross_commission) : null,
-        your_commission_share: editedCase.your_commission_share ? parseFloat(editedCase.your_commission_share) : null,
-        proc_fee_value: editedCase.proc_fee_value ? parseFloat(editedCase.proc_fee_value) : null,
-        proc_fee_total: editedCase.proc_fee_total ? parseFloat(editedCase.proc_fee_total) : null,
+        proc_fee_total: procFee,
+        commission_percentage: commPct,
+        gross_commission: grossComm,
       };
       
       await casesAPI.update(caseId, updateData);
@@ -190,7 +188,7 @@ const CaseDetail = () => {
       });
       toast.success('Task created successfully');
       setShowTaskDialog(false);
-      setNewTask({ title: '', description: '', due_date: '', priority: 'medium', assigned_to: '' });
+      setNewTask({ title: '', description: '', due_date: '', priority: 'medium' });
       loadData();
     } catch (error) {
       toast.error(error.message || 'Failed to create task');
@@ -227,6 +225,13 @@ const CaseDetail = () => {
 
   const formatStatus = (status) => {
     return status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
+  };
+
+  const formatDate = (d) => {
+    if (!d) return '-';
+    const parts = d.split('T')[0].split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
   };
 
   const getStatusColor = (status) => {
@@ -434,20 +439,8 @@ const CaseDetail = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Assigned Advisor</Label>
-                      <Select
-                        value={editedCase.advisor_id || ''}
-                        onValueChange={(value) => setEditedCase({ ...editedCase, advisor_id: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select advisor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users.map((user) => (
-                            <SelectItem key={user.user_id} value={user.user_id}>{user.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label>Account Manager</Label>
+                      <Input value="Kunal Kapadia" disabled className="bg-slate-50" />
                     </div>
                   </>
                 ) : (
@@ -478,10 +471,10 @@ const CaseDetail = () => {
                       <p className="font-medium">{caseData.application_reference || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Assigned Advisor</p>
+                      <p className="text-sm text-slate-500">Account Manager</p>
                       <p className="font-medium flex items-center gap-2">
                         <User className="h-4 w-4 text-slate-400" />
-                        {caseData.advisor_name || '-'}
+                        Kunal Kapadia
                       </p>
                     </div>
                   </>
@@ -642,118 +635,65 @@ const CaseDetail = () => {
             <Card className="border-slate-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-slate-500" />
-                  Commission Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {editing ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Commission Percentage (%)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={editedCase.commission_percentage || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, commission_percentage: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Gross Commission (£)</Label>
-                      <Input
-                        type="number"
-                        value={editedCase.gross_commission || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, gross_commission: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Your Commission Share (£)</Label>
-                      <Input
-                        type="number"
-                        value={editedCase.your_commission_share || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, your_commission_share: e.target.value })}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <p className="text-sm text-slate-500">Commission Rate</p>
-                      <p className="font-medium">{caseData.commission_percentage ? `${caseData.commission_percentage}%` : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Gross Commission</p>
-                      <p className="text-2xl font-bold text-green-600">{formatCurrency(caseData.gross_commission)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Your Share</p>
-                      <p className="text-xl font-bold text-slate-900">{formatCurrency(caseData.your_commission_share)}</p>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
                   <PoundSterling className="h-5 w-5 text-slate-500" />
-                  Proc Fee
+                  Proc Fee & Commission
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {editing ? (
                   <>
                     <div className="space-y-2">
-                      <Label>Proc Fee Type</Label>
-                      <Select
-                        value={editedCase.proc_fee_type || ''}
-                        onValueChange={(value) => setEditedCase({ ...editedCase, proc_fee_type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percentage">Percentage</SelectItem>
-                          <SelectItem value="fixed">Fixed Amount</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Proc Fee Value {editedCase.proc_fee_type === 'percentage' ? '(%)' : '(£)'}</Label>
+                      <Label>Proc Fee (£) — Amount paid by lender</Label>
                       <Input
                         type="number"
                         step="0.01"
-                        value={editedCase.proc_fee_value || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, proc_fee_value: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Proc Fee Total (£)</Label>
-                      <Input
-                        type="number"
+                        placeholder="e.g. 500"
                         value={editedCase.proc_fee_total || ''}
                         onChange={(e) => setEditedCase({ ...editedCase, proc_fee_total: e.target.value })}
+                        data-testid="proc-fee-input"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Your Commission Percentage (%)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g. 35"
+                        value={editedCase.commission_percentage || ''}
+                        onChange={(e) => setEditedCase({ ...editedCase, commission_percentage: e.target.value })}
+                        data-testid="commission-pct-input"
+                      />
+                    </div>
+                    {editedCase.proc_fee_total && editedCase.commission_percentage && (
+                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm text-green-700">Your Commission (auto-calculated)</p>
+                        <p className="text-2xl font-bold text-green-800">
+                          {formatCurrency(Math.round((parseFloat(editedCase.proc_fee_total) * parseFloat(editedCase.commission_percentage) / 100) * 100) / 100)}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          {formatCurrency(editedCase.proc_fee_total)} × {editedCase.commission_percentage}%
+                        </p>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
                     <div>
-                      <p className="text-sm text-slate-500">Fee Type</p>
-                      <p className="font-medium">{formatStatus(caseData.proc_fee_type)}</p>
+                      <p className="text-sm text-slate-500">Proc Fee (from lender)</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(caseData.proc_fee_total)}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Fee Value</p>
-                      <p className="font-medium">
-                        {caseData.proc_fee_type === 'percentage' 
-                          ? `${caseData.proc_fee_value}%` 
-                          : formatCurrency(caseData.proc_fee_value)}
-                      </p>
+                      <p className="text-sm text-slate-500">Your Commission Rate</p>
+                      <p className="font-medium">{caseData.commission_percentage ? `${caseData.commission_percentage}%` : '-'}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Total Proc Fee</p>
-                      <p className="text-xl font-bold text-blue-600">{formatCurrency(caseData.proc_fee_total)}</p>
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-sm text-green-700">Your Commission</p>
+                      <p className="text-2xl font-bold text-green-800">{formatCurrency(caseData.gross_commission)}</p>
+                      {caseData.proc_fee_total && caseData.commission_percentage && (
+                        <p className="text-xs text-green-600 mt-1">
+                          {formatCurrency(caseData.proc_fee_total)} × {caseData.commission_percentage}%
+                        </p>
+                      )}
                     </div>
                   </>
                 )}
@@ -847,27 +787,27 @@ const CaseDetail = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-500 mb-1">Application Submitted</p>
-                    <p className="font-medium text-lg">{caseData.date_application_submitted || '-'}</p>
+                    <p className="font-medium text-lg">{formatDate(caseData.date_application_submitted)}</p>
                   </div>
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-600 mb-1">Expected Completion</p>
-                    <p className="font-medium text-lg">{caseData.expected_completion_date || '-'}</p>
+                    <p className="font-medium text-lg">{formatDate(caseData.expected_completion_date)}</p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg">
                     <p className="text-sm text-green-600 mb-1">Product Start Date</p>
-                    <p className="font-medium text-lg">{caseData.product_start_date || '-'}</p>
+                    <p className="font-medium text-lg">{formatDate(caseData.product_start_date)}</p>
                   </div>
                   <div className="p-4 bg-yellow-50 rounded-lg">
                     <p className="text-sm text-yellow-600 mb-1">Product Review Date</p>
-                    <p className="font-medium text-lg">{caseData.product_review_date || '-'}</p>
+                    <p className="font-medium text-lg">{formatDate(caseData.product_review_date)}</p>
                   </div>
                   <div className="p-4 bg-red-50 rounded-lg">
                     <p className="text-sm text-red-600 mb-1">Product Expiry Date</p>
-                    <p className="font-medium text-lg">{caseData.product_expiry_date || '-'}</p>
+                    <p className="font-medium text-lg">{formatDate(caseData.product_expiry_date)}</p>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-500 mb-1">Case Created</p>
-                    <p className="font-medium text-lg">{caseData.created_at?.split('T')[0] || '-'}</p>
+                    <p className="font-medium text-lg">{formatDate(caseData.created_at)}</p>
                   </div>
                 </div>
               )}
@@ -982,20 +922,8 @@ const CaseDetail = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Assign To</Label>
-              <Select
-                value={newTask.assigned_to}
-                onValueChange={(value) => setNewTask({ ...newTask, assigned_to: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.user_id} value={user.user_id}>{user.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Assigned To</Label>
+              <Input value="Kunal Kapadia" disabled className="bg-slate-50" />
             </div>
           </div>
           <DialogFooter>

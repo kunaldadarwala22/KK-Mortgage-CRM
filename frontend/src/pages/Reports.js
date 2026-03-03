@@ -26,6 +26,12 @@ const Reports = () => {
     if (!v && v !== 0) return '£0';
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v);
   };
+  const fmtDate = (d) => {
+    if (!d) return '-';
+    const parts = d.split('T')[0].split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
+  };
   const fmtStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
 
   const handleGenerate = async () => {
@@ -181,7 +187,7 @@ const Reports = () => {
                               <TableCell>{c.ltv ? <Badge className={c.ltv > 90 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>{c.ltv}%</Badge> : '-'}</TableCell>
                               <TableCell>{c.lender_name || '-'}</TableCell>
                               <TableCell>{fmtStatus(c.product_type)}</TableCell>
-                              <TableCell>{c.expected_completion_date || '-'}</TableCell>
+                              <TableCell>{fmtDate(c.expected_completion_date)}</TableCell>
                               <TableCell className="font-medium text-green-700">{fmt(c.gross_commission)}</TableCell>
                             </TableRow>
                           ))}
@@ -267,7 +273,7 @@ const Reports = () => {
                               <TableCell>{fmtStatus(c.product_type)}</TableCell>
                               <TableCell className="font-medium text-green-700">{fmt(c.gross_commission)}</TableCell>
                               <TableCell>{fmt(c.proc_fee_total)}</TableCell>
-                              <TableCell>{c.expected_completion_date || '-'}</TableCell>
+                              <TableCell>{fmtDate(c.expected_completion_date)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

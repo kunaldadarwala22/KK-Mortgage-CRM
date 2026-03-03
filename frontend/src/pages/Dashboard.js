@@ -136,7 +136,7 @@ const Dashboard = () => {
         </div>
         <Button 
           className="bg-red-600 hover:bg-red-700"
-          onClick={() => navigate('/clients/new')}
+          onClick={() => navigate('/clients', { state: { openAddDialog: true } })}
           data-testid="add-client-btn"
         >
           Add New Client

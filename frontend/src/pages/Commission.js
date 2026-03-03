@@ -91,6 +91,13 @@ const Commission = () => {
     }
   };
 
+  const formatDate = (d) => {
+    if (!d) return '';
+    const parts = d.split('T')[0].split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
+  };
+
   const formatCurrency = (v) => {
     if (!v && v !== 0) return '£0';
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v);
@@ -367,7 +374,7 @@ const Commission = () => {
                 <div key={c.case_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-testid={`commission-row-${c.case_id}`}>
                   <div>
                     <p className="font-medium text-slate-900">{c.client_name}</p>
-                    <p className="text-sm text-slate-500">{c.lender_name || 'No lender'} · {c.product_type}{c.expected_completion_date ? ` · Due: ${c.expected_completion_date}` : ''}</p>
+                    <p className="text-sm text-slate-500">{c.lender_name || 'No lender'} · {c.product_type}{c.expected_completion_date ? ` · Due: ${formatDate(c.expected_completion_date)}` : ''}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { casesAPI, clientsAPI, usersAPI } from '../lib/api';
+import { casesAPI, clientsAPI } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -33,13 +33,11 @@ const Cases = () => {
   const navigate = useNavigate();
   const [cases, setCases] = useState([]);
   const [clients, setClients] = useState([]);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     status: 'all',
     product_type: 'all',
-    advisor_id: 'all',
     commission_status: 'all',
     lender_name: '',
   });
@@ -49,7 +47,7 @@ const Cases = () => {
     client_id: '', product_type: '', mortgage_type: '', insurance_type: '',
     lender_name: '', loan_amount: '', term_years: '', interest_rate: '',
     expected_completion_date: '', product_expiry_date: '',
-    commission_percentage: '', gross_commission: '', advisor_id: '',
+    proc_fee_total: '', commission_percentage: '',
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState(null);
@@ -61,18 +59,15 @@ const Cases = () => {
       const apiFilters = {};
       if (filters.status !== 'all') apiFilters.status = filters.status;
       if (filters.product_type !== 'all') apiFilters.product_type = filters.product_type;
-      if (filters.advisor_id !== 'all') apiFilters.advisor_id = filters.advisor_id;
       if (filters.commission_status !== 'all') apiFilters.commission_status = filters.commission_status;
       if (filters.lender_name) apiFilters.lender_name = filters.lender_name;
 
-      const [casesData, clientsData, usersData] = await Promise.all([
+      const [casesData, clientsData] = await Promise.all([
         casesAPI.getAll(apiFilters),
         clientsAPI.getAll({ limit: 500, enrich_cases: false }),
-        usersAPI.getAll(),
       ]);
       setCases(casesData.cases || []);
       setClients(clientsData.clients || []);
-      setUsers(usersData || []);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError('Failed to load cases. Please try again.');
@@ -86,18 +81,23 @@ const Cases = () => {
 
   const handleAddCase = async () => {
     try {
+      const procFee = newCase.proc_fee_total ? parseFloat(newCase.proc_fee_total) : null;
+      const commPct = newCase.commission_percentage ? parseFloat(newCase.commission_percentage) : null;
+      const grossComm = (procFee && commPct) ? Math.round((procFee * commPct / 100) * 100) / 100 : null;
+      
       const caseData = {
         ...newCase,
         loan_amount: newCase.loan_amount ? parseFloat(newCase.loan_amount) : null,
         term_years: newCase.term_years ? parseInt(newCase.term_years) : null,
         interest_rate: newCase.interest_rate ? parseFloat(newCase.interest_rate) : null,
-        commission_percentage: newCase.commission_percentage ? parseFloat(newCase.commission_percentage) : null,
-        gross_commission: newCase.gross_commission ? parseFloat(newCase.gross_commission) : null,
+        proc_fee_total: procFee,
+        commission_percentage: commPct,
+        gross_commission: grossComm,
       };
       await casesAPI.create(caseData);
       toast.success('Case created successfully');
       setShowAddDialog(false);
-      setNewCase({ client_id: '', product_type: '', mortgage_type: '', insurance_type: '', lender_name: '', loan_amount: '', term_years: '', interest_rate: '', expected_completion_date: '', product_expiry_date: '', commission_percentage: '', gross_commission: '', advisor_id: '' });
+      setNewCase({ client_id: '', product_type: '', mortgage_type: '', insurance_type: '', lender_name: '', loan_amount: '', term_years: '', interest_rate: '', expected_completion_date: '', product_expiry_date: '', proc_fee_total: '', commission_percentage: '' });
       loadData();
     } catch (err) {
       toast.error(err.message || 'Failed to create case');
@@ -118,6 +118,12 @@ const Cases = () => {
   };
 
   const formatCurrency = (v) => v ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v) : '-';
+  const formatDate = (d) => {
+    if (!d) return '-';
+    const parts = d.split('T')[0].split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
+  };
   const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
   const getStatusColor = (s) => ({
     new_lead: 'bg-blue-100 text-blue-800', fact_find_complete: 'bg-purple-100 text-purple-800',
@@ -126,7 +132,7 @@ const Cases = () => {
     lost_case: 'bg-red-100 text-red-800',
   }[s] || 'bg-slate-100 text-slate-800');
 
-  const clearFilters = () => setFilters({ status: 'all', product_type: 'all', advisor_id: 'all', commission_status: 'all', lender_name: '' });
+  const clearFilters = () => setFilters({ status: 'all', product_type: 'all', commission_status: 'all', lender_name: '' });
 
   if (loading) {
     return (
@@ -167,7 +173,7 @@ const Cases = () => {
           </div>
 
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-5 gap-4">
+            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
@@ -195,16 +201,6 @@ const Cases = () => {
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     {COMMISSION_STATUSES.map((s) => <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Advisor</Label>
-                <Select value={filters.advisor_id} onValueChange={(v) => setFilters({ ...filters, advisor_id: v })}>
-                  <SelectTrigger data-testid="filter-advisor"><SelectValue placeholder="All advisors" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Advisors</SelectItem>
-                    {users.map((u) => <SelectItem key={u.user_id} value={u.user_id}>{u.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -252,9 +248,9 @@ const Cases = () => {
                   <TableHead>Lender</TableHead>
                   <TableHead>Loan Amount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Proc Fee</TableHead>
                   <TableHead>Commission</TableHead>
                   <TableHead>Commission Status</TableHead>
-                  <TableHead>Advisor</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -269,9 +265,9 @@ const Cases = () => {
                     <TableCell>{c.lender_name || '-'}</TableCell>
                     <TableCell>{formatCurrency(c.loan_amount)}</TableCell>
                     <TableCell><Badge className={getStatusColor(c.status)}>{formatStatus(c.status)}</Badge></TableCell>
+                    <TableCell>{formatCurrency(c.proc_fee_total)}</TableCell>
                     <TableCell>{formatCurrency(c.gross_commission)}</TableCell>
                     <TableCell><Badge className={getStatusColor(c.commission_status)}>{formatStatus(c.commission_status)}</Badge></TableCell>
-                    <TableCell>{c.advisor_name || '-'}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -343,15 +339,15 @@ const Cases = () => {
             <div className="space-y-2"><Label>Interest Rate (%)</Label><Input type="number" step="0.01" value={newCase.interest_rate} onChange={(e) => setNewCase({ ...newCase, interest_rate: e.target.value })} /></div>
             <div className="space-y-2"><Label>Expected Completion</Label><Input type="date" value={newCase.expected_completion_date} onChange={(e) => setNewCase({ ...newCase, expected_completion_date: e.target.value })} /></div>
             <div className="space-y-2"><Label>Product Expiry Date</Label><Input type="date" value={newCase.product_expiry_date} onChange={(e) => setNewCase({ ...newCase, product_expiry_date: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Commission %</Label><Input type="number" step="0.01" value={newCase.commission_percentage} onChange={(e) => setNewCase({ ...newCase, commission_percentage: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Gross Commission</Label><Input type="number" value={newCase.gross_commission} onChange={(e) => setNewCase({ ...newCase, gross_commission: e.target.value })} /></div>
-            <div className="space-y-2">
-              <Label>Assigned Advisor</Label>
-              <Select value={newCase.advisor_id} onValueChange={(v) => setNewCase({ ...newCase, advisor_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select advisor" /></SelectTrigger>
-                <SelectContent>{users.map((u) => <SelectItem key={u.user_id} value={u.user_id}>{u.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+            <div className="space-y-2"><Label>Proc Fee (£)</Label><Input type="number" step="0.01" placeholder="Amount from lender" value={newCase.proc_fee_total} onChange={(e) => setNewCase({ ...newCase, proc_fee_total: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Your Commission %</Label><Input type="number" step="0.01" placeholder="e.g. 35" value={newCase.commission_percentage} onChange={(e) => setNewCase({ ...newCase, commission_percentage: e.target.value })} /></div>
+            {newCase.proc_fee_total && newCase.commission_percentage && (
+              <div className="col-span-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-sm text-green-700">Your Commission: <span className="font-bold text-green-800">£{(parseFloat(newCase.proc_fee_total) * parseFloat(newCase.commission_percentage) / 100).toFixed(2)}</span>
+                  <span className="text-xs ml-2">({newCase.commission_percentage}% of £{newCase.proc_fee_total})</span>
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>

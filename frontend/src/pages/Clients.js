@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { clientsAPI, usersAPI } from '../lib/api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { clientsAPI } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -30,12 +30,12 @@ const EMPLOYMENT_TYPES = ['employed', 'self_employed', 'contractor', 'retired', 
 
 const Clients = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [clients, setClients] = useState([]);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ advisor_id: '', lead_source: '', postcode: '' });
+  const [filters, setFilters] = useState({ lead_source: '', postcode: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newClient, setNewClient] = useState({
@@ -44,12 +44,21 @@ const Clients = () => {
     income: '', employment_type: '', deposit: '', property_price: '',
     loan_amount: '', credit_issues: false, credit_issues_notes: '',
     lead_source: '', referral_partner_name: '', fact_find_complete: false,
-    vulnerable_customer: false, advice_type: '', advisor_id: '',
+    vulnerable_customer: false, advice_type: '',
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
 
-  useEffect(() => { loadClients(); loadUsers(); }, [filters]);
+  // Open add dialog when navigated from Dashboard
+  useEffect(() => {
+    if (location.state?.openAddDialog) {
+      setShowAddDialog(true);
+      // Clear the state so it doesn't re-open on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  useEffect(() => { loadClients(); }, [filters]);
 
   const loadClients = async () => {
     try {
@@ -63,15 +72,6 @@ const Clients = () => {
       toast.error('Failed to load clients');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const data = await usersAPI.getAll();
-      setUsers(data || []);
-    } catch (err) {
-      console.error('Failed to load users:', err);
     }
   };
 
@@ -89,7 +89,7 @@ const Clients = () => {
       await clientsAPI.create(clientData);
       toast.success('Client created successfully');
       setShowAddDialog(false);
-      setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', security_property_address: '', income: '', employment_type: '', deposit: '', property_price: '', loan_amount: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '', advisor_id: '' });
+      setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', security_property_address: '', income: '', employment_type: '', deposit: '', property_price: '', loan_amount: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '' });
       loadClients();
     } catch (err) {
       toast.error(err.message || 'Failed to create client');
@@ -139,6 +139,12 @@ const Clients = () => {
   };
 
   const formatCurrency = (v) => v ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v) : '-';
+  const formatDate = (d) => {
+    if (!d) return '-';
+    const parts = d.split('T')[0].split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
+  };
   const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
   const getStatusColor = (s) => ({
     new_lead: 'bg-blue-100 text-blue-800', fact_find_complete: 'bg-purple-100 text-purple-800',
@@ -154,7 +160,7 @@ const Clients = () => {
     return 'hover:bg-slate-50';
   };
 
-  const clearFilters = () => setFilters({ advisor_id: '', lead_source: '', postcode: '' });
+  const clearFilters = () => setFilters({ lead_source: '', postcode: '' });
 
   if (loading) {
     return (
@@ -192,17 +198,7 @@ const Clients = () => {
             </div>
           </div>
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Advisor</Label>
-                <Select value={filters.advisor_id || 'all'} onValueChange={(v) => setFilters({ ...filters, advisor_id: v === 'all' ? '' : v })}>
-                  <SelectTrigger><SelectValue placeholder="All advisors" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Advisors</SelectItem>
-                    {users.map((u) => <SelectItem key={u.user_id} value={u.user_id}>{u.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Lead Source</Label>
                 <Select value={filters.lead_source || 'all'} onValueChange={(v) => setFilters({ ...filters, lead_source: v === 'all' ? '' : v })}>
@@ -286,7 +282,7 @@ const Clients = () => {
                       <TableCell>
                         {c.commission_status ? <Badge className={getStatusColor(c.commission_status)}>{formatStatus(c.commission_status)}</Badge> : '-'}
                       </TableCell>
-                      <TableCell className="text-sm">{c.expected_completion_date || '-'}</TableCell>
+                      <TableCell className="text-sm">{formatDate(c.expected_completion_date)}</TableCell>
                       <TableCell>
                         {c.lead_source ? <Badge variant="outline" className="text-xs">{formatStatus(c.lead_source)}</Badge> : '-'}
                       </TableCell>
@@ -357,16 +353,6 @@ const Clients = () => {
             {newClient.lead_source === 'referral' && (
               <div className="space-y-2"><Label>Referral Partner</Label><Input value={newClient.referral_partner_name} onChange={(e) => setNewClient({ ...newClient, referral_partner_name: e.target.value })} /></div>
             )}
-            <div className="space-y-2">
-              <Label>Advisor</Label>
-              <Select value={newClient.advisor_id || 'none'} onValueChange={(v) => setNewClient({ ...newClient, advisor_id: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Select...</SelectItem>
-                  {users.map((u) => <SelectItem key={u.user_id} value={u.user_id}>{u.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="col-span-2 flex items-center space-x-2">
               <Checkbox id="credit" checked={newClient.credit_issues} onCheckedChange={(c) => setNewClient({ ...newClient, credit_issues: c })} />
               <Label htmlFor="credit">Credit Issues</Label>
