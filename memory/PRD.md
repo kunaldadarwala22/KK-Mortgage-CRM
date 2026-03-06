@@ -1,45 +1,71 @@
-# KK Mortgage Solutions — CRM System PRD
+# KK Mortgage Solutions CRM - Product Requirements Document
 
-## Original Problem Statement
-Build a comprehensive, web-based CRM system for a UK Mortgage & Insurance Broker business named "KK Mortgage Solutions".
+## Overview
+Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business named "KK Mortgage Solutions". Single-advisor model for Kunal Kapadia.
 
-## Key Business Rules
-- **Single advisor:** Kunal Kapadia is the sole account manager
-- **Commission:** Bank pays Proc Fee → user enters Proc Fee + Commission % → system auto-calculates Commission
-- **Date format:** UK format dd/mm/yyyy throughout
-- **Access:** Email/password login only (Google OAuth removed). Two users seeded:
-  - `kunalkapadia2212@gmail.com` / `Admin2468!!!`
-  - `kunal.dadarwala22@gmail.com` / `Admin2468!!!`
-- **Multi-application clients:** One client can have multiple linked mortgage/insurance applications. Client info (address, income, employment) is shared across all their applications — no re-entry needed.
-
-## Architecture
-- **Backend:** FastAPI + MongoDB
-- **Frontend:** React + Tailwind CSS + shadcn/ui + Recharts
+## Tech Stack
+- **Backend:** FastAPI, MongoDB (via pymongo), Pandas, openpyxl
+- **Frontend:** React, Tailwind CSS, Recharts, shadcn/ui
 - **Auth:** JWT (email/password only)
 
-## What's Been Implemented
-- [x] Full-stack CRM with branded UI (KK Mortgage logo, red/white theme)
-- [x] Auth (JWT email/password login), default credentials seeded for Kunal Kapadia
-- [x] Google OAuth removed — clean email/password only login
-- [x] Dashboard: Expiring Soon, Contact This Month, Recent Clients, Upcoming Tasks, KPIs, Forecasts, Charts
-- [x] Client management with row highlighting, enriched columns, LTV auto-calc
-- [x] **Client profile as central hub**: Summary banner (total apps, active cases, commission, proc fees, documents)
-- [x] **Multi-application support**: "New Application" button pre-fills loan amount from client profile, dialog explains linking
-- [x] **Applications tab**: All cases linked to client with status, lender, loan, proc fee, commission, completion date
-- [x] Case management with working filters (status, product, commission status, lender)
-- [x] Case detail with Proc Fee + Commission % auto-calc
-- [x] Pipeline Kanban board
-- [x] Commission module: Monthly breakdown, toggle views, stacked charts, detail table
-- [x] Task management
-- [x] Analytics: 6 tabs (Lead, Mortgage Types, Commission Analytics, Revenue, Pipeline, Retention)
-- [x] Custom Business Reports with CSV/Excel export
-- [x] UK date format (dd/mm/yyyy) throughout
-- [x] Single advisor (Kunal Kapadia) — no multi-advisor dropdowns
+## Access
+- `kunalkapadia2212@gmail.com` / `Admin2468!!!`
+- `kunal.dadarwala22@gmail.com` / `Admin2468!!!`
+- Google OAuth: REMOVED
+- Role system: REMOVED (all users have full access)
 
-## Prioritized Backlog
-### P1 — Upcoming
-- Document Management: File upload with object storage
-- Task Automation: Auto-generate tasks from product expiry dates
+## Implemented Features
 
-### P2 — Future
-- Audit Log, Email Automation, Backend refactoring
+### Core
+- [x] JWT email/password authentication (2 seeded users)
+- [x] Dashboard with Expiring Soon, Contact This Month, Recent Clients, KPI cards
+- [x] Client Management with search, filters, conditional row highlighting
+- [x] Case Management (Mortgage + Insurance) with Kanban pipeline
+- [x] Commission Engine (auto-calculated from Proc Fee * Commission %)
+- [x] Task Management
+- [x] Analytics (Mortgage Types, Commission)
+- [x] Custom Business Reports (date range)
+- [x] Document Management (upload/view)
+- [x] Data Export
+
+### Recent Updates (March 2026)
+- [x] **Search bar** — Global search across clients and cases (2+ chars)
+- [x] **Notifications bell** — Shows overdue tasks, upcoming tasks, expiring products
+- [x] **Delete client** — Removed admin-only permission check
+- [x] **Multiple applicants** — Add Additional Applicant button on client profile (joint applications)
+- [x] **Simplified Add Client form** — Removed Security Address, Property Price, Loan Amount, Deposit
+- [x] **Dynamic New Case form** — Searchable client field, Mortgage/Insurance toggle with separate fields
+- [x] **Mortgage fields** — Added Property Value, Deposit Source, Repayment Type, Property Type, Case Reference, Rate Fixed For
+- [x] **Insurance fields** — Insurance Type, Term, Provider, Cover Type, Reference, Monthly Premium, Guaranteed/Reviewable, Sum Assured, In Trust
+- [x] **Cases dashboard** — Split into Mortgage and Insurance tabs; Property Value column for mortgage
+- [x] **Client dashboard** — Removed Loan Amount, Property Price, Case Status, LTV columns
+- [x] **Task automation** — Only auto-creates tasks when case status = "Review Due" or "For Review"
+- [x] **Export** — Single-sheet format, each case = separate row, client data repeated
+- [x] **UK date format** — dd/mm/yyyy across all UI
+
+## Upcoming Tasks (P1)
+- Document Management improvements (file upload to cloud storage)
+- Backend refactoring (break server.py into modular routes)
+
+## Future Tasks (P2)
+- Audit Log system
+- Email Automation (templates + daily summary)
+- Frontend cleanup (deduplicate formatDate utility)
+- Change Password feature
+
+## Key API Endpoints
+- `/api/auth/login`, `/api/auth/register`, `/api/auth/me`, `/api/auth/logout`
+- `/api/search?q=`, `/api/notifications`
+- `/api/clients`, `/api/clients/search?q=`, `/api/clients/{id}`
+- `/api/cases`, `/api/cases/{id}`
+- `/api/tasks`, `/api/tasks/{id}`
+- `/api/commission/monthly`, `/api/commission/ytd`
+- `/api/analytics/commission`, `/api/analytics/mortgage-types`
+- `/api/reports/cases-completed`, `/api/reports/commission-paid`
+- `/api/export/excel`, `/api/export/clients`
+- `/api/retention-stats`
+
+## DB Collections
+- users, clients, cases, tasks, documents, audit_logs, user_sessions
+- Client schema now includes `additional_applicants: [{full_name, dob, email, phone}]`
+- Case schema now includes: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider
