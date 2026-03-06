@@ -1,0 +1,82 @@
+{
+  "summary": "Testing iteration 9: New mortgage case fields (Interest Rate Type, Initial Product Term) and database wipe endpoint. Backend: 12/12 tests passed. Frontend: UI verified - new fields are present and functional in both Cases form and CaseDetail edit mode.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "backend_api": [
+      "POST /api/auth/login - Login with credentials successful",
+      "POST /api/cases with interest_rate_type='fixed' - returns correct field",
+      "POST /api/cases with interest_rate_type='variable' - returns correct field",
+      "POST /api/cases with interest_rate_type='tracker' - returns correct field",
+      "POST /api/cases with interest_rate_type='discounted' - returns correct field",
+      "POST /api/cases with interest_rate_type='capped' - returns correct field",
+      "GET /api/cases/{id} - returns interest_rate_type and initial_product_term correctly",
+      "PUT /api/cases/{id} - can update interest_rate_type and initial_product_term",
+      "DELETE /api/admin/wipe-data - wipes all clients, cases, tasks successfully",
+      "GET /api/cases after wipe - returns empty",
+      "GET /api/clients after wipe - returns empty"
+    ],
+    "frontend_new_case_form": [
+      "Cases page shows empty state after wipe (Mortgage 0, Insurance 0)",
+      "New Case form: Interest Rate Type dropdown present with data-testid='case-interest-rate-type'",
+      "New Case form: Interest Rate Type dropdown has all 5 options: Fixed, Variable, Discounted, Tracker, Capped",
+      "New Case form: Initial Product Term (Years) input present with data-testid='case-initial-product-term'",
+      "Case creation with all fields successful"
+    ],
+    "frontend_case_detail": [
+      "CaseDetail page: Shows Interest Rate Type in display mode",
+      "CaseDetail page: Shows Initial Product Term in display mode (e.g., '5 years')",
+      "CaseDetail edit mode: Interest Rate Type dropdown present with data-testid='case-detail-interest-rate-type'",
+      "CaseDetail edit mode: Interest Rate Type dropdown has all 5 options",
+      "CaseDetail edit mode: Initial Product Term input present with data-testid='case-detail-initial-product-term'",
+      "CaseDetail: Can select Interest Rate Type and save successfully",
+      "CaseDetail: Can update Initial Product Term and save successfully"
+    ]
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iter9_new_fields.py",
+    "/app/test_reports/pytest/pytest_results_iter9.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "GOOD: Interest Rate Type dropdown correctly implemented with all 5 options (Fixed, Variable, Discounted, Tracker, Capped)",
+    "GOOD: Initial Product Term field correctly stored as integer",
+    "GOOD: CaseDetail.js line 146 has parseInt for initial_product_term in save handler",
+    "GOOD: CaseDetail displays interest_rate_type with proper formatting (underscore to space, capitalize)",
+    "GOOD: wipe-data endpoint properly clears clients, cases, and tasks collections"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iter9_new_fields.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (All new field features verified)"
+  },
+
+  "test_credentials": {
+    "email": "kunalkapadia2212@gmail.com",
+    "password": "Admin2468!!!"
+  },
+
+  "seed_data_creation": "Created test client 'TEST_CaseFields TestClient' and test case with interest_rate_type='fixed', initial_product_term=5",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 9 testing complete. New mortgage case fields (interest_rate_type, initial_product_term) work correctly in both backend API and frontend UI. The Interest Rate Type dropdown has 5 options: Fixed, Variable, Discounted, Tracker, Capped. Initial Product Term is stored as integer. CaseDetail page displays these fields in both view and edit modes. DELETE /api/admin/wipe-data endpoint tested and working - clears all data."
+}

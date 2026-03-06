@@ -188,6 +188,8 @@ class CaseCreate(BaseModel):
     property_type: Optional[str] = None  # residential, buy_to_let
     case_reference: Optional[str] = None
     rate_fixed_for: Optional[int] = None  # years
+    interest_rate_type: Optional[str] = None  # fixed, variable, discounted, tracker, capped
+    initial_product_term: Optional[int] = None  # years
     # Insurance Fields
     insurance_cover_type: Optional[str] = None  # level_term, decreasing_term, increasing_term, whole_of_life
     insurance_reference: Optional[str] = None
@@ -220,6 +222,8 @@ class CaseResponse(BaseModel):
     term_years: Optional[int] = None
     fixed_rate_period: Optional[int] = None
     interest_rate: Optional[float] = None
+    interest_rate_type: Optional[str] = None
+    initial_product_term: Optional[int] = None
     lender_name: Optional[str] = None
     date_application_submitted: Optional[str] = None
     expected_completion_date: Optional[str] = None
@@ -1873,7 +1877,7 @@ async def export_all_data(request: Request):
         "Income", "Employment Type", "Lead Source",
         "Case Type", "Case Status", "Lender/Provider", "Mortgage Type", "Insurance Type",
         "Loan Amount", "Property Value", "Property Type", "Repayment Type",
-        "Term (Years)", "Interest Rate", "Rate Fixed For",
+        "Term (Years)", "Interest Rate", "Interest Rate Type", "Initial Product Term", "Rate Fixed For",
         "Monthly Premium", "Sum Assured", "Cover Type",
         "Case Reference", "Application Date", "Product Expiry Date",
         "Proc Fee Total", "Commission %", "Gross Commission", "Commission Status", "Commission Paid Date"
@@ -1921,6 +1925,8 @@ async def export_all_data(request: Request):
             (case.get("repayment_type", "") or "").replace("_", " ").title(),
             case.get("term_years", ""),
             case.get("interest_rate", ""),
+            (case.get("interest_rate_type", "") or "").replace("_", " ").title(),
+            case.get("initial_product_term", ""),
             case.get("rate_fixed_for", ""),
             case.get("monthly_premium", ""),
             case.get("sum_assured", ""),
@@ -2362,6 +2368,18 @@ async def export_clients_data(request: Request):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+# Admin: Wipe all data
+@api_router.delete("/admin/wipe-data")
+async def wipe_all_data(request: Request):
+    current_user = await get_current_user(request)
+    result = {
+        "clients_deleted": (await db.clients.delete_many({})).deleted_count,
+        "cases_deleted": (await db.cases.delete_many({})).deleted_count,
+        "tasks_deleted": (await db.tasks.delete_many({})).deleted_count,
+    }
+    await create_audit_log("admin", "wipe_data", "all", current_user["user_id"])
+    return {"message": "All data wiped successfully", **result}
 
 # Include the router in the main app
 app.include_router(api_router)

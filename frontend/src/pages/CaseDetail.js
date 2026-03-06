@@ -71,6 +71,14 @@ const MORTGAGE_TYPES = [
   { key: 'product_transfer', label: 'Product Transfer' },
 ];
 
+const INTEREST_RATE_TYPES = [
+  { key: 'fixed', label: 'Fixed' },
+  { key: 'variable', label: 'Variable' },
+  { key: 'discounted', label: 'Discounted' },
+  { key: 'tracker', label: 'Tracker' },
+  { key: 'capped', label: 'Capped' },
+];
+
 const INSURANCE_TYPES = [
   { key: 'life_insurance', label: 'Life Insurance' },
   { key: 'home_insurance', label: 'Home Insurance' },
@@ -143,6 +151,7 @@ const CaseDetail = () => {
         term_years: editedCase.term_years ? parseInt(editedCase.term_years) : null,
         fixed_rate_period: editedCase.fixed_rate_period ? parseInt(editedCase.fixed_rate_period) : null,
         interest_rate: editedCase.interest_rate ? parseFloat(editedCase.interest_rate) : null,
+        initial_product_term: editedCase.initial_product_term ? parseInt(editedCase.initial_product_term) : null,
         proc_fee_total: procFee,
         commission_percentage: commPct,
         gross_commission: grossComm,
@@ -530,6 +539,33 @@ const CaseDetail = () => {
                         onChange={(e) => setEditedCase({ ...editedCase, interest_rate: e.target.value })}
                       />
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Interest Rate Type</Label>
+                        <Select
+                          value={editedCase.interest_rate_type || ''}
+                          onValueChange={(value) => setEditedCase({ ...editedCase, interest_rate_type: value })}
+                        >
+                          <SelectTrigger data-testid="case-detail-interest-rate-type">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INTEREST_RATE_TYPES.map((type) => (
+                              <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Initial Product Term (Years)</Label>
+                        <Input
+                          type="number"
+                          value={editedCase.initial_product_term || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, initial_product_term: e.target.value })}
+                          data-testid="case-detail-initial-product-term"
+                        />
+                      </div>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -550,6 +586,16 @@ const CaseDetail = () => {
                     <div>
                       <p className="text-sm text-slate-500">Interest Rate</p>
                       <p className="font-medium">{caseData.interest_rate ? `${caseData.interest_rate}%` : '-'}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-slate-500">Interest Rate Type</p>
+                        <p className="font-medium">{caseData.interest_rate_type ? caseData.interest_rate_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">Initial Product Term</p>
+                        <p className="font-medium">{caseData.initial_product_term ? `${caseData.initial_product_term} years` : '-'}</p>
+                      </div>
                     </div>
                     {monthlyPayment && (
                       <div className="p-3 bg-green-50 rounded-lg">

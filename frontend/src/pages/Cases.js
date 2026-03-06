@@ -65,6 +65,14 @@ const PROPERTY_TYPES = [
   { key: 'buy_to_let', label: 'Buy To Let' },
 ];
 
+const INTEREST_RATE_TYPES = [
+  { key: 'fixed', label: 'Fixed' },
+  { key: 'variable', label: 'Variable' },
+  { key: 'discounted', label: 'Discounted' },
+  { key: 'tracker', label: 'Tracker' },
+  { key: 'capped', label: 'Capped' },
+];
+
 const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
 const formatCurrency = (v) => v ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v) : '-';
 const formatDate = (d) => {
@@ -194,7 +202,7 @@ const Cases = () => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseFloat(caseData[f]);
         else caseData[f] = null;
       });
-      ['term_years', 'rate_fixed_for', 'fixed_rate_period'].forEach(f => {
+      ['term_years', 'rate_fixed_for', 'fixed_rate_period', 'initial_product_term'].forEach(f => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseInt(caseData[f]);
         else caseData[f] = null;
       });
@@ -496,6 +504,14 @@ const Cases = () => {
                 <div className="space-y-2"><Label>Loan Amount (£)</Label><CurrencyInput value={newCase.loan_amount || ''} onChange={(e) => setNewCase({ ...newCase, loan_amount: e.target.value })} data-testid="case-loan-amount" /></div>
                 <div className="space-y-2"><Label>Property Value (£)</Label><CurrencyInput value={newCase.property_value || ''} onChange={(e) => setNewCase({ ...newCase, property_value: e.target.value })} data-testid="case-property-value" /></div>
                 <div className="space-y-2"><Label>Interest Rate (%)</Label><Input type="number" step="0.01" value={newCase.interest_rate || ''} onChange={(e) => setNewCase({ ...newCase, interest_rate: e.target.value })} data-testid="case-interest-rate" /></div>
+                <div className="space-y-2">
+                  <Label>Interest Rate Type</Label>
+                  <Select value={newCase.interest_rate_type || 'none'} onValueChange={(v) => setNewCase({ ...newCase, interest_rate_type: v === 'none' ? '' : v })}>
+                    <SelectTrigger data-testid="case-interest-rate-type"><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem>{INTEREST_RATE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>Initial Product Term (Years)</Label><Input type="number" value={newCase.initial_product_term || ''} onChange={(e) => setNewCase({ ...newCase, initial_product_term: e.target.value })} data-testid="case-initial-product-term" /></div>
                 <div className="space-y-2"><Label>Term (Years)</Label><Input type="number" value={newCase.term_years || ''} onChange={(e) => setNewCase({ ...newCase, term_years: e.target.value })} data-testid="case-term" /></div>
                 <div className="space-y-2"><Label>Deposit Source</Label><Input value={newCase.deposit_source || ''} onChange={(e) => setNewCase({ ...newCase, deposit_source: e.target.value })} data-testid="case-deposit-source" /></div>
                 <div className="space-y-2">
