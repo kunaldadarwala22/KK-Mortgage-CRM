@@ -58,6 +58,11 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - [x] Currency display: raw number when typing, £X,XXX format on blur (CurrencyInput component)
 - [x] Expiring Soon dashboard filtered to 6 months (was 90 days)
 
+### March 2026 Updates (Session 4)
+- [x] Commission Paid Date: restricted to 4-digit year (max=9999-12-31) on all date inputs
+- [x] Additional Applicant: replaced Full Name with First Name + Surname, added Income + Employment Type
+- [x] Expiring Soon: fixed backend to strictly filter to 6 months (expiring_by_month + retention_value queries capped)
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
