@@ -17,7 +17,7 @@ import {
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
-  Search, Plus, Eye, Briefcase, Home, Shield, Filter, X, Loader2,
+  Search, Plus, Eye, Briefcase, Home, Shield, Filter, X, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -75,6 +75,15 @@ const formatDate = (d) => {
 };
 const getStatusColor = (s) => CASE_STATUSES.find(st => st.key === s)?.color || 'bg-slate-100 text-slate-800';
 
+// Clean empty strings to null for Pydantic compatibility
+const cleanData = (obj) => {
+  const cleaned = {};
+  for (const [k, v] of Object.entries(obj)) {
+    cleaned[k] = (v === '' || v === undefined) ? null : v;
+  }
+  return cleaned;
+};
+
 const Cases = () => {
   const navigate = useNavigate();
   const [cases, setCases] = useState([]);
@@ -84,6 +93,8 @@ const Cases = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('mortgage');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [caseToDelete, setCaseToDelete] = useState(null);
 
   // New case form
   const [newCase, setNewCase] = useState({ product_type: 'mortgage', client_id: '', mortgage_type: '', insurance_type: '', status: 'new_lead' });
@@ -93,12 +104,15 @@ const Cases = () => {
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
   const clientSearchRef = useRef(null);
 
-  useEffect(() => { loadCases(); }, [filters]);
+  useEffect(() => { loadCases(); }, [filters]); // eslint-disable-line
 
   const loadCases = async () => {
     try {
       setLoading(true);
-      const params = { ...filters };
+      const params = {};
+      if (filters.status) params.status = filters.status;
+      if (filters.product_type) params.product_type = filters.product_type;
+      if (filters.commission_status) params.commission_status = filters.commission_status;
       if (search) params.search = search;
       const data = await casesAPI.getAll(params);
       setCases(data.cases || []);
@@ -147,17 +161,23 @@ const Cases = () => {
 
   const handleCreateCase = async () => {
     try {
-      const caseData = { ...newCase };
+      const caseData = cleanData({ ...newCase });
       // Parse numeric fields
       ['loan_amount', 'property_value', 'interest_rate', 'monthly_premium', 'sum_assured', 'proc_fee_total', 'commission_percentage', 'proc_fee_value'].forEach(f => {
-        if (caseData[f]) caseData[f] = parseFloat(caseData[f]);
+        if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseFloat(caseData[f]);
+        else caseData[f] = null;
       });
       ['term_years', 'rate_fixed_for', 'fixed_rate_period'].forEach(f => {
-        if (caseData[f]) caseData[f] = parseInt(caseData[f]);
+        if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseInt(caseData[f]);
+        else caseData[f] = null;
       });
       // Auto-calculate commission
       if (caseData.proc_fee_total && caseData.commission_percentage) {
         caseData.gross_commission = Math.round((caseData.proc_fee_total * caseData.commission_percentage / 100) * 100) / 100;
+      }
+      // Clean NaN values
+      for (const k of Object.keys(caseData)) {
+        if (typeof caseData[k] === 'number' && isNaN(caseData[k])) caseData[k] = null;
       }
 
       await casesAPI.create(caseData);
@@ -167,6 +187,19 @@ const Cases = () => {
       loadCases();
     } catch (err) {
       toast.error(err.message || 'Failed to create case');
+    }
+  };
+
+  const handleDeleteCase = async () => {
+    if (!caseToDelete) return;
+    try {
+      await casesAPI.delete(caseToDelete.case_id);
+      toast.success('Case deleted');
+      setDeleteDialogOpen(false);
+      setCaseToDelete(null);
+      loadCases();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete case');
     }
   };
 
@@ -277,7 +310,7 @@ const Cases = () => {
                         <TableHead>Status</TableHead>
                         <TableHead>Commission</TableHead>
                         <TableHead>Expiry</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -292,9 +325,10 @@ const Cases = () => {
                           <TableCell>{formatCurrency(c.gross_commission)}</TableCell>
                           <TableCell className="text-sm">{formatDate(c.product_expiry_date)}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/cases/${c.case_id}`); }}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`view-case-${c.case_id}`}><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => { setCaseToDelete(c); setDeleteDialogOpen(true); }} data-testid={`delete-case-${c.case_id}`}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -328,7 +362,7 @@ const Cases = () => {
                         <TableHead>Sum Assured</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Commission</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -343,9 +377,10 @@ const Cases = () => {
                           <TableCell><Badge className={getStatusColor(c.status)}>{formatStatus(c.status)}</Badge></TableCell>
                           <TableCell>{formatCurrency(c.gross_commission)}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/cases/${c.case_id}`); }}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" onClick={() => navigate(`/cases/${c.case_id}`)}><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => { setCaseToDelete(c); setDeleteDialogOpen(true); }} data-testid={`delete-case-ins-${c.case_id}`}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -357,6 +392,22 @@ const Cases = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Case Confirmation */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Case</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this case ({caseToDelete?.case_id})? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteCase} data-testid="confirm-delete-case-btn">Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Case Dialog */}
       <Dialog open={showAddDialog} onOpenChange={(open) => { setShowAddDialog(open); if (!open) resetNewCase(); }}>
@@ -383,12 +434,7 @@ const Cases = () => {
                 {clientDropdownOpen && clientResults.length > 0 && (
                   <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {clientResults.map((c) => (
-                      <button
-                        key={c.client_id}
-                        className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm"
-                        data-testid={`client-option-${c.client_id}`}
-                        onClick={() => handleSelectClient(c)}
-                      >
+                      <button key={c.client_id} className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm" data-testid={`client-option-${c.client_id}`} onClick={() => handleSelectClient(c)}>
                         <span className="font-medium">{c.first_name} {c.last_name}</span>
                         {c.email && <span className="text-slate-500 ml-2">({c.email})</span>}
                       </button>
@@ -396,33 +442,15 @@ const Cases = () => {
                   </div>
                 )}
               </div>
-              {selectedClient && (
-                <p className="text-sm text-green-600">Selected: {selectedClient.first_name} {selectedClient.last_name}</p>
-              )}
+              {selectedClient && <p className="text-sm text-green-600">Selected: {selectedClient.first_name} {selectedClient.last_name}</p>}
             </div>
 
             {/* Product Type Toggle */}
             <div className="space-y-2">
               <Label>Case Type *</Label>
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={newCase.product_type === 'mortgage' ? 'default' : 'outline'}
-                  className={newCase.product_type === 'mortgage' ? 'bg-red-600 hover:bg-red-700' : ''}
-                  onClick={() => setNewCase({ ...newCase, product_type: 'mortgage', insurance_type: '', insurance_cover_type: '', monthly_premium: '', sum_assured: '', guaranteed_or_reviewable: '', in_trust: '', insurance_provider: '', insurance_reference: '' })}
-                  data-testid="case-type-mortgage"
-                >
-                  <Home className="h-4 w-4 mr-2" />Mortgage
-                </Button>
-                <Button
-                  type="button"
-                  variant={newCase.product_type === 'insurance' ? 'default' : 'outline'}
-                  className={newCase.product_type === 'insurance' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                  onClick={() => setNewCase({ ...newCase, product_type: 'insurance', mortgage_type: '', loan_amount: '', property_value: '', deposit_source: '', repayment_type: '', property_type: '', lender_name: '', interest_rate: '', fixed_rate_period: '' })}
-                  data-testid="case-type-insurance"
-                >
-                  <Shield className="h-4 w-4 mr-2" />Insurance
-                </Button>
+                <Button type="button" variant={newCase.product_type === 'mortgage' ? 'default' : 'outline'} className={newCase.product_type === 'mortgage' ? 'bg-red-600 hover:bg-red-700' : ''} onClick={() => setNewCase({ ...newCase, product_type: 'mortgage' })} data-testid="case-type-mortgage"><Home className="h-4 w-4 mr-2" />Mortgage</Button>
+                <Button type="button" variant={newCase.product_type === 'insurance' ? 'default' : 'outline'} className={newCase.product_type === 'insurance' ? 'bg-blue-600 hover:bg-blue-700' : ''} onClick={() => setNewCase({ ...newCase, product_type: 'insurance' })} data-testid="case-type-insurance"><Shield className="h-4 w-4 mr-2" />Insurance</Button>
               </div>
             </div>
 
@@ -434,15 +462,12 @@ const Cases = () => {
                   <Label>Mortgage Type</Label>
                   <Select value={newCase.mortgage_type || 'none'} onValueChange={(v) => setNewCase({ ...newCase, mortgage_type: v === 'none' ? '' : v })}>
                     <SelectTrigger data-testid="case-mortgage-type"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select...</SelectItem>
-                      {MORTGAGE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem>{MORTGAGE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Lender Name</Label><Input value={newCase.lender_name || ''} onChange={(e) => setNewCase({ ...newCase, lender_name: e.target.value })} data-testid="case-lender" /></div>
-                <div className="space-y-2"><Label>Loan Amount</Label><Input type="number" value={newCase.loan_amount || ''} onChange={(e) => setNewCase({ ...newCase, loan_amount: e.target.value })} data-testid="case-loan-amount" /></div>
-                <div className="space-y-2"><Label>Property Value</Label><Input type="number" value={newCase.property_value || ''} onChange={(e) => setNewCase({ ...newCase, property_value: e.target.value })} data-testid="case-property-value" /></div>
+                <div className="space-y-2"><Label>Loan Amount (£)</Label><Input type="number" value={newCase.loan_amount || ''} onChange={(e) => setNewCase({ ...newCase, loan_amount: e.target.value })} data-testid="case-loan-amount" /></div>
+                <div className="space-y-2"><Label>Property Value (£)</Label><Input type="number" value={newCase.property_value || ''} onChange={(e) => setNewCase({ ...newCase, property_value: e.target.value })} data-testid="case-property-value" /></div>
                 <div className="space-y-2"><Label>Interest Rate (%)</Label><Input type="number" step="0.01" value={newCase.interest_rate || ''} onChange={(e) => setNewCase({ ...newCase, interest_rate: e.target.value })} data-testid="case-interest-rate" /></div>
                 <div className="space-y-2"><Label>Term (Years)</Label><Input type="number" value={newCase.term_years || ''} onChange={(e) => setNewCase({ ...newCase, term_years: e.target.value })} data-testid="case-term" /></div>
                 <div className="space-y-2"><Label>Deposit Source</Label><Input value={newCase.deposit_source || ''} onChange={(e) => setNewCase({ ...newCase, deposit_source: e.target.value })} data-testid="case-deposit-source" /></div>
@@ -450,25 +475,18 @@ const Cases = () => {
                   <Label>Repayment Type</Label>
                   <Select value={newCase.repayment_type || 'none'} onValueChange={(v) => setNewCase({ ...newCase, repayment_type: v === 'none' ? '' : v })}>
                     <SelectTrigger data-testid="case-repayment-type"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select...</SelectItem>
-                      {REPAYMENT_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem>{REPAYMENT_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Property Type</Label>
                   <Select value={newCase.property_type || 'none'} onValueChange={(v) => setNewCase({ ...newCase, property_type: v === 'none' ? '' : v })}>
                     <SelectTrigger data-testid="case-property-type"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select...</SelectItem>
-                      {PROPERTY_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem>{PROPERTY_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Case Reference Number</Label><Input value={newCase.case_reference || ''} onChange={(e) => setNewCase({ ...newCase, case_reference: e.target.value })} data-testid="case-reference" /></div>
                 <div className="space-y-2"><Label>Rate Fixed For (Years)</Label><Input type="number" value={newCase.rate_fixed_for || ''} onChange={(e) => setNewCase({ ...newCase, rate_fixed_for: e.target.value })} data-testid="case-rate-fixed" /></div>
-                <div className="space-y-2"><Label>Application Reference</Label><Input value={newCase.application_reference || ''} onChange={(e) => setNewCase({ ...newCase, application_reference: e.target.value })} /></div>
               </div>
             )}
 
@@ -480,10 +498,7 @@ const Cases = () => {
                   <Label>Insurance Type</Label>
                   <Select value={newCase.insurance_type || 'none'} onValueChange={(v) => setNewCase({ ...newCase, insurance_type: v === 'none' ? '' : v })}>
                     <SelectTrigger data-testid="case-insurance-type"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select...</SelectItem>
-                      {INSURANCE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem>{INSURANCE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Term (Years)</Label><Input type="number" value={newCase.term_years || ''} onChange={(e) => setNewCase({ ...newCase, term_years: e.target.value })} data-testid="case-insurance-term" /></div>
@@ -492,35 +507,24 @@ const Cases = () => {
                   <Label>Type of Cover</Label>
                   <Select value={newCase.insurance_cover_type || 'none'} onValueChange={(v) => setNewCase({ ...newCase, insurance_cover_type: v === 'none' ? '' : v })}>
                     <SelectTrigger data-testid="case-cover-type"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select...</SelectItem>
-                      {INSURANCE_COVER_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem>{INSURANCE_COVER_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Reference Number</Label><Input value={newCase.insurance_reference || ''} onChange={(e) => setNewCase({ ...newCase, insurance_reference: e.target.value })} data-testid="case-insurance-ref" /></div>
-                <div className="space-y-2"><Label>Monthly Premium</Label><Input type="number" step="0.01" value={newCase.monthly_premium || ''} onChange={(e) => setNewCase({ ...newCase, monthly_premium: e.target.value })} data-testid="case-monthly-premium" /></div>
+                <div className="space-y-2"><Label>Monthly Premium (£)</Label><Input type="number" step="0.01" value={newCase.monthly_premium || ''} onChange={(e) => setNewCase({ ...newCase, monthly_premium: e.target.value })} data-testid="case-monthly-premium" /></div>
                 <div className="space-y-2">
                   <Label>Guaranteed or Reviewable</Label>
                   <Select value={newCase.guaranteed_or_reviewable || 'none'} onValueChange={(v) => setNewCase({ ...newCase, guaranteed_or_reviewable: v === 'none' ? '' : v })}>
                     <SelectTrigger data-testid="case-guaranteed"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select...</SelectItem>
-                      <SelectItem value="guaranteed">Guaranteed</SelectItem>
-                      <SelectItem value="reviewable">Reviewable</SelectItem>
-                    </SelectContent>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem><SelectItem value="guaranteed">Guaranteed</SelectItem><SelectItem value="reviewable">Reviewable</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Sum Assured</Label><Input type="number" value={newCase.sum_assured || ''} onChange={(e) => setNewCase({ ...newCase, sum_assured: e.target.value })} data-testid="case-sum-assured" /></div>
+                <div className="space-y-2"><Label>Sum Assured (£)</Label><Input type="number" value={newCase.sum_assured || ''} onChange={(e) => setNewCase({ ...newCase, sum_assured: e.target.value })} data-testid="case-sum-assured" /></div>
                 <div className="space-y-2">
                   <Label>In Trust</Label>
                   <Select value={newCase.in_trust === true ? 'yes' : newCase.in_trust === false ? 'no' : 'none'} onValueChange={(v) => setNewCase({ ...newCase, in_trust: v === 'yes' ? true : v === 'no' ? false : null })}>
                     <SelectTrigger data-testid="case-in-trust"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select...</SelectItem>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
+                    <SelectContent><SelectItem value="none">Select...</SelectItem><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent>
                   </Select>
                 </div>
               </div>
@@ -551,9 +555,7 @@ const Cases = () => {
               <Label>Status</Label>
               <Select value={newCase.status || 'new_lead'} onValueChange={(v) => setNewCase({ ...newCase, status: v })}>
                 <SelectTrigger data-testid="case-status"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CASE_STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{CASE_STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>

@@ -175,7 +175,6 @@ class CaseCreate(BaseModel):
     fixed_rate_period: Optional[int] = None
     interest_rate: Optional[float] = None
     lender_name: Optional[str] = None
-    application_reference: Optional[str] = None
     date_application_submitted: Optional[str] = None
     expected_completion_date: Optional[str] = None
     product_start_date: Optional[str] = None
@@ -205,6 +204,7 @@ class CaseCreate(BaseModel):
     your_commission_share: Optional[float] = None
     proc_fee_total: Optional[float] = None
     commission_status: str = CommissionStatus.PENDING
+    commission_paid_date: Optional[str] = None
     # Assignment
     advisor_id: Optional[str] = None
     notes: Optional[str] = None
@@ -221,7 +221,6 @@ class CaseResponse(BaseModel):
     fixed_rate_period: Optional[int] = None
     interest_rate: Optional[float] = None
     lender_name: Optional[str] = None
-    application_reference: Optional[str] = None
     date_application_submitted: Optional[str] = None
     expected_completion_date: Optional[str] = None
     product_start_date: Optional[str] = None
@@ -1140,35 +1139,63 @@ async def get_revenue_analytics(
     }
 
 @api_router.get("/dashboard/forecast")
-async def get_commission_forecast(request: Request):
+async def get_commission_summary(request: Request):
+    """Commission This Month and Last 30 Days based on commission_paid_date"""
     await get_current_user(request)
     
     today = datetime.now(timezone.utc)
     
-    # 30, 60, 90 day forecasts
-    forecasts = {}
-    for days in [30, 60, 90]:
-        future_date = (today + timedelta(days=days)).strftime("%Y-%m-%d")
-        today_str = today.strftime("%Y-%m-%d")
-        
-        result = await db.cases.aggregate([
-            {"$match": {
-                "expected_completion_date": {"$gte": today_str, "$lte": future_date},
-                "commission_status": {"$in": [CommissionStatus.PENDING, CommissionStatus.SUBMITTED]}
-            }},
-            {"$group": {
-                "_id": None,
-                "total": {"$sum": "$gross_commission"},
-                "count": {"$sum": 1}
-            }}
-        ]).to_list(1)
-        
-        forecasts[f"next_{days}_days"] = {
-            "amount": result[0]["total"] if result else 0,
-            "cases": result[0]["count"] if result else 0
-        }
+    # Commission This Month
+    month_start = today.replace(day=1).strftime("%Y-%m-%d")
+    month_end = today.strftime("%Y-%m-%d")
     
-    return forecasts
+    this_month = await db.cases.aggregate([
+        {"$match": {
+            "commission_status": CommissionStatus.PAID,
+            "$or": [
+                {"commission_paid_date": {"$gte": month_start, "$lte": month_end}},
+                {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$gte": month_start, "$lte": month_end}}
+            ]
+        }},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
+            "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "count": {"$sum": 1}
+        }}
+    ]).to_list(1)
+    
+    # Commission in Last 30 Days
+    thirty_days_ago = (today - timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    last_30 = await db.cases.aggregate([
+        {"$match": {
+            "commission_status": CommissionStatus.PAID,
+            "$or": [
+                {"commission_paid_date": {"$gte": thirty_days_ago, "$lte": month_end}},
+                {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$gte": thirty_days_ago, "$lte": month_end}}
+            ]
+        }},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
+            "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "count": {"$sum": 1}
+        }}
+    ]).to_list(1)
+    
+    return {
+        "commission_this_month": {
+            "amount": this_month[0]["total"] if this_month else 0,
+            "proc_fees": this_month[0]["proc_fees"] if this_month else 0,
+            "cases": this_month[0]["count"] if this_month else 0
+        },
+        "commission_last_30_days": {
+            "amount": last_30[0]["total"] if last_30 else 0,
+            "proc_fees": last_30[0]["proc_fees"] if last_30 else 0,
+            "cases": last_30[0]["count"] if last_30 else 0
+        }
+    }
 
 @api_router.get("/dashboard/retention")
 async def get_retention_data(request: Request):
@@ -1326,7 +1353,7 @@ async def global_search(request: Request, q: str = ""):
     case_query = {"$or": [
         {"case_id": {"$regex": q, "$options": "i"}},
         {"lender_name": {"$regex": q, "$options": "i"}},
-        {"application_reference": {"$regex": q, "$options": "i"}},
+        {"case_reference": {"$regex": q, "$options": "i"}},
         {"case_reference": {"$regex": q, "$options": "i"}},
         {"insurance_reference": {"$regex": q, "$options": "i"}},
     ]}
@@ -1428,21 +1455,36 @@ async def get_commission_monthly(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ):
-    """Monthly commission breakdown with status grouping"""
+    """Monthly commission breakdown with status grouping, using commission_paid_date for paid cases"""
     await get_current_user(request)
     
     match_stage = {}
     if start_date and end_date:
-        match_stage["expected_completion_date"] = {"$gte": start_date, "$lte": end_date}
+        match_stage["$or"] = [
+            {"commission_paid_date": {"$gte": start_date, "$lte": end_date}},
+            {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}},
+            {"commission_paid_date": None, "expected_completion_date": {"$gte": start_date, "$lte": end_date}},
+        ]
     elif year:
-        match_stage["expected_completion_date"] = {"$regex": f"^{year}"}
+        match_stage["$or"] = [
+            {"commission_paid_date": {"$regex": f"^{year}"}},
+            {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$regex": f"^{year}"}},
+            {"commission_paid_date": None, "expected_completion_date": {"$regex": f"^{year}"}},
+        ]
     
     pipeline = [
         {"$match": match_stage} if match_stage else {"$match": {}},
         {"$addFields": {
+            "effective_date": {"$cond": {
+                "if": {"$and": [{"$ne": ["$commission_paid_date", None]}, {"$ne": ["$commission_paid_date", ""]}]},
+                "then": "$commission_paid_date",
+                "else": "$expected_completion_date"
+            }},
+        }},
+        {"$addFields": {
             "month": {"$cond": {
-                "if": {"$and": [{"$ne": ["$expected_completion_date", None]}, {"$ne": ["$expected_completion_date", ""]}]},
-                "then": {"$substr": ["$expected_completion_date", 0, 7]},
+                "if": {"$and": [{"$ne": ["$effective_date", None]}, {"$ne": ["$effective_date", ""]}]},
+                "then": {"$substr": ["$effective_date", 0, 7]},
                 "else": "unknown"
             }}
         }},
@@ -1835,7 +1877,7 @@ async def export_all_data(request: Request):
         "Term (Years)", "Interest Rate", "Rate Fixed For",
         "Monthly Premium", "Sum Assured", "Cover Type",
         "Case Reference", "Application Date", "Product Expiry Date",
-        "Proc Fee Total", "Commission %", "Gross Commission", "Commission Status"
+        "Proc Fee Total", "Commission %", "Gross Commission", "Commission Status", "Commission Paid Date"
     ]
     
     ws.append(headers)
@@ -1884,13 +1926,14 @@ async def export_all_data(request: Request):
             case.get("monthly_premium", ""),
             case.get("sum_assured", ""),
             (case.get("insurance_cover_type", "") or "").replace("_", " ").title(),
-            case.get("case_reference", "") or case.get("insurance_reference", "") or case.get("application_reference", ""),
+            case.get("case_reference", "") or case.get("insurance_reference", ""),
             case.get("date_application_submitted", ""),
             case.get("product_expiry_date", ""),
             case.get("proc_fee_total", ""),
             case.get("commission_percentage", ""),
             case.get("gross_commission", ""),
             (case.get("commission_status", "") or "").replace("_", " ").title(),
+            case.get("commission_paid_date", ""),
         ]
         
         for col, value in enumerate(row_data, 1):
@@ -1919,7 +1962,7 @@ async def export_all_data(request: Request):
                 client.get("income", ""),
                 (client.get("employment_type", "") or "").replace("_", " ").title(),
                 (client.get("lead_source", "") or "").replace("_", " ").title(),
-            ] + [""] * 22
+            ] + [""] * 23
             
             for col, value in enumerate(row_data, 1):
                 cell = ws.cell(row=row_num, column=col, value=value)

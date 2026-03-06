@@ -278,28 +278,49 @@ const ClientDetail = () => {
             {/* Additional Applicants (Joint Applications) */}
             <Card className="border-slate-200 lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-slate-500" />Additional Applicants</CardTitle>
-                <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => setShowApplicantDialog(true)} data-testid="add-applicant-btn"><Plus className="h-4 w-4 mr-2" />Add Applicant</Button>
+                <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-slate-500" />Applicants</CardTitle>
+                <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => setShowApplicantDialog(true)} data-testid="add-applicant-btn"><Plus className="h-4 w-4 mr-2" />Add Additional Applicant</Button>
               </CardHeader>
               <CardContent>
-                {(!client.additional_applicants || client.additional_applicants.length === 0) ? (
-                  <p className="text-sm text-slate-500 text-center py-4">No additional applicants. Click "Add Applicant" if this is a joint application.</p>
-                ) : (
-                  <div className="space-y-3">
+                {/* Primary Applicant */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className="bg-red-100 text-red-800">Applicant 1 (Primary)</Badge>
+                  </div>
+                  <div className="p-4 border border-slate-200 rounded-lg bg-white">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div><p className="text-xs text-slate-500">Full Name</p><p className="font-medium text-sm">{client.first_name} {client.last_name}</p></div>
+                      <div><p className="text-xs text-slate-500">Date of Birth</p><p className="text-sm">{fmtDate(client.dob)}</p></div>
+                      <div><p className="text-xs text-slate-500">Email</p><p className="text-sm">{client.email || '-'}</p></div>
+                      <div><p className="text-xs text-slate-500">Phone</p><p className="text-sm">{client.phone || '-'}</p></div>
+                    </div>
+                  </div>
+                </div>
+                {/* Additional Applicants */}
+                {client.additional_applicants && client.additional_applicants.length > 0 && (
+                  <div className="space-y-4">
                     {client.additional_applicants.map((ap, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-slate-50" data-testid={`applicant-${idx}`}>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
-                          <div><p className="text-xs text-slate-500">Full Name</p><p className="font-medium text-sm">{ap.full_name || '-'}</p></div>
-                          <div><p className="text-xs text-slate-500">Date of Birth</p><p className="text-sm">{fmtDate(ap.dob)}</p></div>
-                          <div><p className="text-xs text-slate-500">Email</p><p className="text-sm">{ap.email || '-'}</p></div>
-                          <div><p className="text-xs text-slate-500">Phone</p><p className="text-sm">{ap.phone || '-'}</p></div>
+                      <div key={idx} data-testid={`applicant-${idx}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge className="bg-blue-100 text-blue-800">Applicant {idx + 2}</Badge>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-7" onClick={() => handleRemoveApplicant(idx)} data-testid={`remove-applicant-${idx}`}>
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />Remove
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 ml-2" onClick={() => handleRemoveApplicant(idx)} data-testid={`remove-applicant-${idx}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><p className="text-xs text-slate-500">Full Name</p><p className="font-medium text-sm">{ap.full_name || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500">Date of Birth</p><p className="text-sm">{fmtDate(ap.dob)}</p></div>
+                            <div><p className="text-xs text-slate-500">Email</p><p className="text-sm">{ap.email || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500">Phone</p><p className="text-sm">{ap.phone || '-'}</p></div>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
+                )}
+                {(!client.additional_applicants || client.additional_applicants.length === 0) && (
+                  <p className="text-sm text-slate-500 text-center py-2 mt-2">No additional applicants. Click "Add Additional Applicant" for joint applications.</p>
                 )}
               </CardContent>
             </Card>

@@ -433,10 +433,10 @@ const CaseDetail = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Application Reference</Label>
+                      <Label>Case Reference Number</Label>
                       <Input
-                        value={editedCase.application_reference || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, application_reference: e.target.value })}
+                        value={editedCase.case_reference || ''}
+                        onChange={(e) => setEditedCase({ ...editedCase, case_reference: e.target.value })}
                         placeholder="REF-12345"
                       />
                     </div>
@@ -469,8 +469,8 @@ const CaseDetail = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Application Reference</p>
-                      <p className="font-medium">{caseData.application_reference || '-'}</p>
+                      <p className="text-sm text-slate-500">Case Reference Number</p>
+                      <p className="font-medium">{caseData.case_reference || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-slate-500">Account Manager</p>
@@ -726,6 +726,29 @@ const CaseDetail = () => {
                       {status.label}
                     </Button>
                   ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <Label className="text-sm font-medium text-slate-600">Commission Paid Date</Label>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Input
+                      type="date"
+                      className="w-48"
+                      value={caseData.commission_paid_date || ''}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        try {
+                          await casesAPI.update(caseId, { commission_paid_date: val || null });
+                          setCaseData({ ...caseData, commission_paid_date: val });
+                          setEditedCase({ ...editedCase, commission_paid_date: val });
+                          toast.success('Commission paid date updated');
+                        } catch (err) { toast.error('Failed to update date'); }
+                      }}
+                      data-testid="commission-paid-date"
+                    />
+                    {caseData.commission_paid_date && (
+                      <span className="text-sm text-green-600 font-medium">Paid: {formatDate(caseData.commission_paid_date)}</span>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -5,7 +5,6 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../components/ui/select';
@@ -13,12 +12,14 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import {
-  PoundSterling, TrendingUp, Calendar, CheckCircle, AlertTriangle, ArrowDownCircle,
+  PoundSterling, TrendingUp, Calendar, AlertTriangle, ArrowDownCircle, Clock,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { toast } from 'sonner';
+
+const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
 
 const COMMISSION_STATUSES = [
   { key: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
@@ -29,7 +30,7 @@ const COMMISSION_STATUSES = [
 
 const Commission = () => {
   const [stats, setStats] = useState(null);
-  const [forecast, setForecast] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [monthly, setMonthly] = useState(null);
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,19 +38,19 @@ const Commission = () => {
   const [viewMode, setViewMode] = useState('monthly');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, []); // eslint-disable-line
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, forecastData, monthlyData, casesData] = await Promise.all([
+      const [statsData, summaryData, monthlyData, casesData] = await Promise.all([
         dashboardAPI.getStats(),
         dashboardAPI.getForecast(),
         commissionAPI.getMonthly({}),
         casesAPI.getAll({}),
       ]);
       setStats(statsData);
-      setForecast(forecastData);
+      setSummary(summaryData);
       setMonthly(monthlyData);
       setCases(casesData.cases || []);
     } catch (err) {
@@ -81,18 +82,18 @@ const Commission = () => {
     }
   };
 
-  const handleUpdateCommissionStatus = async (caseId, newStatus) => {
+  const handleUpdateCommission = async (caseId, updates) => {
     try {
-      await casesAPI.update(caseId, { commission_status: newStatus });
-      toast.success('Commission status updated');
+      await casesAPI.update(caseId, updates);
+      toast.success('Commission updated');
       loadData();
     } catch (err) {
-      toast.error('Failed to update status');
+      toast.error('Failed to update');
     }
   };
 
   const formatDate = (d) => {
-    if (!d) return '';
+    if (!d) return '-';
     const parts = d.split('T')[0].split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return d;
@@ -104,8 +105,8 @@ const Commission = () => {
   };
 
   const getFilteredCases = () => {
-    if (statusFilter === 'all') return cases.filter(c => c.gross_commission > 0);
-    return cases.filter(c => c.commission_status === statusFilter && c.gross_commission > 0);
+    if (statusFilter === 'all') return cases.filter(c => c.gross_commission > 0 || c.proc_fee_total > 0);
+    return cases.filter(c => c.commission_status === statusFilter && (c.gross_commission > 0 || c.proc_fee_total > 0));
   };
 
   const getStatusBadge = (status) => {
@@ -141,10 +142,10 @@ const Commission = () => {
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="commission-page">
       <div>
         <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Commission & Revenue</h1>
-        <p className="text-slate-500 mt-1">Track your earnings and forecast future revenue</p>
+        <p className="text-slate-500 mt-1">Track your earnings and revenue</p>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-slate-200 stat-card">
           <CardContent className="p-6">
@@ -161,10 +162,10 @@ const Commission = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Pending Commission</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="pending-commission">{formatCurrency(monthly?.totals?.total_pending)}</p>
+                <p className="text-sm text-slate-500">Total Proc Fees</p>
+                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="total-proc-fees">{formatCurrency(monthly?.totals?.total_proc_fees || stats?.total_proc_fees)}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-yellow-600" /></div>
+              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-blue-600" /></div>
             </div>
           </CardContent>
         </Card>
@@ -172,10 +173,10 @@ const Commission = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Proc Fees</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">{formatCurrency(monthly?.totals?.total_proc_fees || stats?.total_proc_fees)}</p>
+                <p className="text-sm text-slate-500">Pending Commission</p>
+                <p className="text-3xl font-bold text-yellow-700 mt-1" data-testid="pending-commission">{formatCurrency(monthly?.totals?.total_pending)}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-blue-600" /></div>
+              <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-yellow-600" /></div>
             </div>
           </CardContent>
         </Card>
@@ -188,6 +189,30 @@ const Commission = () => {
               </div>
               <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center"><ArrowDownCircle className="h-6 w-6 text-red-600" /></div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Commission This Month + Last 30 Days (replaces forecast) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Calendar className="h-5 w-5 text-green-600" />
+              <p className="text-sm font-medium text-green-700">Commission This Month</p>
+            </div>
+            <p className="text-3xl font-bold text-slate-900" data-testid="commission-this-month">{formatCurrency(summary?.commission_this_month?.amount)}</p>
+            <p className="text-sm text-slate-500 mt-1">{summary?.commission_this_month?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_this_month?.proc_fees)}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <p className="text-sm font-medium text-blue-700">Commission in Last 30 Days</p>
+            </div>
+            <p className="text-3xl font-bold text-slate-900" data-testid="commission-last-30">{formatCurrency(summary?.commission_last_30_days?.amount)}</p>
+            <p className="text-sm text-slate-500 mt-1">{summary?.commission_last_30_days?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_last_30_days?.proc_fees)}</p>
           </CardContent>
         </Card>
       </div>
@@ -212,22 +237,6 @@ const Commission = () => {
             <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(monthly?.totals?.grand_total)}</p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Forecast Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[{ key: 'next_30_days', label: 'Next 30 Days', color: 'green' }, { key: 'next_60_days', label: 'Next 60 Days', color: 'blue' }, { key: 'next_90_days', label: 'Next 90 Days', color: 'purple' }].map(({ key, label, color }) => (
-          <Card key={key} className={`border-slate-200 bg-gradient-to-br from-${color}-50 to-white`}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar className={`h-5 w-5 text-${color}-600`} />
-                <p className={`text-sm font-medium text-${color}-700`}>Forecast: {label}</p>
-              </div>
-              <p className="text-2xl font-bold text-slate-900">{formatCurrency(forecast?.[key]?.amount)}</p>
-              <p className="text-sm text-slate-500">{forecast?.[key]?.cases || 0} cases expected</p>
-            </CardContent>
-          </Card>
-        ))}
       </div>
 
       {/* Monthly Revenue View */}
@@ -325,7 +334,6 @@ const Commission = () => {
                       <TableCell className="text-right font-bold">{formatCurrency(m.total_commission)}</TableCell>
                     </TableRow>
                   ))}
-                  {/* Totals Row */}
                   <TableRow className="bg-slate-50 font-bold">
                     <TableCell>TOTAL</TableCell>
                     <TableCell className="text-right text-yellow-700">{formatCurrency(monthly?.totals?.total_pending)}</TableCell>
@@ -374,22 +382,23 @@ const Commission = () => {
                 <div key={c.case_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-testid={`commission-row-${c.case_id}`}>
                   <div>
                     <p className="font-medium text-slate-900">{c.client_name}</p>
-                    <p className="text-sm text-slate-500">{c.lender_name || 'No lender'} · {c.product_type}{c.expected_completion_date ? ` · Due: ${formatDate(c.expected_completion_date)}` : ''}</p>
+                    <p className="text-sm text-slate-500">
+                      {c.lender_name || c.insurance_provider || 'No provider'} &middot; {formatStatus(c.product_type)}
+                      {c.commission_paid_date && <span className="ml-2 text-green-600">Paid: {formatDate(c.commission_paid_date)}</span>}
+                    </p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="font-bold text-slate-900">{formatCurrency(c.gross_commission)}</p>
-                      {c.proc_fee_total > 0 && <p className="text-sm text-slate-500">+ {formatCurrency(c.proc_fee_total)} proc fee</p>}
+                      {c.proc_fee_total > 0 && <p className="text-xs text-slate-500">Proc Fee: {formatCurrency(c.proc_fee_total)}</p>}
                     </div>
-                    <Select value={c.commission_status} onValueChange={(v) => handleUpdateCommissionStatus(c.case_id, v)}>
+                    <Select value={c.commission_status} onValueChange={(v) => handleUpdateCommission(c.case_id, { commission_status: v })}>
                       <SelectTrigger className="w-[150px]">
                         <Badge className={getStatusBadge(c.commission_status)}>
                           {COMMISSION_STATUSES.find(s => s.key === c.commission_status)?.label || c.commission_status}
                         </Badge>
                       </SelectTrigger>
-                      <SelectContent>
-                        {COMMISSION_STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-                      </SelectContent>
+                      <SelectContent>{COMMISSION_STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
