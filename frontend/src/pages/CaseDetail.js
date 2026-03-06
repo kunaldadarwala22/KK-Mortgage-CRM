@@ -55,6 +55,8 @@ const CASE_STATUSES = [
   { key: 'offer_issued', label: 'Offer Issued', color: 'bg-indigo-100 text-indigo-800' },
   { key: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },
   { key: 'lost_case', label: 'Lost Case', color: 'bg-red-100 text-red-800' },
+  { key: 'review_due', label: 'Review Due', color: 'bg-amber-100 text-amber-800' },
+  { key: 'for_review', label: 'For Review', color: 'bg-amber-100 text-amber-800' },
 ];
 
 const PRODUCT_TYPES = [

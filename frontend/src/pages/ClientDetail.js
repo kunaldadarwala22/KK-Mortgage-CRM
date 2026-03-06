@@ -18,7 +18,7 @@ import {
 import {
   ArrowLeft, Edit, Save, X, Plus, FileText, Briefcase, CheckSquare,
   Phone, Mail, MapPin, PoundSterling, User, Building2, AlertTriangle,
-  Upload, Trash2, Copy,
+  Upload, Trash2, Copy, Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,6 +40,8 @@ const ClientDetail = () => {
   const [showCaseDialog, setShowCaseDialog] = useState(false);
   const [showDocDialog, setShowDocDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [showApplicantDialog, setShowApplicantDialog] = useState(false);
+  const [newApplicant, setNewApplicant] = useState({ full_name: '', dob: '', email: '', phone: '' });
 
   const emptyCase = {
     product_type: '', mortgage_type: '', insurance_type: '',
@@ -147,6 +149,31 @@ const ClientDetail = () => {
   };
 
   const fmt = (v) => v ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v) : '-';
+
+  const handleAddApplicant = async () => {
+    try {
+      const applicants = [...(client.additional_applicants || []), { ...newApplicant }];
+      await clientsAPI.update(clientId, { additional_applicants: applicants });
+      toast.success('Additional applicant added');
+      setShowApplicantDialog(false);
+      setNewApplicant({ full_name: '', dob: '', email: '', phone: '' });
+      loadData();
+    } catch (error) {
+      toast.error(error.message || 'Failed to add applicant');
+    }
+  };
+
+  const handleRemoveApplicant = async (index) => {
+    try {
+      const applicants = [...(client.additional_applicants || [])];
+      applicants.splice(index, 1);
+      await clientsAPI.update(clientId, { additional_applicants: applicants });
+      toast.success('Applicant removed');
+      loadData();
+    } catch (error) {
+      toast.error(error.message || 'Failed to remove applicant');
+    }
+  };
   const fmtDate = (d) => { if (!d) return '-'; const p = d.split('T')[0].split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; };
   const fmtStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
   const statusColor = (s) => ({ new_lead: 'bg-blue-100 text-blue-800', fact_find_complete: 'bg-purple-100 text-purple-800', application_submitted: 'bg-yellow-100 text-yellow-800', valuation_booked: 'bg-orange-100 text-orange-800', offer_issued: 'bg-indigo-100 text-indigo-800', completed: 'bg-green-100 text-green-800', lost_case: 'bg-red-100 text-red-800' }[s] || 'bg-slate-100 text-slate-800');
@@ -244,6 +271,35 @@ const ClientDetail = () => {
                       <div><p className="text-sm text-slate-500">Security Property</p><p className="font-medium">{client.security_property_address}</p></div>
                     )}
                   </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Additional Applicants (Joint Applications) */}
+            <Card className="border-slate-200 lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-slate-500" />Additional Applicants</CardTitle>
+                <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => setShowApplicantDialog(true)} data-testid="add-applicant-btn"><Plus className="h-4 w-4 mr-2" />Add Applicant</Button>
+              </CardHeader>
+              <CardContent>
+                {(!client.additional_applicants || client.additional_applicants.length === 0) ? (
+                  <p className="text-sm text-slate-500 text-center py-4">No additional applicants. Click "Add Applicant" if this is a joint application.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {client.additional_applicants.map((ap, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-slate-50" data-testid={`applicant-${idx}`}>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+                          <div><p className="text-xs text-slate-500">Full Name</p><p className="font-medium text-sm">{ap.full_name || '-'}</p></div>
+                          <div><p className="text-xs text-slate-500">Date of Birth</p><p className="text-sm">{fmtDate(ap.dob)}</p></div>
+                          <div><p className="text-xs text-slate-500">Email</p><p className="text-sm">{ap.email || '-'}</p></div>
+                          <div><p className="text-xs text-slate-500">Phone</p><p className="text-sm">{ap.phone || '-'}</p></div>
+                        </div>
+                        <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 ml-2" onClick={() => handleRemoveApplicant(idx)} data-testid={`remove-applicant-${idx}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -494,6 +550,26 @@ const ClientDetail = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTaskDialog(false)}>Cancel</Button>
             <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddTask} disabled={!newTask.title || !newTask.due_date}>Create Task</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Additional Applicant Dialog */}
+      <Dialog open={showApplicantDialog} onOpenChange={setShowApplicantDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Additional Applicant</DialogTitle>
+            <DialogDescription>Add a joint applicant to {client.first_name}'s profile.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Full Name *</Label><Input value={newApplicant.full_name} onChange={(e) => setNewApplicant({ ...newApplicant, full_name: e.target.value })} placeholder="e.g. Jane Smith" data-testid="applicant-name" /></div>
+            <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" value={newApplicant.dob} onChange={(e) => setNewApplicant({ ...newApplicant, dob: e.target.value })} data-testid="applicant-dob" /></div>
+            <div className="space-y-2"><Label>Email</Label><Input type="email" value={newApplicant.email} onChange={(e) => setNewApplicant({ ...newApplicant, email: e.target.value })} data-testid="applicant-email" /></div>
+            <div className="space-y-2"><Label>Phone</Label><Input value={newApplicant.phone} onChange={(e) => setNewApplicant({ ...newApplicant, phone: e.target.value })} data-testid="applicant-phone" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApplicantDialog(false)}>Cancel</Button>
+            <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddApplicant} disabled={!newApplicant.full_name} data-testid="save-applicant-btn">Add Applicant</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

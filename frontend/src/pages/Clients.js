@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clientsAPI } from '../lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
@@ -21,7 +21,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Checkbox } from '../components/ui/checkbox';
 import {
-  Search, Plus, MoreHorizontal, Eye, Trash2, Phone, Mail, MapPin, Users, Filter, Download, X, Loader2,
+  Search, Plus, MoreHorizontal, Eye, Trash2, Mail, Users, Filter, Download, X, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,20 +40,18 @@ const Clients = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newClient, setNewClient] = useState({
     first_name: '', last_name: '', email: '', phone: '', dob: '',
-    current_address: '', postcode: '', security_property_address: '',
-    income: '', employment_type: '', deposit: '', property_price: '',
-    loan_amount: '', credit_issues: false, credit_issues_notes: '',
+    current_address: '', postcode: '',
+    income: '', employment_type: '',
+    credit_issues: false, credit_issues_notes: '',
     lead_source: '', referral_partner_name: '', fact_find_complete: false,
     vulnerable_customer: false, advice_type: '',
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
 
-  // Open add dialog when navigated from Dashboard
   useEffect(() => {
     if (location.state?.openAddDialog) {
       setShowAddDialog(true);
-      // Clear the state so it doesn't re-open on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -82,14 +80,11 @@ const Clients = () => {
       const clientData = {
         ...newClient,
         income: newClient.income ? parseFloat(newClient.income) : null,
-        deposit: newClient.deposit ? parseFloat(newClient.deposit) : null,
-        property_price: newClient.property_price ? parseFloat(newClient.property_price) : null,
-        loan_amount: newClient.loan_amount ? parseFloat(newClient.loan_amount) : null,
       };
       await clientsAPI.create(clientData);
       toast.success('Client created successfully');
       setShowAddDialog(false);
-      setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', security_property_address: '', income: '', employment_type: '', deposit: '', property_price: '', loan_amount: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '' });
+      setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', income: '', employment_type: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '' });
       loadClients();
     } catch (err) {
       toast.error(err.message || 'Failed to create client');
@@ -131,14 +126,12 @@ const Clients = () => {
       window.URL.revokeObjectURL(url);
       toast.success('Client data exported successfully!');
     } catch (err) {
-      console.error('Export error:', err);
       toast.error('Failed to export client data');
     } finally {
       setExporting(false);
     }
   };
 
-  const formatCurrency = (v) => v ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v) : '-';
   const formatDate = (d) => {
     if (!d) return '-';
     const parts = d.split('T')[0].split('-');
@@ -146,12 +139,6 @@ const Clients = () => {
     return d;
   };
   const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
-  const getStatusColor = (s) => ({
-    new_lead: 'bg-blue-100 text-blue-800', fact_find_complete: 'bg-purple-100 text-purple-800',
-    application_submitted: 'bg-yellow-100 text-yellow-800', valuation_booked: 'bg-orange-100 text-orange-800',
-    offer_issued: 'bg-indigo-100 text-indigo-800', completed: 'bg-green-100 text-green-800',
-    lost_case: 'bg-red-100 text-red-800',
-  }[s] || 'bg-slate-100 text-slate-800');
 
   const getRowBg = (client) => {
     if (client.case_status === 'completed') return 'bg-green-50 hover:bg-green-100';
@@ -225,10 +212,10 @@ const Clients = () => {
       <div className="flex gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-200 inline-block" /> Completed</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block" /> Lost Case</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 inline-block" /> Expiring Soon (90 days)</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 inline-block" /> Expiring Soon</span>
       </div>
 
-      {/* Client Table */}
+      {/* Client Table - Only client info, no case metrics */}
       <Card className="border-slate-200">
         <CardContent className="p-0">
           {clients.length === 0 ? (
@@ -244,15 +231,13 @@ const Clients = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Client Name</TableHead>
-                    <TableHead>Security Address</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Postcode</TableHead>
-                    <TableHead>Loan Amount</TableHead>
-                    <TableHead>Property Value</TableHead>
-                    <TableHead>LTV</TableHead>
-                    <TableHead>Case Status</TableHead>
-                    <TableHead>Commission Status</TableHead>
-                    <TableHead>Completion Date</TableHead>
+                    <TableHead>Income</TableHead>
+                    <TableHead>Employment</TableHead>
                     <TableHead>Lead Source</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -261,31 +246,22 @@ const Clients = () => {
                     <TableRow key={c.client_id} className={`cursor-pointer transition-colors ${getRowBg(c)}`} onClick={() => navigate(`/clients/${c.client_id}`)} data-testid={`client-row-${c.client_id}`}>
                       <TableCell>
                         <p className="font-medium">{c.first_name} {c.last_name}</p>
-                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                          {c.email && <span className="flex items-center gap-0.5"><Mail className="h-3 w-3" />{c.email}</span>}
-                        </div>
                       </TableCell>
-                      <TableCell className="text-sm">{c.security_property_address || c.current_address ? (c.security_property_address || c.current_address).split(',')[0] : '-'}</TableCell>
+                      <TableCell className="text-sm">
+                        {c.email ? <span className="flex items-center gap-1"><Mail className="h-3 w-3 text-slate-400" />{c.email}</span> : '-'}
+                      </TableCell>
+                      <TableCell className="text-sm">{c.phone || '-'}</TableCell>
                       <TableCell>{c.postcode || '-'}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(c.case_loan_amount || c.loan_amount)}</TableCell>
-                      <TableCell>{formatCurrency(c.property_price)}</TableCell>
-                      <TableCell>
-                        {c.ltv ? (
-                          <Badge className={c.ltv > 90 ? 'bg-red-100 text-red-800' : c.ltv > 75 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
-                            {c.ltv}%
-                          </Badge>
-                        ) : '-'}
+                      <TableCell className="font-medium">
+                        {c.income ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(c.income) : '-'}
                       </TableCell>
                       <TableCell>
-                        {c.case_status ? <Badge className={getStatusColor(c.case_status)}>{formatStatus(c.case_status)}</Badge> : '-'}
+                        {c.employment_type ? <Badge variant="outline" className="text-xs">{formatStatus(c.employment_type)}</Badge> : '-'}
                       </TableCell>
-                      <TableCell>
-                        {c.commission_status ? <Badge className={getStatusColor(c.commission_status)}>{formatStatus(c.commission_status)}</Badge> : '-'}
-                      </TableCell>
-                      <TableCell className="text-sm">{formatDate(c.expected_completion_date)}</TableCell>
                       <TableCell>
                         {c.lead_source ? <Badge variant="outline" className="text-xs">{formatStatus(c.lead_source)}</Badge> : '-'}
                       </TableCell>
+                      <TableCell className="text-sm">{formatDate(c.created_at)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -310,7 +286,7 @@ const Clients = () => {
         </CardContent>
       </Card>
 
-      {/* Add Client Dialog */}
+      {/* Add Client Dialog - Removed: Security Address, Property Price, Loan Amount, Deposit */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -320,30 +296,26 @@ const Clients = () => {
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2"><Label>First Name *</Label><Input value={newClient.first_name} onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })} data-testid="client-first-name" /></div>
             <div className="space-y-2"><Label>Last Name *</Label><Input value={newClient.last_name} onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })} data-testid="client-last-name" /></div>
-            <div className="space-y-2"><Label>Email</Label><Input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Phone</Label><Input value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" value={newClient.dob} onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Postcode</Label><Input value={newClient.postcode} onChange={(e) => setNewClient({ ...newClient, postcode: e.target.value })} /></div>
-            <div className="col-span-2 space-y-2"><Label>Current Address</Label><Input value={newClient.current_address} onChange={(e) => setNewClient({ ...newClient, current_address: e.target.value })} /></div>
-            <div className="col-span-2 space-y-2"><Label>Security Property Address</Label><Input value={newClient.security_property_address} onChange={(e) => setNewClient({ ...newClient, security_property_address: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Income</Label><Input type="number" value={newClient.income} onChange={(e) => setNewClient({ ...newClient, income: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Email</Label><Input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} data-testid="client-email" /></div>
+            <div className="space-y-2"><Label>Phone</Label><Input value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} data-testid="client-phone" /></div>
+            <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" value={newClient.dob} onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })} data-testid="client-dob" /></div>
+            <div className="space-y-2"><Label>Postcode</Label><Input value={newClient.postcode} onChange={(e) => setNewClient({ ...newClient, postcode: e.target.value })} data-testid="client-postcode" /></div>
+            <div className="col-span-2 space-y-2"><Label>Current Address</Label><Input value={newClient.current_address} onChange={(e) => setNewClient({ ...newClient, current_address: e.target.value })} data-testid="client-address" /></div>
+            <div className="space-y-2"><Label>Income</Label><Input type="number" value={newClient.income} onChange={(e) => setNewClient({ ...newClient, income: e.target.value })} data-testid="client-income" /></div>
             <div className="space-y-2">
               <Label>Employment Type</Label>
               <Select value={newClient.employment_type || 'none'} onValueChange={(v) => setNewClient({ ...newClient, employment_type: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger data-testid="client-employment"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Select...</SelectItem>
                   {EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{formatStatus(t)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2"><Label>Property Price</Label><Input type="number" value={newClient.property_price} onChange={(e) => setNewClient({ ...newClient, property_price: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Loan Amount</Label><Input type="number" value={newClient.loan_amount} onChange={(e) => setNewClient({ ...newClient, loan_amount: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Deposit</Label><Input type="number" value={newClient.deposit} onChange={(e) => setNewClient({ ...newClient, deposit: e.target.value })} /></div>
             <div className="space-y-2">
               <Label>Lead Source</Label>
               <Select value={newClient.lead_source || 'none'} onValueChange={(v) => setNewClient({ ...newClient, lead_source: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger data-testid="client-lead-source"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Select...</SelectItem>
                   {LEAD_SOURCES.map((s) => <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>)}

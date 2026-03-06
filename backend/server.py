@@ -101,6 +101,8 @@ class ClientCreate(BaseModel):
     gdpr_consent_date: Optional[str] = None
     # Assignment
     advisor_id: Optional[str] = None
+    # Additional applicants (joint applications)
+    additional_applicants: Optional[List[Dict[str, Any]]] = None
 
 class ClientResponse(BaseModel):
     client_id: str
@@ -180,8 +182,23 @@ class CaseCreate(BaseModel):
     product_review_date: Optional[str] = None
     product_expiry_date: Optional[str] = None
     loan_amount: Optional[float] = None
+    # New Mortgage Fields
+    property_value: Optional[float] = None
+    deposit_source: Optional[str] = None
+    repayment_type: Optional[str] = None  # interest_only, repayment
+    property_type: Optional[str] = None  # residential, buy_to_let
+    case_reference: Optional[str] = None
+    rate_fixed_for: Optional[int] = None  # years
+    # Insurance Fields
+    insurance_cover_type: Optional[str] = None  # level_term, decreasing_term, increasing_term, whole_of_life
+    insurance_reference: Optional[str] = None
+    monthly_premium: Optional[float] = None
+    guaranteed_or_reviewable: Optional[str] = None  # guaranteed, reviewable
+    sum_assured: Optional[float] = None
+    in_trust: Optional[bool] = None
+    insurance_provider: Optional[str] = None
     # Commission
-    proc_fee_type: Optional[str] = None  # "percentage" or "fixed"
+    proc_fee_type: Optional[str] = None
     proc_fee_value: Optional[float] = None
     commission_percentage: Optional[float] = None
     gross_commission: Optional[float] = None
@@ -581,6 +598,23 @@ async def get_clients(
     
     return {"clients": clients, "total": total}
 
+@api_router.get("/clients/search")
+async def search_clients(request: Request, q: str = ""):
+    """Search clients by name for case creation"""
+    await get_current_user(request)
+    
+    if not q or len(q) < 1:
+        clients = await db.clients.find({}, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1, "phone": 1}).limit(20).to_list(20)
+        return clients
+    
+    query = {"$or": [
+        {"first_name": {"$regex": q, "$options": "i"}},
+        {"last_name": {"$regex": q, "$options": "i"}},
+        {"email": {"$regex": q, "$options": "i"}},
+    ]}
+    clients = await db.clients.find(query, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1, "phone": 1}).limit(20).to_list(20)
+    return clients
+
 @api_router.get("/clients/{client_id}")
 async def get_client(client_id: str, request: Request):
     await get_current_user(request)
@@ -621,9 +655,6 @@ async def update_client(client_id: str, request: Request):
 async def delete_client(client_id: str, request: Request):
     current_user = await get_current_user(request)
     
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only admins can delete clients")
-    
     await db.clients.delete_one({"client_id": client_id})
     await db.cases.delete_many({"client_id": client_id})
     await db.documents.delete_many({"client_id": client_id})
@@ -652,9 +683,6 @@ async def create_case(case: CaseCreate, request: Request):
     await db.cases.insert_one(case_doc)
     await create_audit_log("create", "case", case_id, current_user["user_id"])
     
-    # Create auto tasks based on status
-    await create_case_tasks(case_id, case.status, current_user["user_id"])
-    
     result = await db.cases.find_one({"case_id": case_id}, {"_id": 0})
     return result
 
@@ -667,6 +695,7 @@ async def get_cases(
     advisor_id: Optional[str] = None,
     lender_name: Optional[str] = None,
     commission_status: Optional[str] = None,
+    search: Optional[str] = None,
     skip: int = 0,
     limit: int = 100
 ):
@@ -685,6 +714,17 @@ async def get_cases(
         query["lender_name"] = {"$regex": lender_name, "$options": "i"}
     if commission_status:
         query["commission_status"] = commission_status
+    
+    # Search by client name
+    if search:
+        matching_clients = await db.clients.find({
+            "$or": [
+                {"first_name": {"$regex": search, "$options": "i"}},
+                {"last_name": {"$regex": search, "$options": "i"}},
+            ]
+        }, {"client_id": 1, "_id": 0}).to_list(500)
+        matching_ids = [c["client_id"] for c in matching_clients]
+        query["client_id"] = {"$in": matching_ids} if matching_ids else "__no_match__"
     
     cases = await db.cases.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     total = await db.cases.count_documents(query)
@@ -750,27 +790,26 @@ async def delete_case(case_id: str, request: Request):
     return {"message": "Case deleted successfully"}
 
 async def create_case_tasks(case_id: str, status: str, user_id: str):
-    """Create automatic tasks based on case status changes"""
-    task_templates = {
-        CaseStatus.APPLICATION_SUBMITTED: {"title": "Follow up on application", "days": 3},
-        CaseStatus.OFFER_ISSUED: {"title": "Review offer with client", "days": 2},
-        CaseStatus.COMPLETED: {"title": "Completion follow-up and review", "days": 1}
-    }
+    """Create automatic tasks only when case status is set to review"""
+    review_statuses = ["review_due", "for_review"]
     
-    if status in task_templates:
-        template = task_templates[status]
+    if status.lower() in review_statuses:
         task_id = generate_id("task_")
-        due_date = (datetime.now(timezone.utc) + timedelta(days=template["days"])).strftime("%Y-%m-%d")
+        due_date = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d")
+        
+        case = await db.cases.find_one({"case_id": case_id}, {"_id": 0, "client_id": 1})
+        client_id = case.get("client_id") if case else None
         
         task_doc = {
             "task_id": task_id,
-            "title": template["title"],
-            "description": f"Auto-generated task for status: {status}",
+            "title": f"Review case - {case_id}",
+            "description": "Auto-generated: Case marked for review",
             "due_date": due_date,
             "case_id": case_id,
+            "client_id": client_id,
             "assigned_to": user_id,
-            "priority": "medium",
-            "task_type": "auto",
+            "priority": "high",
+            "task_type": "auto_review",
             "completed": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
@@ -1246,9 +1285,6 @@ async def get_audit_logs(
 ):
     current_user = await get_current_user(request)
     
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only admins can view audit logs")
-    
     query = {}
     if entity_type:
         query["entity_type"] = entity_type
@@ -1265,6 +1301,113 @@ async def get_audit_logs(
         log["user_name"] = user["name"] if user else None
     
     return logs
+
+# ==================== GLOBAL SEARCH ====================
+
+@api_router.get("/search")
+async def global_search(request: Request, q: str = ""):
+    """Search across clients and cases"""
+    await get_current_user(request)
+    
+    if not q or len(q) < 2:
+        return {"clients": [], "cases": []}
+    
+    # Search clients
+    client_query = {"$or": [
+        {"first_name": {"$regex": q, "$options": "i"}},
+        {"last_name": {"$regex": q, "$options": "i"}},
+        {"email": {"$regex": q, "$options": "i"}},
+        {"phone": {"$regex": q, "$options": "i"}},
+        {"postcode": {"$regex": q, "$options": "i"}},
+    ]}
+    clients = await db.clients.find(client_query, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1, "phone": 1}).limit(10).to_list(10)
+    
+    # Search cases
+    case_query = {"$or": [
+        {"case_id": {"$regex": q, "$options": "i"}},
+        {"lender_name": {"$regex": q, "$options": "i"}},
+        {"application_reference": {"$regex": q, "$options": "i"}},
+        {"case_reference": {"$regex": q, "$options": "i"}},
+        {"insurance_reference": {"$regex": q, "$options": "i"}},
+    ]}
+    cases = await db.cases.find(case_query, {"_id": 0, "case_id": 1, "client_id": 1, "product_type": 1, "status": 1, "lender_name": 1}).limit(10).to_list(10)
+    
+    # Enrich cases with client names
+    for case in cases:
+        client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+        case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
+    
+    return {"clients": clients, "cases": cases}
+
+# ==================== NOTIFICATIONS ====================
+
+@api_router.get("/notifications")
+async def get_notifications(request: Request):
+    """Get notifications: overdue tasks, expiring products, upcoming tasks"""
+    await get_current_user(request)
+    
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    week_ahead = (now + timedelta(days=7)).strftime("%Y-%m-%d")
+    month_ahead = (now + timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    notifications = []
+    
+    # Overdue tasks
+    overdue_tasks = await db.tasks.find({
+        "completed": False,
+        "due_date": {"$lt": today}
+    }, {"_id": 0}).sort("due_date", 1).limit(10).to_list(10)
+    
+    for task in overdue_tasks:
+        notifications.append({
+            "type": "overdue_task",
+            "title": f"Overdue: {task['title']}",
+            "description": f"Due: {task.get('due_date', '')}",
+            "link": f"/tasks",
+            "severity": "high",
+            "created_at": task.get("created_at", "")
+        })
+    
+    # Tasks due this week
+    upcoming_tasks = await db.tasks.find({
+        "completed": False,
+        "due_date": {"$gte": today, "$lte": week_ahead}
+    }, {"_id": 0}).sort("due_date", 1).limit(10).to_list(10)
+    
+    for task in upcoming_tasks:
+        notifications.append({
+            "type": "upcoming_task",
+            "title": f"Due soon: {task['title']}",
+            "description": f"Due: {task.get('due_date', '')}",
+            "link": f"/tasks",
+            "severity": "medium",
+            "created_at": task.get("created_at", "")
+        })
+    
+    # Expiring products (cases with product_expiry_date coming up)
+    expiring_cases = await db.cases.find({
+        "product_expiry_date": {"$gte": today, "$lte": month_ahead},
+        "status": {"$ne": "completed"}
+    }, {"_id": 0, "case_id": 1, "client_id": 1, "product_type": 1, "product_expiry_date": 1, "lender_name": 1}).limit(10).to_list(10)
+    
+    for case in expiring_cases:
+        client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+        client_name = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
+        notifications.append({
+            "type": "expiring_product",
+            "title": f"Product expiring: {client_name}",
+            "description": f"{case.get('lender_name', case.get('product_type', ''))} - Expires: {case.get('product_expiry_date', '')}",
+            "link": f"/cases/{case['case_id']}",
+            "severity": "high",
+            "created_at": case.get("product_expiry_date", "")
+        })
+    
+    return {"notifications": notifications, "count": len(notifications)}
+
+# ==================== CLIENT SEARCH (for case creation) ====================
+
+# (Moved to before /clients/{client_id} to avoid path conflicts)
 
 # ==================== UTILITY ROUTES ====================
 
@@ -1662,274 +1805,140 @@ async def export_report(
 
 @api_router.get("/export/excel")
 async def export_all_data(request: Request):
-    """Export all CRM data to Excel file"""
+    """Export all CRM data to a single Excel sheet - one row per case with client data"""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
     
     current_user = await get_current_user(request)
     
-    # Create workbook
     wb = Workbook()
+    ws = wb.active
+    ws.title = "CRM Data"
     
-    # Style definitions
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
+    alt_fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
     thin_border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+        left=Side(style='thin', color='E5E7EB'),
+        right=Side(style='thin', color='E5E7EB'),
+        top=Side(style='thin', color='E5E7EB'),
+        bottom=Side(style='thin', color='E5E7EB')
     )
     
-    # ===== CLIENTS SHEET =====
-    ws_clients = wb.active
-    ws_clients.title = "Clients"
-    
-    client_headers = [
-        "Client ID", "First Name", "Last Name", "Email", "Phone", "DOB",
-        "Address", "Postcode", "Income", "Employment Type", "Deposit",
-        "Property Price", "Loan Amount", "LTV %", "Credit Issues",
-        "Lead Source", "Referral Partner", "Fact Find Complete",
-        "Vulnerable Customer", "Advice Type", "GDPR Consent Date",
-        "Created At"
+    # Title row
+    headers = [
+        "Client Name", "Client Email", "Client Phone", "DOB", "Address", "Postcode",
+        "Income", "Employment Type", "Lead Source",
+        "Case Type", "Case Status", "Lender/Provider", "Mortgage Type", "Insurance Type",
+        "Loan Amount", "Property Value", "Property Type", "Repayment Type",
+        "Term (Years)", "Interest Rate", "Rate Fixed For",
+        "Monthly Premium", "Sum Assured", "Cover Type",
+        "Case Reference", "Application Date", "Product Expiry Date",
+        "Proc Fee Total", "Commission %", "Gross Commission", "Commission Status"
     ]
-    ws_clients.append(client_headers)
     
-    # Style headers
-    for col, header in enumerate(client_headers, 1):
-        cell = ws_clients.cell(row=1, column=col)
+    ws.append(headers)
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col)
         cell.font = header_font
         cell.fill = header_fill
         cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center')
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    ws.row_dimensions[1].height = 30
     
-    # Fetch and add client data
+    # Build client lookup
     clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
-    for client in clients:
-        row = [
-            client.get("client_id", ""),
-            client.get("first_name", ""),
-            client.get("last_name", ""),
+    client_map = {c["client_id"]: c for c in clients}
+    
+    # Fetch all cases
+    cases = await db.cases.find({}, {"_id": 0}).to_list(10000)
+    
+    row_num = 2
+    for idx, case in enumerate(cases):
+        client = client_map.get(case.get("client_id"), {})
+        fill = alt_fill if idx % 2 == 0 else None
+        
+        row_data = [
+            f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
             client.get("email", ""),
             client.get("phone", ""),
             client.get("dob", ""),
             client.get("current_address", ""),
             client.get("postcode", ""),
             client.get("income", ""),
-            client.get("employment_type", ""),
-            client.get("deposit", ""),
-            client.get("property_price", ""),
-            client.get("loan_amount", ""),
-            client.get("ltv", ""),
-            "Yes" if client.get("credit_issues") else "No",
-            client.get("lead_source", ""),
-            client.get("referral_partner_name", ""),
-            "Yes" if client.get("fact_find_complete") else "No",
-            "Yes" if client.get("vulnerable_customer") else "No",
-            client.get("advice_type", ""),
-            client.get("gdpr_consent_date", ""),
-            client.get("created_at", "")
-        ]
-        ws_clients.append(row)
-    
-    # Auto-adjust column widths for clients
-    for col in ws_clients.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        ws_clients.column_dimensions[column].width = min(max_length + 2, 50)
-    
-    # ===== CASES SHEET =====
-    ws_cases = wb.create_sheet("Cases")
-    
-    case_headers = [
-        "Case ID", "Client ID", "Product Type", "Mortgage Type", "Insurance Type",
-        "Status", "Lender Name", "Loan Amount", "Term (Years)", "Interest Rate",
-        "Application Reference", "Application Date", "Expected Completion",
-        "Product Start Date", "Product Review Date", "Product Expiry Date",
-        "Proc Fee Type", "Proc Fee Value", "Commission %", "Gross Commission",
-        "Your Share", "Proc Fee Total", "Commission Status", "Created At"
-    ]
-    ws_cases.append(case_headers)
-    
-    for col, header in enumerate(case_headers, 1):
-        cell = ws_cases.cell(row=1, column=col)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center')
-    
-    cases = await db.cases.find({}, {"_id": 0}).to_list(10000)
-    for case in cases:
-        row = [
-            case.get("case_id", ""),
-            case.get("client_id", ""),
-            case.get("product_type", ""),
-            case.get("mortgage_type", ""),
-            case.get("insurance_type", ""),
-            case.get("status", ""),
-            case.get("lender_name", ""),
+            (client.get("employment_type", "") or "").replace("_", " ").title(),
+            (client.get("lead_source", "") or "").replace("_", " ").title(),
+            (case.get("product_type", "") or "").replace("_", " ").title(),
+            (case.get("status", "") or "").replace("_", " ").title(),
+            case.get("lender_name", "") or case.get("insurance_provider", ""),
+            (case.get("mortgage_type", "") or "").replace("_", " ").title(),
+            (case.get("insurance_type", "") or "").replace("_", " ").title(),
             case.get("loan_amount", ""),
+            case.get("property_value", ""),
+            (case.get("property_type", "") or "").replace("_", " ").title(),
+            (case.get("repayment_type", "") or "").replace("_", " ").title(),
             case.get("term_years", ""),
             case.get("interest_rate", ""),
-            case.get("application_reference", ""),
+            case.get("rate_fixed_for", ""),
+            case.get("monthly_premium", ""),
+            case.get("sum_assured", ""),
+            (case.get("insurance_cover_type", "") or "").replace("_", " ").title(),
+            case.get("case_reference", "") or case.get("insurance_reference", "") or case.get("application_reference", ""),
             case.get("date_application_submitted", ""),
-            case.get("expected_completion_date", ""),
-            case.get("product_start_date", ""),
-            case.get("product_review_date", ""),
             case.get("product_expiry_date", ""),
-            case.get("proc_fee_type", ""),
-            case.get("proc_fee_value", ""),
+            case.get("proc_fee_total", ""),
             case.get("commission_percentage", ""),
             case.get("gross_commission", ""),
-            case.get("your_commission_share", ""),
-            case.get("proc_fee_total", ""),
-            case.get("commission_status", ""),
-            case.get("created_at", "")
+            (case.get("commission_status", "") or "").replace("_", " ").title(),
         ]
-        ws_cases.append(row)
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=value)
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical='center')
+            if fill:
+                cell.fill = fill
+            if isinstance(value, (int, float)) and value and col in [7, 15, 16, 22, 23, 28, 30]:
+                cell.number_format = '£#,##0'
+        
+        row_num += 1
     
-    for col in ws_cases.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        ws_cases.column_dimensions[column].width = min(max_length + 2, 50)
+    # Also add clients with no cases
+    case_client_ids = set(c.get("client_id") for c in cases)
+    for idx2, client in enumerate(clients):
+        if client.get("client_id") not in case_client_ids:
+            fill = alt_fill if (len(cases) + idx2) % 2 == 0 else None
+            row_data = [
+                f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
+                client.get("email", ""),
+                client.get("phone", ""),
+                client.get("dob", ""),
+                client.get("current_address", ""),
+                client.get("postcode", ""),
+                client.get("income", ""),
+                (client.get("employment_type", "") or "").replace("_", " ").title(),
+                (client.get("lead_source", "") or "").replace("_", " ").title(),
+            ] + [""] * 22
+            
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col, value=value)
+                cell.border = thin_border
+                if fill:
+                    cell.fill = fill
+            row_num += 1
     
-    # ===== TASKS SHEET =====
-    ws_tasks = wb.create_sheet("Tasks")
+    # Auto-fit columns
+    for col_cells in ws.columns:
+        max_len = max((len(str(cell.value or "")) for cell in col_cells), default=10)
+        ws.column_dimensions[col_cells[0].column_letter].width = min(max_len + 3, 35)
     
-    task_headers = [
-        "Task ID", "Title", "Description", "Due Date", "Priority",
-        "Client ID", "Case ID", "Assigned To", "Completed", "Completed At", "Created At"
-    ]
-    ws_tasks.append(task_headers)
-    
-    for col, header in enumerate(task_headers, 1):
-        cell = ws_tasks.cell(row=1, column=col)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center')
-    
-    tasks = await db.tasks.find({}, {"_id": 0}).to_list(10000)
-    for task in tasks:
-        row = [
-            task.get("task_id", ""),
-            task.get("title", ""),
-            task.get("description", ""),
-            task.get("due_date", ""),
-            task.get("priority", ""),
-            task.get("client_id", ""),
-            task.get("case_id", ""),
-            task.get("assigned_to", ""),
-            "Yes" if task.get("completed") else "No",
-            task.get("completed_at", ""),
-            task.get("created_at", "")
-        ]
-        ws_tasks.append(row)
-    
-    for col in ws_tasks.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        ws_tasks.column_dimensions[column].width = min(max_length + 2, 50)
-    
-    # ===== DOCUMENTS SHEET =====
-    ws_docs = wb.create_sheet("Documents")
-    
-    doc_headers = ["Document ID", "Client ID", "Document Type", "File Name", "Notes", "Uploaded By", "Uploaded At"]
-    ws_docs.append(doc_headers)
-    
-    for col, header in enumerate(doc_headers, 1):
-        cell = ws_docs.cell(row=1, column=col)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center')
-    
-    documents = await db.documents.find({}, {"_id": 0, "file_data": 0}).to_list(10000)
-    for doc in documents:
-        row = [
-            doc.get("document_id", ""),
-            doc.get("client_id", ""),
-            doc.get("document_type", ""),
-            doc.get("file_name", ""),
-            doc.get("notes", ""),
-            doc.get("uploaded_by", ""),
-            doc.get("uploaded_at", "")
-        ]
-        ws_docs.append(row)
-    
-    for col in ws_docs.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        ws_docs.column_dimensions[column].width = min(max_length + 2, 50)
-    
-    # ===== USERS SHEET =====
-    ws_users = wb.create_sheet("Users")
-    
-    user_headers = ["User ID", "Name", "Email", "Role", "Created At"]
-    ws_users.append(user_headers)
-    
-    for col, header in enumerate(user_headers, 1):
-        cell = ws_users.cell(row=1, column=col)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center')
-    
-    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(10000)
-    for user in users:
-        row = [
-            user.get("user_id", ""),
-            user.get("name", ""),
-            user.get("email", ""),
-            user.get("role", ""),
-            user.get("created_at", "")
-        ]
-        ws_users.append(row)
-    
-    for col in ws_users.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        ws_users.column_dimensions[column].width = min(max_length + 2, 50)
-    
-    # Create audit log
     await create_audit_log("export", "all_data", "excel", current_user["user_id"])
     
-    # Save to bytes
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
     
-    # Generate filename with timestamp
     filename = f"KK_Mortgage_CRM_Export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
     
     return StreamingResponse(
