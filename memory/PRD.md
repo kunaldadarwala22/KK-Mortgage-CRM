@@ -63,6 +63,14 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - [x] Additional Applicant: replaced Full Name with First Name + Surname, added Income + Employment Type
 - [x] Expiring Soon: fixed backend to strictly filter to 6 months (expiring_by_month + retention_value queries capped)
 
+### March 2026 Updates (Session 5)
+- [x] Interest Rate Type dropdown on mortgage case form (Fixed, Variable, Discounted, Tracker, Capped)
+- [x] Initial Product Term (Years) field on mortgage case form
+- [x] Both fields visible on CaseDetail page (view + edit modes)
+- [x] Both fields included in Excel export
+- [x] Admin wipe-data endpoint (DELETE /api/admin/wipe-data)
+- [x] Database wiped clean for production use
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
@@ -84,9 +92,10 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - `/api/analytics/commission`, `/api/analytics/mortgage-types`
 - `/api/reports/cases-completed`, `/api/reports/commission-paid`
 - `/api/export/excel` (single sheet), `/api/export/clients`
+- `/api/admin/wipe-data` (DELETE - wipes all clients, cases, tasks)
 - `/api/retention-stats`
 
 ## DB Collections
 - users, clients, cases, tasks, documents, audit_logs, user_sessions
 - Client: `additional_applicants: [{full_name, dob, email, phone}]`
-- Case: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider, commission_paid_date
+- Case: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, interest_rate_type, initial_product_term, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider, commission_paid_date
