@@ -52,6 +52,12 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - [x] Case deletion from Cases dashboard (trash icon + confirmation)
 - [x] Multiple applicants fix: primary applicant section + numbered "Applicant N" cards
 
+### March 2026 Updates (Session 3)
+- [x] Commission Paid Date bug fix — saves on blur, not on each keystroke
+- [x] Add Additional Applicant during client creation (unlimited applicants with name/DOB/email/phone)
+- [x] Currency display: raw number when typing, £X,XXX format on blur (CurrencyInput component)
+- [x] Expiring Soon dashboard filtered to 6 months (was 90 days)
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
