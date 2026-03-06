@@ -193,13 +193,13 @@ const Commission = () => {
         </Card>
       </div>
 
-      {/* Commission This Month + Last 30 Days (replaces forecast) */}
+      {/* Commission Paid This Month + Last 30 Days */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Calendar className="h-5 w-5 text-green-600" />
-              <p className="text-sm font-medium text-green-700">Commission This Month</p>
+              <p className="text-sm font-medium text-green-700">Commission Paid This Month</p>
             </div>
             <p className="text-3xl font-bold text-slate-900" data-testid="commission-this-month">{formatCurrency(summary?.commission_this_month?.amount)}</p>
             <p className="text-sm text-slate-500 mt-1">{summary?.commission_this_month?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_this_month?.proc_fees)}</p>
@@ -209,7 +209,7 @@ const Commission = () => {
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Clock className="h-5 w-5 text-blue-600" />
-              <p className="text-sm font-medium text-blue-700">Commission in Last 30 Days</p>
+              <p className="text-sm font-medium text-blue-700">Commission Paid in Last 30 Days</p>
             </div>
             <p className="text-3xl font-bold text-slate-900" data-testid="commission-last-30">{formatCurrency(summary?.commission_last_30_days?.amount)}</p>
             <p className="text-sm text-slate-500 mt-1">{summary?.commission_last_30_days?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_last_30_days?.proc_fees)}</p>
@@ -218,15 +218,26 @@ const Commission = () => {
       </div>
 
       {/* Client Fees Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="border-slate-200 stat-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Client Fees</p>
-                <p className="text-3xl font-bold text-purple-700 mt-1" data-testid="total-client-fees">{formatCurrency(summary?.total_client_fees)}</p>
+                <p className="text-sm text-slate-500">Total Client Fees (Paid)</p>
+                <p className="text-3xl font-bold text-purple-700 mt-1" data-testid="total-client-fees">{formatCurrency(summary?.total_client_fees_paid)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center"><PoundSterling className="h-6 w-6 text-purple-600" /></div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200 stat-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Client Fee Pending</p>
+                <p className="text-3xl font-bold text-yellow-700 mt-1" data-testid="client-fee-pending">{formatCurrency(summary?.client_fee_pending)}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-yellow-600" /></div>
             </div>
           </CardContent>
         </Card>
@@ -235,7 +246,7 @@ const Commission = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Total Commission + Client Fees</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="total-commission-and-fees">{formatCurrency((stats?.total_commission || 0) + (summary?.total_client_fees || 0))}</p>
+                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="total-commission-and-fees">{formatCurrency((stats?.total_commission || 0) + (summary?.total_client_fees_paid || 0))}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-slate-200 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-slate-600" /></div>
             </div>
@@ -245,18 +256,18 @@ const Commission = () => {
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Calendar className="h-5 w-5 text-purple-600" />
-              <p className="text-sm font-medium text-purple-700">Client Fees This Month</p>
+              <p className="text-sm font-medium text-purple-700">Client Fees Paid This Month</p>
             </div>
-            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-this-month">{formatCurrency(summary?.commission_this_month?.client_fees)}</p>
+            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-this-month">{formatCurrency(summary?.client_fees_paid_this_month)}</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-gradient-to-br from-indigo-50 to-white">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Clock className="h-5 w-5 text-indigo-600" />
-              <p className="text-sm font-medium text-indigo-700">Client Fees Last 30 Days</p>
+              <p className="text-sm font-medium text-indigo-700">Client Fees Paid Last 30 Days</p>
             </div>
-            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-last-30">{formatCurrency(summary?.commission_last_30_days?.client_fees)}</p>
+            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-last-30">{formatCurrency(summary?.client_fees_paid_last_30_days)}</p>
           </CardContent>
         </Card>
       </div>

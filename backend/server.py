@@ -208,6 +208,8 @@ class CaseCreate(BaseModel):
     commission_status: str = CommissionStatus.PENDING
     commission_paid_date: Optional[str] = None
     client_fee: Optional[float] = None
+    client_fee_status: str = CommissionStatus.PENDING
+    client_fee_paid_date: Optional[str] = None
     # Assignment
     advisor_id: Optional[str] = None
     notes: Optional[str] = None
@@ -240,6 +242,8 @@ class CaseResponse(BaseModel):
     proc_fee_total: Optional[float] = None
     commission_status: str
     client_fee: Optional[float] = None
+    client_fee_status: Optional[str] = None
+    client_fee_paid_date: Optional[str] = None
     advisor_id: Optional[str] = None
     advisor_name: Optional[str] = None
     notes: Optional[str] = None
@@ -1006,6 +1010,12 @@ async def get_dashboard_stats(request: Request):
     
     commission_stats = commission_agg[0] if commission_agg else {"total_gross": 0, "total_proc": 0, "total_share": 0, "total_client_fees": 0}
     
+    # Client fee pending total
+    cf_pending_agg = await db.cases.aggregate([
+        {"$match": {"client_fee_status": CommissionStatus.PENDING, "client_fee": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}}}
+    ]).to_list(1)
+    
     # Cases by status
     status_counts = await db.cases.aggregate([
         {"$group": {"_id": "$status", "count": {"$sum": 1}}}
@@ -1073,7 +1083,8 @@ async def get_dashboard_stats(request: Request):
         "overdue_tasks": overdue_tasks,
         "mortgage_commission": mortgage_comm[0]["total"] if mortgage_comm else 0,
         "insurance_commission": insurance_comm[0]["total"] if insurance_comm else 0,
-        "total_client_fees": commission_stats.get("total_client_fees", 0)
+        "total_client_fees": commission_stats.get("total_client_fees", 0),
+        "client_fee_pending": cf_pending_agg[0]["total"] if cf_pending_agg else 0
     }
 
 @api_router.get("/dashboard/revenue")
@@ -1148,72 +1159,99 @@ async def get_revenue_analytics(
 
 @api_router.get("/dashboard/forecast")
 async def get_commission_summary(request: Request):
-    """Commission This Month and Last 30 Days based on commission_paid_date"""
+    """Commission & Client Fee stats: This Month, Last 30 Days, Totals, Pending"""
     await get_current_user(request)
     
     today = datetime.now(timezone.utc)
-    
-    # Commission This Month
     month_start = today.replace(day=1).strftime("%Y-%m-%d")
     month_end = today.strftime("%Y-%m-%d")
+    thirty_days_ago = (today - timedelta(days=30)).strftime("%Y-%m-%d")
     
-    this_month = await db.cases.aggregate([
+    # --- Commission Paid This Month (by commission_paid_date) ---
+    comm_this_month = await db.cases.aggregate([
         {"$match": {
             "commission_status": CommissionStatus.PAID,
             "$or": [
                 {"commission_paid_date": {"$gte": month_start, "$lte": month_end}},
-                {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$gte": month_start, "$lte": month_end}}
+                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": month_start, "$lte": month_end}}
             ]
         }},
         {"$group": {
             "_id": None,
             "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
             "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
-            "client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "count": {"$sum": 1}
         }}
     ]).to_list(1)
     
-    # Commission in Last 30 Days
-    thirty_days_ago = (today - timedelta(days=30)).strftime("%Y-%m-%d")
-    
-    last_30 = await db.cases.aggregate([
+    # --- Commission Paid Last 30 Days (by commission_paid_date) ---
+    comm_last_30 = await db.cases.aggregate([
         {"$match": {
             "commission_status": CommissionStatus.PAID,
             "$or": [
                 {"commission_paid_date": {"$gte": thirty_days_ago, "$lte": month_end}},
-                {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$gte": thirty_days_ago, "$lte": month_end}}
+                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": thirty_days_ago, "$lte": month_end}}
             ]
         }},
         {"$group": {
             "_id": None,
             "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
             "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
-            "client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "count": {"$sum": 1}
         }}
     ]).to_list(1)
     
-    # Total Client Fees (all time, paid status)
-    total_client_fees_agg = await db.cases.aggregate([
-        {"$match": {"commission_status": CommissionStatus.PAID}},
+    # --- Client Fees Paid This Month (by client_fee_paid_date) ---
+    cf_this_month = await db.cases.aggregate([
+        {"$match": {
+            "client_fee_status": CommissionStatus.PAID,
+            "$or": [
+                {"client_fee_paid_date": {"$gte": month_start, "$lte": month_end}},
+                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": month_start, "$lte": month_end}}
+            ]
+        }},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}, "count": {"$sum": 1}}}
+    ]).to_list(1)
+    
+    # --- Client Fees Paid Last 30 Days (by client_fee_paid_date) ---
+    cf_last_30 = await db.cases.aggregate([
+        {"$match": {
+            "client_fee_status": CommissionStatus.PAID,
+            "$or": [
+                {"client_fee_paid_date": {"$gte": thirty_days_ago, "$lte": month_end}},
+                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": thirty_days_ago, "$lte": month_end}}
+            ]
+        }},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}, "count": {"$sum": 1}}}
+    ]).to_list(1)
+    
+    # --- Total Client Fees (paid only) ---
+    total_cf_paid = await db.cases.aggregate([
+        {"$match": {"client_fee_status": CommissionStatus.PAID}},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}}}
+    ]).to_list(1)
+    
+    # --- Client Fee Pending ---
+    cf_pending = await db.cases.aggregate([
+        {"$match": {"client_fee_status": CommissionStatus.PENDING, "client_fee": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}, "count": {"$sum": 1}}}
     ]).to_list(1)
     
     return {
         "commission_this_month": {
-            "amount": this_month[0]["total"] if this_month else 0,
-            "proc_fees": this_month[0]["proc_fees"] if this_month else 0,
-            "client_fees": this_month[0]["client_fees"] if this_month else 0,
-            "cases": this_month[0]["count"] if this_month else 0
+            "amount": comm_this_month[0]["total"] if comm_this_month else 0,
+            "proc_fees": comm_this_month[0]["proc_fees"] if comm_this_month else 0,
+            "cases": comm_this_month[0]["count"] if comm_this_month else 0
         },
         "commission_last_30_days": {
-            "amount": last_30[0]["total"] if last_30 else 0,
-            "proc_fees": last_30[0]["proc_fees"] if last_30 else 0,
-            "client_fees": last_30[0]["client_fees"] if last_30 else 0,
-            "cases": last_30[0]["count"] if last_30 else 0
+            "amount": comm_last_30[0]["total"] if comm_last_30 else 0,
+            "proc_fees": comm_last_30[0]["proc_fees"] if comm_last_30 else 0,
+            "cases": comm_last_30[0]["count"] if comm_last_30 else 0
         },
-        "total_client_fees": total_client_fees_agg[0]["total"] if total_client_fees_agg else 0
+        "client_fees_paid_this_month": cf_this_month[0]["total"] if cf_this_month else 0,
+        "client_fees_paid_last_30_days": cf_last_30[0]["total"] if cf_last_30 else 0,
+        "total_client_fees_paid": total_cf_paid[0]["total"] if total_cf_paid else 0,
+        "client_fee_pending": cf_pending[0]["total"] if cf_pending else 0
     }
 
 @api_router.get("/dashboard/retention")
@@ -1735,13 +1773,50 @@ async def get_commission_paid_report(
     end_date: str = Query(...),
     report_type: str = Query(default="commission")
 ):
-    """Commission paid within a date range. report_type: commission, client_fees, both"""
+    """Reports filtered by paid dates. report_type: commission, client_fees, both"""
     await get_current_user(request)
     
-    cases = await db.cases.find({
-        "commission_status": CommissionStatus.PAID,
-        "expected_completion_date": {"$gte": start_date, "$lte": end_date}
-    }, {"_id": 0}).to_list(1000)
+    if report_type == "client_fees":
+        # Filter by client_fee_paid_date for client fee reports
+        cases = await db.cases.find({
+            "client_fee_status": CommissionStatus.PAID,
+            "$or": [
+                {"client_fee_paid_date": {"$gte": start_date, "$lte": end_date}},
+                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
+            ]
+        }, {"_id": 0}).to_list(1000)
+    elif report_type == "both":
+        # Get cases where either commission or client fee was paid in range
+        comm_cases = await db.cases.find({
+            "commission_status": CommissionStatus.PAID,
+            "$or": [
+                {"commission_paid_date": {"$gte": start_date, "$lte": end_date}},
+                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
+            ]
+        }, {"_id": 0}).to_list(1000)
+        cf_cases = await db.cases.find({
+            "client_fee_status": CommissionStatus.PAID,
+            "$or": [
+                {"client_fee_paid_date": {"$gte": start_date, "$lte": end_date}},
+                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
+            ]
+        }, {"_id": 0}).to_list(1000)
+        # Merge unique cases
+        seen = set()
+        cases = []
+        for c in comm_cases + cf_cases:
+            if c["case_id"] not in seen:
+                seen.add(c["case_id"])
+                cases.append(c)
+    else:
+        # Filter by commission_paid_date for commission reports
+        cases = await db.cases.find({
+            "commission_status": CommissionStatus.PAID,
+            "$or": [
+                {"commission_paid_date": {"$gte": start_date, "$lte": end_date}},
+                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
+            ]
+        }, {"_id": 0}).to_list(1000)
     
     for case in cases:
         client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
@@ -1934,7 +2009,8 @@ async def export_all_data(request: Request):
         "Term (Years)", "Interest Rate", "Interest Rate Type", "Initial Product Term", "Rate Fixed For",
         "Monthly Premium", "Sum Assured", "Cover Type",
         "Case Reference", "Application Date", "Product Expiry Date",
-        "Proc Fee Total", "Commission %", "Gross Commission", "Client Fee", "Commission Status", "Commission Paid Date"
+        "Proc Fee Total", "Commission %", "Gross Commission", "Client Fee", "Commission Status", "Commission Paid Date",
+        "Client Fee Status", "Client Fee Paid Date"
     ]
     
     ws.append(headers)
@@ -1994,6 +2070,8 @@ async def export_all_data(request: Request):
             case.get("client_fee", ""),
             (case.get("commission_status", "") or "").replace("_", " ").title(),
             case.get("commission_paid_date", ""),
+            (case.get("client_fee_status", "") or "").replace("_", " ").title(),
+            case.get("client_fee_paid_date", ""),
         ]
         
         for col, value in enumerate(row_data, 1):

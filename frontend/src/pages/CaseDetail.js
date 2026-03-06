@@ -191,6 +191,17 @@ const CaseDetail = () => {
     }
   };
 
+  const handleClientFeeStatusChange = async (newStatus) => {
+    try {
+      await casesAPI.update(caseId, { client_fee_status: newStatus });
+      setCaseData({ ...caseData, client_fee_status: newStatus });
+      setEditedCase({ ...editedCase, client_fee_status: newStatus });
+      toast.success('Client fee status updated');
+    } catch (error) {
+      toast.error('Failed to update client fee status');
+    }
+  };
+
   const handleAddTask = async () => {
     try {
       await tasksAPI.create({
@@ -812,6 +823,60 @@ const CaseDetail = () => {
                     />
                     {caseData.commission_paid_date && (
                       <span className="text-sm text-green-600 font-medium">Paid: {formatDate(caseData.commission_paid_date)}</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Client Fee Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-slate-600">Current Status:</span>
+                  <Badge className={getCommissionStatusColor(caseData.client_fee_status || 'pending')}>
+                    {COMMISSION_STATUSES.find(s => s.key === (caseData.client_fee_status || 'pending'))?.label || caseData.client_fee_status}
+                  </Badge>
+                </div>
+                <div className="flex gap-2 mt-4 flex-wrap">
+                  {COMMISSION_STATUSES.map((status) => (
+                    <Button
+                      key={status.key}
+                      variant={(caseData.client_fee_status || 'pending') === status.key ? "default" : "outline"}
+                      size="sm"
+                      className={(caseData.client_fee_status || 'pending') === status.key ? "bg-purple-600 hover:bg-purple-700" : ""}
+                      onClick={() => handleClientFeeStatusChange(status.key)}
+                      data-testid={`client-fee-status-btn-${status.key}`}
+                    >
+                      {status.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <Label className="text-sm font-medium text-slate-600">Client Fee Paid Date</Label>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Input
+                      type="date"
+                      className="w-48"
+                      max="9999-12-31"
+                      defaultValue={caseData.client_fee_paid_date || ''}
+                      onBlur={async (e) => {
+                        const val = e.target.value;
+                        if (val !== (caseData.client_fee_paid_date || '')) {
+                          try {
+                            await casesAPI.update(caseId, { client_fee_paid_date: val || null });
+                            setCaseData({ ...caseData, client_fee_paid_date: val });
+                            setEditedCase({ ...editedCase, client_fee_paid_date: val });
+                            toast.success('Client fee paid date updated');
+                          } catch (err) { toast.error('Failed to update date'); }
+                        }
+                      }}
+                      data-testid="client-fee-paid-date"
+                    />
+                    {caseData.client_fee_paid_date && (
+                      <span className="text-sm text-purple-600 font-medium">Paid: {formatDate(caseData.client_fee_paid_date)}</span>
                     )}
                   </div>
                 </div>
