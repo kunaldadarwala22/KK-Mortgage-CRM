@@ -297,8 +297,8 @@ export const reportsAPI = {
       credentials: 'include',
       headers: getHeaders(),
     }).then(handleResponse),
-  getCommissionPaid: (startDate, endDate) =>
-    fetch(`${API_URL}/api/reports/commission-paid?start_date=${startDate}&end_date=${endDate}`, {
+  getCommissionPaid: (startDate, endDate, reportType = 'commission') =>
+    fetch(`${API_URL}/api/reports/commission-paid?start_date=${startDate}&end_date=${endDate}&report_type=${reportType}`, {
       credentials: 'include',
       headers: getHeaders(),
     }).then(handleResponse),

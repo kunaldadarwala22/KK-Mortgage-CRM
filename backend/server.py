@@ -207,6 +207,7 @@ class CaseCreate(BaseModel):
     proc_fee_total: Optional[float] = None
     commission_status: str = CommissionStatus.PENDING
     commission_paid_date: Optional[str] = None
+    client_fee: Optional[float] = None
     # Assignment
     advisor_id: Optional[str] = None
     notes: Optional[str] = None
@@ -238,6 +239,7 @@ class CaseResponse(BaseModel):
     your_commission_share: Optional[float] = None
     proc_fee_total: Optional[float] = None
     commission_status: str
+    client_fee: Optional[float] = None
     advisor_id: Optional[str] = None
     advisor_name: Optional[str] = None
     notes: Optional[str] = None
@@ -997,11 +999,12 @@ async def get_dashboard_stats(request: Request):
             "_id": None,
             "total_gross": {"$sum": "$gross_commission"},
             "total_proc": {"$sum": "$proc_fee_total"},
-            "total_share": {"$sum": "$your_commission_share"}
+            "total_share": {"$sum": "$your_commission_share"},
+            "total_client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}}
         }}
     ]).to_list(1)
     
-    commission_stats = commission_agg[0] if commission_agg else {"total_gross": 0, "total_proc": 0, "total_share": 0}
+    commission_stats = commission_agg[0] if commission_agg else {"total_gross": 0, "total_proc": 0, "total_share": 0, "total_client_fees": 0}
     
     # Cases by status
     status_counts = await db.cases.aggregate([
@@ -1069,7 +1072,8 @@ async def get_dashboard_stats(request: Request):
         "tasks_due_today": tasks_today,
         "overdue_tasks": overdue_tasks,
         "mortgage_commission": mortgage_comm[0]["total"] if mortgage_comm else 0,
-        "insurance_commission": insurance_comm[0]["total"] if insurance_comm else 0
+        "insurance_commission": insurance_comm[0]["total"] if insurance_comm else 0,
+        "total_client_fees": commission_stats.get("total_client_fees", 0)
     }
 
 @api_router.get("/dashboard/revenue")
@@ -1165,6 +1169,7 @@ async def get_commission_summary(request: Request):
             "_id": None,
             "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
             "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "count": {"$sum": 1}
         }}
     ]).to_list(1)
@@ -1184,21 +1189,31 @@ async def get_commission_summary(request: Request):
             "_id": None,
             "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
             "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "count": {"$sum": 1}
         }}
+    ]).to_list(1)
+    
+    # Total Client Fees (all time, paid status)
+    total_client_fees_agg = await db.cases.aggregate([
+        {"$match": {"commission_status": CommissionStatus.PAID}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}}}
     ]).to_list(1)
     
     return {
         "commission_this_month": {
             "amount": this_month[0]["total"] if this_month else 0,
             "proc_fees": this_month[0]["proc_fees"] if this_month else 0,
+            "client_fees": this_month[0]["client_fees"] if this_month else 0,
             "cases": this_month[0]["count"] if this_month else 0
         },
         "commission_last_30_days": {
             "amount": last_30[0]["total"] if last_30 else 0,
             "proc_fees": last_30[0]["proc_fees"] if last_30 else 0,
+            "client_fees": last_30[0]["client_fees"] if last_30 else 0,
             "cases": last_30[0]["count"] if last_30 else 0
-        }
+        },
+        "total_client_fees": total_client_fees_agg[0]["total"] if total_client_fees_agg else 0
     }
 
 @api_router.get("/dashboard/retention")
@@ -1495,6 +1510,7 @@ async def get_commission_monthly(
             "_id": {"month": "$month", "commission_status": "$commission_status", "product_type": "$product_type"},
             "total_commission": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
             "total_proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "total_client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "case_count": {"$sum": 1}
         }},
         {"$sort": {"_id.month": 1}}
@@ -1513,11 +1529,12 @@ async def get_commission_monthly(
                 "month": month,
                 "pending": 0, "submitted": 0, "paid": 0, "clawed_back": 0,
                 "mortgage_commission": 0, "insurance_commission": 0,
-                "proc_fees": 0, "total_commission": 0, "case_count": 0
+                "proc_fees": 0, "client_fees": 0, "total_commission": 0, "case_count": 0
             }
         
         commission = r["total_commission"]
         proc = r["total_proc_fees"]
+        client_fees = r["total_client_fees"]
         
         status_key = {"pending": "pending", "submitted_to_lender": "submitted", "paid": "paid", "clawed_back": "clawed_back"}.get(status, "pending")
         months[month][status_key] += commission
@@ -1528,6 +1545,7 @@ async def get_commission_monthly(
             months[month]["insurance_commission"] += commission
         
         months[month]["proc_fees"] += proc
+        months[month]["client_fees"] += client_fees
         months[month]["total_commission"] += commission
         months[month]["case_count"] += r["case_count"]
     
@@ -1541,6 +1559,7 @@ async def get_commission_monthly(
         "total_mortgage": sum(m["mortgage_commission"] for m in monthly_data),
         "total_insurance": sum(m["insurance_commission"] for m in monthly_data),
         "total_proc_fees": sum(m["proc_fees"] for m in monthly_data),
+        "total_client_fees": sum(m["client_fees"] for m in monthly_data),
         "grand_total": sum(m["total_commission"] for m in monthly_data),
     }
     
@@ -1618,6 +1637,7 @@ async def get_commission_analytics(
             "total_pending": {"$sum": {"$cond": [{"$eq": ["$commission_status", "pending"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
             "total_clawbacks": {"$sum": {"$cond": [{"$eq": ["$commission_status", "clawed_back"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
             "total_proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
+            "total_client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "case_count": {"$sum": 1},
             "avg_commission": {"$avg": {"$ifNull": ["$gross_commission", 0]}}
         }}
@@ -1712,9 +1732,10 @@ async def get_cases_completed_report(
 async def get_commission_paid_report(
     request: Request,
     start_date: str = Query(...),
-    end_date: str = Query(...)
+    end_date: str = Query(...),
+    report_type: str = Query(default="commission")
 ):
-    """Commission paid within a date range"""
+    """Commission paid within a date range. report_type: commission, client_fees, both"""
     await get_current_user(request)
     
     cases = await db.cases.find({
@@ -1728,14 +1749,17 @@ async def get_commission_paid_report(
     
     total_commission = sum(c.get("gross_commission", 0) or 0 for c in cases)
     total_proc_fees = sum(c.get("proc_fee_total", 0) or 0 for c in cases)
+    total_client_fees = sum(c.get("client_fee", 0) or 0 for c in cases)
     
     return {
         "cases": cases,
+        "report_type": report_type,
         "summary": {
             "total_cases": len(cases),
             "total_commission_paid": total_commission,
             "total_proc_fees": total_proc_fees,
-            "total_combined_revenue": total_commission + total_proc_fees
+            "total_client_fees": total_client_fees,
+            "total_combined_revenue": total_commission + total_client_fees
         }
     }
 
@@ -1770,8 +1794,8 @@ async def export_report(
                 (c.get("mortgage_type", "") or "").replace("_", " ").title(),
                 c.get("expected_completion_date", ""), c.get("gross_commission", "")
             ]
-    else:
-        data = await get_commission_paid_report(request, start_date, end_date)
+    elif report_type == "commission_paid":
+        data = await get_commission_paid_report(request, start_date, end_date, report_type="commission")
         cases = data["cases"]
         summary = data["summary"]
         title = "Commission Paid Report"
@@ -1782,6 +1806,36 @@ async def export_report(
                 c.get("client_name", ""), c.get("loan_amount", ""), c.get("lender_name", ""),
                 (c.get("product_type", "") or "").replace("_", " ").title(),
                 c.get("gross_commission", ""), c.get("proc_fee_total", ""),
+                c.get("expected_completion_date", "")
+            ]
+    elif report_type == "client_fees":
+        data = await get_commission_paid_report(request, start_date, end_date, report_type="client_fees")
+        cases = data["cases"]
+        summary = data["summary"]
+        title = "Client Fees Report"
+        headers = ["Client Name", "Loan Amount", "Lender", "Product Type", "Client Fee", "Payment Date"]
+        
+        def row_fn(c):
+            return [
+                c.get("client_name", ""), c.get("loan_amount", ""), c.get("lender_name", ""),
+                (c.get("product_type", "") or "").replace("_", " ").title(),
+                c.get("client_fee", ""),
+                c.get("expected_completion_date", "")
+            ]
+    else:  # commission_and_fees (both)
+        data = await get_commission_paid_report(request, start_date, end_date, report_type="both")
+        cases = data["cases"]
+        summary = data["summary"]
+        title = "Commission & Client Fees Report"
+        headers = ["Client Name", "Loan Amount", "Lender", "Product Type", "Commission", "Client Fee", "Combined Total", "Payment Date"]
+        
+        def row_fn(c):
+            comm = c.get("gross_commission", 0) or 0
+            fee = c.get("client_fee", 0) or 0
+            return [
+                c.get("client_name", ""), c.get("loan_amount", ""), c.get("lender_name", ""),
+                (c.get("product_type", "") or "").replace("_", " ").title(),
+                comm, fee, comm + fee,
                 c.get("expected_completion_date", "")
             ]
     
@@ -1880,7 +1934,7 @@ async def export_all_data(request: Request):
         "Term (Years)", "Interest Rate", "Interest Rate Type", "Initial Product Term", "Rate Fixed For",
         "Monthly Premium", "Sum Assured", "Cover Type",
         "Case Reference", "Application Date", "Product Expiry Date",
-        "Proc Fee Total", "Commission %", "Gross Commission", "Commission Status", "Commission Paid Date"
+        "Proc Fee Total", "Commission %", "Gross Commission", "Client Fee", "Commission Status", "Commission Paid Date"
     ]
     
     ws.append(headers)
@@ -1937,6 +1991,7 @@ async def export_all_data(request: Request):
             case.get("proc_fee_total", ""),
             case.get("commission_percentage", ""),
             case.get("gross_commission", ""),
+            case.get("client_fee", ""),
             (case.get("commission_status", "") or "").replace("_", " ").title(),
             case.get("commission_paid_date", ""),
         ]

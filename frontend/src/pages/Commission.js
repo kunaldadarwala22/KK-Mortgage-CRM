@@ -105,8 +105,8 @@ const Commission = () => {
   };
 
   const getFilteredCases = () => {
-    if (statusFilter === 'all') return cases.filter(c => c.gross_commission > 0 || c.proc_fee_total > 0);
-    return cases.filter(c => c.commission_status === statusFilter && (c.gross_commission > 0 || c.proc_fee_total > 0));
+    if (statusFilter === 'all') return cases.filter(c => c.gross_commission > 0 || c.proc_fee_total > 0 || c.client_fee > 0);
+    return cases.filter(c => c.commission_status === statusFilter && (c.gross_commission > 0 || c.proc_fee_total > 0 || c.client_fee > 0));
   };
 
   const getStatusBadge = (status) => {
@@ -213,6 +213,50 @@ const Commission = () => {
             </div>
             <p className="text-3xl font-bold text-slate-900" data-testid="commission-last-30">{formatCurrency(summary?.commission_last_30_days?.amount)}</p>
             <p className="text-sm text-slate-500 mt-1">{summary?.commission_last_30_days?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_last_30_days?.proc_fees)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Client Fees Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-slate-200 stat-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Total Client Fees</p>
+                <p className="text-3xl font-bold text-purple-700 mt-1" data-testid="total-client-fees">{formatCurrency(summary?.total_client_fees)}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center"><PoundSterling className="h-6 w-6 text-purple-600" /></div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200 stat-card bg-gradient-to-br from-slate-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Total Commission + Client Fees</p>
+                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="total-commission-and-fees">{formatCurrency((stats?.total_commission || 0) + (summary?.total_client_fees || 0))}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-slate-200 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-slate-600" /></div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Calendar className="h-5 w-5 text-purple-600" />
+              <p className="text-sm font-medium text-purple-700">Client Fees This Month</p>
+            </div>
+            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-this-month">{formatCurrency(summary?.commission_this_month?.client_fees)}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200 bg-gradient-to-br from-indigo-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="h-5 w-5 text-indigo-600" />
+              <p className="text-sm font-medium text-indigo-700">Client Fees Last 30 Days</p>
+            </div>
+            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-last-30">{formatCurrency(summary?.commission_last_30_days?.client_fees)}</p>
           </CardContent>
         </Card>
       </div>
@@ -391,6 +435,7 @@ const Commission = () => {
                     <div className="text-right">
                       <p className="font-bold text-slate-900">{formatCurrency(c.gross_commission)}</p>
                       {c.proc_fee_total > 0 && <p className="text-xs text-slate-500">Proc Fee: {formatCurrency(c.proc_fee_total)}</p>}
+                      {c.client_fee > 0 && <p className="text-xs text-purple-600">Client Fee: {formatCurrency(c.client_fee)}</p>}
                     </div>
                     <Select value={c.commission_status} onValueChange={(v) => handleUpdateCommission(c.case_id, { commission_status: v })}>
                       <SelectTrigger className="w-[150px]">

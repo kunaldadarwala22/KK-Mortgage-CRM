@@ -21,6 +21,8 @@ const Reports = () => {
   const [exporting, setExporting] = useState(false);
   const [casesReport, setCasesReport] = useState(null);
   const [commReport, setCommReport] = useState(null);
+  const [feeReport, setFeeReport] = useState(null);
+  const [bothReport, setBothReport] = useState(null);
 
   const fmt = (v) => {
     if (!v && v !== 0) return '£0';
@@ -48,9 +50,15 @@ const Reports = () => {
       if (activeTab === 'cases') {
         const data = await reportsAPI.getCasesCompleted(dateRange.start, dateRange.end);
         setCasesReport(data);
-      } else {
-        const data = await reportsAPI.getCommissionPaid(dateRange.start, dateRange.end);
+      } else if (activeTab === 'commission') {
+        const data = await reportsAPI.getCommissionPaid(dateRange.start, dateRange.end, 'commission');
         setCommReport(data);
+      } else if (activeTab === 'client_fees') {
+        const data = await reportsAPI.getCommissionPaid(dateRange.start, dateRange.end, 'client_fees');
+        setFeeReport(data);
+      } else {
+        const data = await reportsAPI.getCommissionPaid(dateRange.start, dateRange.end, 'both');
+        setBothReport(data);
       }
     } catch (err) {
       console.error('Report error:', err);
@@ -64,7 +72,8 @@ const Reports = () => {
     if (!dateRange.start || !dateRange.end) return;
     setExporting(true);
     try {
-      const reportType = activeTab === 'cases' ? 'cases_completed' : 'commission_paid';
+      const reportTypeMap = { cases: 'cases_completed', commission: 'commission_paid', client_fees: 'client_fees', both: 'commission_and_fees' };
+      const reportType = reportTypeMap[activeTab] || 'cases_completed';
       const response = await reportsAPI.exportReport(reportType, dateRange.start, dateRange.end, format);
       if (!response.ok) throw new Error('Export failed');
       const blob = await response.blob();
@@ -93,10 +102,12 @@ const Reports = () => {
         <p className="text-slate-500 mt-1">Generate detailed reports for any date range</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setCasesReport(null); setCommReport(null); }}>
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setCasesReport(null); setCommReport(null); setFeeReport(null); setBothReport(null); }}>
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="cases" data-testid="report-cases-tab">Cases Completed</TabsTrigger>
-          <TabsTrigger value="commission" data-testid="report-commission-tab">Commission Paid</TabsTrigger>
+          <TabsTrigger value="commission" data-testid="report-commission-tab">Commission</TabsTrigger>
+          <TabsTrigger value="client_fees" data-testid="report-client-fees-tab">Client Fees</TabsTrigger>
+          <TabsTrigger value="both" data-testid="report-both-tab">Commission + Fees</TabsTrigger>
         </TabsList>
 
         {/* Date Range Selector */}
@@ -114,7 +125,7 @@ const Reports = () => {
               <Button onClick={handleGenerate} disabled={loading} className="bg-red-600 hover:bg-red-700" data-testid="generate-report-btn">
                 {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Search className="h-4 w-4 mr-2" />Generate Report</>}
               </Button>
-              {((activeTab === 'cases' && casesReport) || (activeTab === 'commission' && commReport)) && (
+              {((activeTab === 'cases' && casesReport) || (activeTab === 'commission' && commReport) || (activeTab === 'client_fees' && feeReport) || (activeTab === 'both' && bothReport)) && (
                 <div className="flex gap-2 ml-auto">
                   <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting} data-testid="export-csv-btn">
                     <Download className="h-4 w-4 mr-2" />CSV
@@ -289,8 +300,112 @@ const Reports = () => {
             <div className="text-center py-16 mt-6">
               <PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" />
               <h3 className="text-lg font-medium text-slate-700">Select a Date Range</h3>
-              <p className="text-slate-500 mt-1">Choose start and end dates to generate a commission paid report.</p>
+              <p className="text-slate-500 mt-1">Choose start and end dates to generate a commission report.</p>
             </div>
+          )}
+        </TabsContent>
+
+        {/* Client Fees Report */}
+        <TabsContent value="client_fees" className="mt-0">
+          {feeReport && (
+            <div className="space-y-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+                  <CardContent className="p-5">
+                    <p className="text-sm text-slate-500">Total Cases</p>
+                    <p className="text-3xl font-bold text-slate-900" data-testid="report-fee-total-cases">{feeReport.summary.total_cases}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+                  <CardContent className="p-5">
+                    <p className="text-sm text-slate-500">Total Client Fees</p>
+                    <p className="text-3xl font-bold text-purple-700" data-testid="report-total-client-fees">{fmt(feeReport.summary.total_client_fees)}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+                  <CardContent className="p-5">
+                    <p className="text-sm text-slate-500">Avg Fee per Case</p>
+                    <p className="text-3xl font-bold text-slate-900">{fmt(feeReport.summary.total_cases > 0 ? feeReport.summary.total_client_fees / feeReport.summary.total_cases : 0)}</p>
+                  </CardContent>
+                </Card>
+              </div>
+              <Card className="border-slate-200">
+                <CardContent className="p-0">
+                  {feeReport.cases.length === 0 ? (
+                    <div className="text-center py-12"><PoundSterling className="h-12 w-12 mx-auto text-slate-300 mb-4" /><h3 className="text-lg font-medium text-slate-700">No Results Found</h3><p className="text-slate-500">No client fees found in the selected date range.</p></div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader><TableRow><TableHead>Client Name</TableHead><TableHead>Loan Amount</TableHead><TableHead>Lender</TableHead><TableHead>Product Type</TableHead><TableHead>Client Fee</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                          {feeReport.cases.map((c) => (
+                            <TableRow key={c.case_id}><TableCell className="font-medium">{c.client_name}</TableCell><TableCell>{fmt(c.loan_amount)}</TableCell><TableCell>{c.lender_name || '-'}</TableCell><TableCell>{fmtStatus(c.product_type)}</TableCell><TableCell className="font-medium text-purple-700">{fmt(c.client_fee)}</TableCell><TableCell>{fmtDate(c.expected_completion_date)}</TableCell></TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          {!feeReport && !loading && (
+            <div className="text-center py-16 mt-6"><PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" /><h3 className="text-lg font-medium text-slate-700">Select a Date Range</h3><p className="text-slate-500 mt-1">Choose start and end dates to generate a client fees report.</p></div>
+          )}
+        </TabsContent>
+
+        {/* Commission + Client Fees Combined Report */}
+        <TabsContent value="both" className="mt-0">
+          {bothReport && (
+            <div className="space-y-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+                  <CardContent className="p-5">
+                    <p className="text-sm text-slate-500">Total Cases</p>
+                    <p className="text-3xl font-bold text-slate-900" data-testid="report-both-total-cases">{bothReport.summary.total_cases}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+                  <CardContent className="p-5">
+                    <p className="text-sm text-slate-500">Commission</p>
+                    <p className="text-3xl font-bold text-green-700">{fmt(bothReport.summary.total_commission_paid)}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+                  <CardContent className="p-5">
+                    <p className="text-sm text-slate-500">Client Fees</p>
+                    <p className="text-3xl font-bold text-purple-700">{fmt(bothReport.summary.total_client_fees)}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-slate-200 bg-gradient-to-br from-slate-100 to-white">
+                  <CardContent className="p-5">
+                    <p className="text-sm text-slate-500">Combined Total</p>
+                    <p className="text-3xl font-bold text-slate-900" data-testid="report-combined-total">{fmt(bothReport.summary.total_combined_revenue)}</p>
+                  </CardContent>
+                </Card>
+              </div>
+              <Card className="border-slate-200">
+                <CardContent className="p-0">
+                  {bothReport.cases.length === 0 ? (
+                    <div className="text-center py-12"><PoundSterling className="h-12 w-12 mx-auto text-slate-300 mb-4" /><h3 className="text-lg font-medium text-slate-700">No Results Found</h3><p className="text-slate-500">No data found in the selected date range.</p></div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader><TableRow><TableHead>Client Name</TableHead><TableHead>Loan Amount</TableHead><TableHead>Lender</TableHead><TableHead>Product Type</TableHead><TableHead>Commission</TableHead><TableHead>Client Fee</TableHead><TableHead>Combined</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                          {bothReport.cases.map((c) => (
+                            <TableRow key={c.case_id}><TableCell className="font-medium">{c.client_name}</TableCell><TableCell>{fmt(c.loan_amount)}</TableCell><TableCell>{c.lender_name || '-'}</TableCell><TableCell>{fmtStatus(c.product_type)}</TableCell><TableCell className="font-medium text-green-700">{fmt(c.gross_commission)}</TableCell><TableCell className="font-medium text-purple-700">{fmt(c.client_fee)}</TableCell><TableCell className="font-bold">{fmt((c.gross_commission || 0) + (c.client_fee || 0))}</TableCell><TableCell>{fmtDate(c.expected_completion_date)}</TableCell></TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          {!bothReport && !loading && (
+            <div className="text-center py-16 mt-6"><PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" /><h3 className="text-lg font-medium text-slate-700">Select a Date Range</h3><p className="text-slate-500 mt-1">Choose start and end dates to generate a combined commission & client fees report.</p></div>
           )}
         </TabsContent>
       </Tabs>

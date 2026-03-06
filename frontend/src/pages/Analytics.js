@@ -257,12 +257,13 @@ const Analytics = () => {
           </Card>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { label: 'Total Commission', value: fmt(commAnalytics?.summary?.total_commission) },
               { label: 'Total Paid', value: fmt(commAnalytics?.summary?.total_paid) },
               { label: 'Total Pending', value: fmt(commAnalytics?.summary?.total_pending) },
               { label: 'Total Clawbacks', value: fmt(commAnalytics?.summary?.total_clawbacks) },
+              { label: 'Total Client Fees', value: fmt(commAnalytics?.summary?.total_client_fees) },
               { label: 'Avg per Case', value: fmt(commAnalytics?.summary?.avg_commission) },
             ].map(({ label, value }) => (
               <Card key={label} className="border-slate-200">

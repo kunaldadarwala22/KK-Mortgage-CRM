@@ -198,7 +198,7 @@ const Cases = () => {
     try {
       const caseData = cleanData({ ...newCase });
       // Parse numeric fields
-      ['loan_amount', 'property_value', 'interest_rate', 'monthly_premium', 'sum_assured', 'proc_fee_total', 'commission_percentage', 'proc_fee_value'].forEach(f => {
+      ['loan_amount', 'property_value', 'interest_rate', 'monthly_premium', 'sum_assured', 'proc_fee_total', 'commission_percentage', 'proc_fee_value', 'client_fee'].forEach(f => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseFloat(caseData[f]);
         else caseData[f] = null;
       });
@@ -591,6 +591,7 @@ const Cases = () => {
                   Calculated Commission: {formatCurrency(Math.round((parseFloat(newCase.proc_fee_total) * parseFloat(newCase.commission_percentage) / 100) * 100) / 100)}
                 </div>
               )}
+              <div className="space-y-2"><Label>Client Fee (£)</Label><CurrencyInput value={newCase.client_fee || ''} onChange={(e) => setNewCase({ ...newCase, client_fee: e.target.value })} data-testid="case-client-fee" /></div>
             </div>
 
             {/* Status */}

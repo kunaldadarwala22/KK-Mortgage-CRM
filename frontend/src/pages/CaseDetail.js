@@ -155,6 +155,7 @@ const CaseDetail = () => {
         proc_fee_total: procFee,
         commission_percentage: commPct,
         gross_commission: grossComm,
+        client_fee: editedCase.client_fee ? parseFloat(editedCase.client_fee) : null,
       };
       
       await casesAPI.update(caseId, updateData);
@@ -723,6 +724,17 @@ const CaseDetail = () => {
                         </p>
                       </div>
                     )}
+                    <div className="space-y-2">
+                      <Label>Client Fee (£)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g. 500"
+                        value={editedCase.client_fee || ''}
+                        onChange={(e) => setEditedCase({ ...editedCase, client_fee: e.target.value })}
+                        data-testid="client-fee-input"
+                      />
+                    </div>
                   </>
                 ) : (
                   <>
@@ -742,6 +754,10 @@ const CaseDetail = () => {
                           {formatCurrency(caseData.proc_fee_total)} × {caseData.commission_percentage}%
                         </p>
                       )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">Client Fee</p>
+                      <p className="text-2xl font-bold text-purple-600">{formatCurrency(caseData.client_fee)}</p>
                     </div>
                   </>
                 )}
