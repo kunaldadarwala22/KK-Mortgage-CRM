@@ -26,26 +26,35 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - [x] Analytics (Mortgage Types, Commission)
 - [x] Custom Business Reports (date range)
 - [x] Document Management (upload/view)
-- [x] Data Export
+- [x] Data Export (single-sheet, case-per-row)
 
-### Recent Updates (March 2026)
-- [x] **Search bar** — Global search across clients and cases (2+ chars)
-- [x] **Notifications bell** — Shows overdue tasks, upcoming tasks, expiring products
-- [x] **Delete client** — Removed admin-only permission check
-- [x] **Multiple applicants** — Add Additional Applicant button on client profile (joint applications)
-- [x] **Simplified Add Client form** — Removed Security Address, Property Price, Loan Amount, Deposit
-- [x] **Dynamic New Case form** — Searchable client field, Mortgage/Insurance toggle with separate fields
-- [x] **Mortgage fields** — Added Property Value, Deposit Source, Repayment Type, Property Type, Case Reference, Rate Fixed For
-- [x] **Insurance fields** — Insurance Type, Term, Provider, Cover Type, Reference, Monthly Premium, Guaranteed/Reviewable, Sum Assured, In Trust
-- [x] **Cases dashboard** — Split into Mortgage and Insurance tabs; Property Value column for mortgage
-- [x] **Client dashboard** — Removed Loan Amount, Property Price, Case Status, LTV columns
-- [x] **Task automation** — Only auto-creates tasks when case status = "Review Due" or "For Review"
-- [x] **Export** — Single-sheet format, each case = separate row, client data repeated
-- [x] **UK date format** — dd/mm/yyyy across all UI
+### March 2026 Updates (Session 1)
+- [x] Global search bar (clients + cases, 2+ chars)
+- [x] Notifications bell (overdue tasks, upcoming, expiring products)
+- [x] Delete client without permission error
+- [x] Multiple applicants per client (Add Additional Applicant)
+- [x] Simplified Add Client form (removed Security Address, Property Price, Loan Amount, Deposit)
+- [x] Dynamic New Case form (searchable client + Mortgage/Insurance toggle)
+- [x] Mortgage new fields: Property Value, Deposit Source, Repayment Type, Property Type, Case Reference, Rate Fixed For
+- [x] Insurance fields: Insurance Type, Term, Provider, Cover Type, Reference, Monthly Premium, Guaranteed/Reviewable, Sum Assured, In Trust
+- [x] Cases dashboard split Mortgage/Insurance tabs
+- [x] Client dashboard: removed case-metric columns
+- [x] Task automation only on Review Due / For Review status
+- [x] UK date format dd/mm/yyyy
+
+### March 2026 Updates (Session 2)
+- [x] Currency formatting (£X,XXX GBP with thousand separators) across all pages
+- [x] Field naming: "Application Number/Reference" → "Case Reference Number" everywhere
+- [x] Case creation bug fix (empty strings → null for Pydantic int/float/bool)
+- [x] Commission Paid Date field (on case detail, in reports/exports)
+- [x] Commission structure: Proc Fee = lender payment, Commission = % of proc fee
+- [x] Commission dashboard: replaced 30/60/90 forecasts with "This Month" + "Last 30 Days"
+- [x] Case deletion from Cases dashboard (trash icon + confirmation)
+- [x] Multiple applicants fix: primary applicant section + numbered "Applicant N" cards
 
 ## Upcoming Tasks (P1)
-- Document Management improvements (file upload to cloud storage)
 - Backend refactoring (break server.py into modular routes)
+- Document Management improvements (cloud storage)
 
 ## Future Tasks (P2)
 - Audit Log system
@@ -57,15 +66,16 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - `/api/auth/login`, `/api/auth/register`, `/api/auth/me`, `/api/auth/logout`
 - `/api/search?q=`, `/api/notifications`
 - `/api/clients`, `/api/clients/search?q=`, `/api/clients/{id}`
-- `/api/cases`, `/api/cases/{id}`
+- `/api/cases`, `/api/cases/{id}` (GET/POST/PUT/DELETE)
 - `/api/tasks`, `/api/tasks/{id}`
+- `/api/dashboard/forecast` (returns commission_this_month + commission_last_30_days)
 - `/api/commission/monthly`, `/api/commission/ytd`
 - `/api/analytics/commission`, `/api/analytics/mortgage-types`
 - `/api/reports/cases-completed`, `/api/reports/commission-paid`
-- `/api/export/excel`, `/api/export/clients`
+- `/api/export/excel` (single sheet), `/api/export/clients`
 - `/api/retention-stats`
 
 ## DB Collections
 - users, clients, cases, tasks, documents, audit_logs, user_sessions
-- Client schema now includes `additional_applicants: [{full_name, dob, email, phone}]`
-- Case schema now includes: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider
+- Client: `additional_applicants: [{full_name, dob, email, phone}]`
+- Case: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider, commission_paid_date
