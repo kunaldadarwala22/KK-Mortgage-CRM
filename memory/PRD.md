@@ -80,6 +80,12 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - [x] Backend: /api/dashboard/forecast, /api/commission/analytics, /api/commission/monthly all return client_fee data
 - [x] Reports: /api/reports/commission-paid accepts report_type param (commission, client_fees, both)
 - [x] Export: /api/reports/export supports client_fees and commission_and_fees report types
+- [x] Client Fee Status field (Pending/Submitted/Paid/Clawed Back) - mirrors Commission Status
+- [x] Client Fee Paid Date field on CaseDetail page
+- [x] Commission Dashboard: "Commission Paid This Month", "Commission Paid in Last 30 Days" (filtered by commission_paid_date)
+- [x] Commission Dashboard: "Total Client Fees (Paid)", "Client Fee Pending", "Total Commission + Client Fees"
+- [x] Commission Dashboard: "Client Fees Paid This Month", "Client Fees Paid Last 30 Days" (filtered by client_fee_paid_date)
+- [x] Reports: Commission report filters by commission_paid_date, Client Fees report by client_fee_paid_date, Both report merges both
 - [x] Database wiped clean for production use
 
 ## Upcoming Tasks (P1)
@@ -109,4 +115,4 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 ## DB Collections
 - users, clients, cases, tasks, documents, audit_logs, user_sessions
 - Client: `additional_applicants: [{full_name, dob, email, phone}]`
-- Case: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, interest_rate_type, initial_product_term, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider, commission_paid_date, client_fee
+- Case: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, interest_rate_type, initial_product_term, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider, commission_paid_date, client_fee, client_fee_status, client_fee_paid_date
