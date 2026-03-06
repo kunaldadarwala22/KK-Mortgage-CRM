@@ -1018,11 +1018,11 @@ async def get_dashboard_stats(request: Request):
     ]).to_list(1)
     avg_loan_size = round(avg_loan[0]["avg"], 2) if avg_loan else 0
     
-    # Expiring products (next 90 days)
-    ninety_days = (datetime.now(timezone.utc) + timedelta(days=90)).strftime("%Y-%m-%d")
+    # Expiring products (next 6 months)
+    six_months = (datetime.now(timezone.utc) + timedelta(days=180)).strftime("%Y-%m-%d")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     expiring_count = await db.cases.count_documents({
-        "product_expiry_date": {"$gte": today, "$lte": ninety_days},
+        "product_expiry_date": {"$gte": today, "$lte": six_months},
         "status": CaseStatus.COMPLETED
     })
     
@@ -1204,14 +1204,13 @@ async def get_retention_data(request: Request):
     today = datetime.now(timezone.utc)
     today_str = today.strftime("%Y-%m-%d")
     
-    # Products expiring this month
-    month_end = (today.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
-    month_end_str = month_end.strftime("%Y-%m-%d")
+    # Products expiring within the next 6 months
+    six_months_ahead = (today + timedelta(days=180)).strftime("%Y-%m-%d")
     
     expiring_this_month = await db.cases.find({
-        "product_expiry_date": {"$gte": today_str, "$lte": month_end_str},
+        "product_expiry_date": {"$gte": today_str, "$lte": six_months_ahead},
         "status": CaseStatus.COMPLETED
-    }, {"_id": 0}).to_list(100)
+    }, {"_id": 0}).sort("product_expiry_date", 1).to_list(100)
     
     # Enrich with client names
     for case in expiring_this_month:

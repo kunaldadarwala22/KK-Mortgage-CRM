@@ -733,15 +733,17 @@ const CaseDetail = () => {
                     <Input
                       type="date"
                       className="w-48"
-                      value={caseData.commission_paid_date || ''}
-                      onChange={async (e) => {
+                      defaultValue={caseData.commission_paid_date || ''}
+                      onBlur={async (e) => {
                         const val = e.target.value;
-                        try {
-                          await casesAPI.update(caseId, { commission_paid_date: val || null });
-                          setCaseData({ ...caseData, commission_paid_date: val });
-                          setEditedCase({ ...editedCase, commission_paid_date: val });
-                          toast.success('Commission paid date updated');
-                        } catch (err) { toast.error('Failed to update date'); }
+                        if (val !== (caseData.commission_paid_date || '')) {
+                          try {
+                            await casesAPI.update(caseId, { commission_paid_date: val || null });
+                            setCaseData({ ...caseData, commission_paid_date: val });
+                            setEditedCase({ ...editedCase, commission_paid_date: val });
+                            toast.success('Commission paid date updated');
+                          } catch (err) { toast.error('Failed to update date'); }
+                        }
                       }}
                       data-testid="commission-paid-date"
                     />

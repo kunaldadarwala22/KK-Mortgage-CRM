@@ -96,14 +96,14 @@ const Dashboard = () => {
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-amber-700">{expiringSoonCount}</p>
-              <p className="text-xs text-amber-600">products in 90 days</p>
+              <p className="text-xs text-amber-600">products in 6 months</p>
             </div>
           </CardHeader>
           <CardContent>
             {expiringSoonCount === 0 ? (
               <div className="text-center py-6 text-amber-600">
                 <CheckCircle className="h-8 w-8 mx-auto mb-2 text-amber-300" />
-                <p className="text-sm">No products expiring in the next 90 days</p>
+                <p className="text-sm">No products expiring in the next 6 months</p>
               </div>
             ) : (
               <>
@@ -134,7 +134,7 @@ const Dashboard = () => {
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                 <Phone className="h-4 w-4 text-blue-600" />
               </div>
-              <CardTitle className="text-lg font-semibold text-blue-900">Contact This Month</CardTitle>
+              <CardTitle className="text-lg font-semibold text-blue-900">Contact Soon</CardTitle>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-blue-700">{expiringThisMonth.length}</p>

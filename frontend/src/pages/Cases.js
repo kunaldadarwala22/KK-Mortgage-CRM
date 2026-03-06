@@ -75,6 +75,33 @@ const formatDate = (d) => {
 };
 const getStatusColor = (s) => CASE_STATUSES.find(st => st.key === s)?.color || 'bg-slate-100 text-slate-800';
 
+// Currency input: show raw number when focused, formatted £ when blurred
+const CurrencyInput = ({ value, onChange, ...props }) => {
+  const [display, setDisplay] = React.useState(value || '');
+  const [focused, setFocused] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!focused) setDisplay(value || '');
+  }, [value, focused]);
+
+  const fmtDisplay = (v) => {
+    const num = parseFloat(v);
+    if (isNaN(num) || !v) return v;
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(num);
+  };
+
+  return (
+    <Input
+      {...props}
+      type={focused ? 'number' : 'text'}
+      value={focused ? display : (display ? fmtDisplay(display) : '')}
+      onChange={(e) => { setDisplay(e.target.value); onChange(e); }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  );
+};
+
 // Clean empty strings to null for Pydantic compatibility
 const cleanData = (obj) => {
   const cleaned = {};
@@ -466,8 +493,8 @@ const Cases = () => {
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Lender Name</Label><Input value={newCase.lender_name || ''} onChange={(e) => setNewCase({ ...newCase, lender_name: e.target.value })} data-testid="case-lender" /></div>
-                <div className="space-y-2"><Label>Loan Amount (£)</Label><Input type="number" value={newCase.loan_amount || ''} onChange={(e) => setNewCase({ ...newCase, loan_amount: e.target.value })} data-testid="case-loan-amount" /></div>
-                <div className="space-y-2"><Label>Property Value (£)</Label><Input type="number" value={newCase.property_value || ''} onChange={(e) => setNewCase({ ...newCase, property_value: e.target.value })} data-testid="case-property-value" /></div>
+                <div className="space-y-2"><Label>Loan Amount (£)</Label><CurrencyInput value={newCase.loan_amount || ''} onChange={(e) => setNewCase({ ...newCase, loan_amount: e.target.value })} data-testid="case-loan-amount" /></div>
+                <div className="space-y-2"><Label>Property Value (£)</Label><CurrencyInput value={newCase.property_value || ''} onChange={(e) => setNewCase({ ...newCase, property_value: e.target.value })} data-testid="case-property-value" /></div>
                 <div className="space-y-2"><Label>Interest Rate (%)</Label><Input type="number" step="0.01" value={newCase.interest_rate || ''} onChange={(e) => setNewCase({ ...newCase, interest_rate: e.target.value })} data-testid="case-interest-rate" /></div>
                 <div className="space-y-2"><Label>Term (Years)</Label><Input type="number" value={newCase.term_years || ''} onChange={(e) => setNewCase({ ...newCase, term_years: e.target.value })} data-testid="case-term" /></div>
                 <div className="space-y-2"><Label>Deposit Source</Label><Input value={newCase.deposit_source || ''} onChange={(e) => setNewCase({ ...newCase, deposit_source: e.target.value })} data-testid="case-deposit-source" /></div>
@@ -511,7 +538,7 @@ const Cases = () => {
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Reference Number</Label><Input value={newCase.insurance_reference || ''} onChange={(e) => setNewCase({ ...newCase, insurance_reference: e.target.value })} data-testid="case-insurance-ref" /></div>
-                <div className="space-y-2"><Label>Monthly Premium (£)</Label><Input type="number" step="0.01" value={newCase.monthly_premium || ''} onChange={(e) => setNewCase({ ...newCase, monthly_premium: e.target.value })} data-testid="case-monthly-premium" /></div>
+                <div className="space-y-2"><Label>Monthly Premium (£)</Label><CurrencyInput value={newCase.monthly_premium || ''} onChange={(e) => setNewCase({ ...newCase, monthly_premium: e.target.value })} data-testid="case-monthly-premium" /></div>
                 <div className="space-y-2">
                   <Label>Guaranteed or Reviewable</Label>
                   <Select value={newCase.guaranteed_or_reviewable || 'none'} onValueChange={(v) => setNewCase({ ...newCase, guaranteed_or_reviewable: v === 'none' ? '' : v })}>
@@ -519,7 +546,7 @@ const Cases = () => {
                     <SelectContent><SelectItem value="none">Select...</SelectItem><SelectItem value="guaranteed">Guaranteed</SelectItem><SelectItem value="reviewable">Reviewable</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Sum Assured (£)</Label><Input type="number" value={newCase.sum_assured || ''} onChange={(e) => setNewCase({ ...newCase, sum_assured: e.target.value })} data-testid="case-sum-assured" /></div>
+                <div className="space-y-2"><Label>Sum Assured (£)</Label><CurrencyInput value={newCase.sum_assured || ''} onChange={(e) => setNewCase({ ...newCase, sum_assured: e.target.value })} data-testid="case-sum-assured" /></div>
                 <div className="space-y-2">
                   <Label>In Trust</Label>
                   <Select value={newCase.in_trust === true ? 'yes' : newCase.in_trust === false ? 'no' : 'none'} onValueChange={(v) => setNewCase({ ...newCase, in_trust: v === 'yes' ? true : v === 'no' ? false : null })}>
@@ -541,7 +568,7 @@ const Cases = () => {
             {/* Commission */}
             <div className="grid grid-cols-2 gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
               <h3 className="col-span-2 font-semibold text-slate-700">Commission</h3>
-              <div className="space-y-2"><Label>Proc Fee Total (£)</Label><Input type="number" step="0.01" value={newCase.proc_fee_total || ''} onChange={(e) => setNewCase({ ...newCase, proc_fee_total: e.target.value })} data-testid="case-proc-fee" /></div>
+              <div className="space-y-2"><Label>Proc Fee Total (£)</Label><CurrencyInput value={newCase.proc_fee_total || ''} onChange={(e) => setNewCase({ ...newCase, proc_fee_total: e.target.value })} data-testid="case-proc-fee" /></div>
               <div className="space-y-2"><Label>Commission Percentage (%)</Label><Input type="number" step="0.01" value={newCase.commission_percentage || ''} onChange={(e) => setNewCase({ ...newCase, commission_percentage: e.target.value })} data-testid="case-commission-pct" /></div>
               {newCase.proc_fee_total && newCase.commission_percentage && (
                 <div className="col-span-2 text-sm text-green-700 font-medium">

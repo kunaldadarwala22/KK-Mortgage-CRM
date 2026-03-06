@@ -21,12 +21,40 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Checkbox } from '../components/ui/checkbox';
 import {
-  Search, Plus, MoreHorizontal, Eye, Trash2, Mail, Users, Filter, Download, X, Loader2,
+  Search, Plus, MoreHorizontal, Eye, Trash2, Mail, Users, Filter, Download, X, Loader2, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const LEAD_SOURCES = ['walk_in', 'cold_call', 'referral', 'online', 'other'];
 const EMPLOYMENT_TYPES = ['employed', 'self_employed', 'contractor', 'retired', 'unemployed'];
+
+const CurrencyInput = ({ value, onChange, ...props }) => {
+  const [display, setDisplay] = React.useState(value || '');
+  const [focused, setFocused] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!focused) {
+      setDisplay(value || '');
+    }
+  }, [value, focused]);
+
+  const formatForDisplay = (v) => {
+    const num = parseFloat(v);
+    if (isNaN(num) || !v) return v;
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(num);
+  };
+
+  return (
+    <Input
+      {...props}
+      type={focused ? 'number' : 'text'}
+      value={focused ? display : (display ? formatForDisplay(display) : '')}
+      onChange={(e) => { setDisplay(e.target.value); onChange(e); }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  );
+};
 
 const Clients = () => {
   const navigate = useNavigate();
@@ -45,6 +73,7 @@ const Clients = () => {
     credit_issues: false, credit_issues_notes: '',
     lead_source: '', referral_partner_name: '', fact_find_complete: false,
     vulnerable_customer: false, advice_type: '',
+    additional_applicants: [],
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
@@ -84,7 +113,7 @@ const Clients = () => {
       await clientsAPI.create(clientData);
       toast.success('Client created successfully');
       setShowAddDialog(false);
-      setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', income: '', employment_type: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '' });
+      setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', income: '', employment_type: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '', additional_applicants: [] });
       loadClients();
     } catch (err) {
       toast.error(err.message || 'Failed to create client');
@@ -301,7 +330,7 @@ const Clients = () => {
             <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" value={newClient.dob} onChange={(e) => setNewClient({ ...newClient, dob: e.target.value })} data-testid="client-dob" /></div>
             <div className="space-y-2"><Label>Postcode</Label><Input value={newClient.postcode} onChange={(e) => setNewClient({ ...newClient, postcode: e.target.value })} data-testid="client-postcode" /></div>
             <div className="col-span-2 space-y-2"><Label>Current Address</Label><Input value={newClient.current_address} onChange={(e) => setNewClient({ ...newClient, current_address: e.target.value })} data-testid="client-address" /></div>
-            <div className="space-y-2"><Label>Income</Label><Input type="number" value={newClient.income} onChange={(e) => setNewClient({ ...newClient, income: e.target.value })} data-testid="client-income" /></div>
+            <div className="space-y-2"><Label>Income</Label><CurrencyInput value={newClient.income} onChange={(e) => setNewClient({ ...newClient, income: e.target.value })} data-testid="client-income" /></div>
             <div className="space-y-2">
               <Label>Employment Type</Label>
               <Select value={newClient.employment_type || 'none'} onValueChange={(v) => setNewClient({ ...newClient, employment_type: v === 'none' ? '' : v })}>
@@ -335,6 +364,51 @@ const Clients = () => {
             <div className="flex items-center space-x-2">
               <Checkbox id="vulnerable" checked={newClient.vulnerable_customer} onCheckedChange={(c) => setNewClient({ ...newClient, vulnerable_customer: c })} />
               <Label htmlFor="vulnerable">Vulnerable Customer</Label>
+            </div>
+
+            {/* Additional Applicants */}
+            <div className="col-span-2 border-t border-slate-200 pt-4 mt-2">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-base font-semibold">Additional Applicants</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setNewClient({ ...newClient, additional_applicants: [...newClient.additional_applicants, { full_name: '', dob: '', email: '', phone: '' }] })}
+                  data-testid="add-applicant-in-form-btn"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />Add Additional Applicant
+                </Button>
+              </div>
+              {newClient.additional_applicants.map((ap, idx) => (
+                <div key={idx} className="p-3 mb-3 bg-slate-50 border border-slate-200 rounded-lg" data-testid={`new-applicant-${idx}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline" className="text-xs">Applicant {idx + 2}</Badge>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 h-7"
+                      onClick={() => {
+                        const updated = [...newClient.additional_applicants];
+                        updated.splice(idx, 1);
+                        setNewClient({ ...newClient, additional_applicants: updated });
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />Remove
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label className="text-xs">Full Name *</Label><Input value={ap.full_name} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], full_name: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} data-testid={`new-applicant-name-${idx}`} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Date of Birth</Label><Input type="date" value={ap.dob} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], dob: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Email</Label><Input type="email" value={ap.email} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], email: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Phone</Label><Input value={ap.phone} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], phone: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
+                  </div>
+                </div>
+              ))}
+              {newClient.additional_applicants.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-2">No additional applicants. Click the button above for joint applications.</p>
+              )}
             </div>
           </div>
           <DialogFooter>

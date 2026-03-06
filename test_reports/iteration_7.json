@@ -1,0 +1,92 @@
+{
+  "summary": "Tested 4 bug fixes for CRM Iteration 7. All 4 fixes verified working. Backend: 7/7 pytest tests passed. Frontend: All UI features verified via Playwright.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Dashboard Charts",
+        "issues": ["Minor: Console warnings about chart width/height being -1 - likely Recharts rendering before container has dimensions"]
+      }
+    ]
+  },
+
+  "passed_tests": {
+    "fix_1_commission_paid_date_blur_save": [
+      "Backend: commission_paid_date field stores and retrieves correctly",
+      "Backend: PUT /api/cases/{id} with commission_paid_date returns 200",
+      "Frontend: CaseDetail.js uses defaultValue + onBlur pattern (saves on blur not onChange)",
+      "Frontend: Commission tab shows 'Commission Paid Date' label and date input",
+      "Code Review: Lines 736-749 confirm onBlur handler with API call"
+    ],
+    "fix_2_add_additional_applicant": [
+      "Backend: POST /api/clients with additional_applicants array returns 201",
+      "Backend: additional_applicants stored and retrieved correctly",
+      "Backend: Multiple additional applicants supported",
+      "Frontend: 'Add Additional Applicant' button visible in Add Client form",
+      "Frontend: Button has UserPlus icon and data-testid='add-applicant-in-form-btn'",
+      "Frontend: Clicking button adds 'Applicant 2' section with Name, DOB, Email, Phone fields"
+    ],
+    "fix_3_currency_display_format": [
+      "Frontend: CurrencyInput component shows type=number when focused",
+      "Frontend: CurrencyInput shows type=text with £X,XXX format when blurred",
+      "Frontend: Tested Loan Amount: typed '300000' -> displayed '£300,000' after blur",
+      "Frontend: Cases list shows properly formatted values (£360,000, £5,000,000, etc.)"
+    ],
+    "fix_4_expiring_soon_6_months": [
+      "Backend: /api/dashboard/retention uses timedelta(days=180)",
+      "Backend: /api/dashboard/stats uses timedelta(days=180) for expiring_products count",
+      "Frontend: Dashboard 'Expiring Soon' section shows 'products in 6 months'",
+      "Frontend: NOT showing '90 days' text"
+    ],
+    "regression_case_creation": [
+      "Backend: POST /api/cases creates case successfully",
+      "Backend: Case with loan_amount, property_value, proc_fee_total returns correct data"
+    ],
+    "regression_case_deletion": [
+      "Backend: DELETE /api/cases/{id} returns 200",
+      "Backend: GET /api/cases/{id} after delete returns 404",
+      "Frontend: Delete buttons visible on case rows in Cases page"
+    ]
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iter7_fixes.py",
+    "/app/test_reports/pytest/pytest_results_iter7.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "GOOD: Commission Paid Date uses defaultValue + onBlur pattern - prevents premature saves",
+    "GOOD: CurrencyInput component toggles between number/text type for UX",
+    "MINOR: Console warnings from Recharts about chart dimensions - not affecting functionality"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iter7_fixes.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (7/7 tests passed)",
+    "frontend": "100% (All 4 fixes verified)"
+  },
+
+  "test_credentials": {
+    "email": "kunalkapadia2212@gmail.com",
+    "password": "Admin2468!!!"
+  },
+
+  "seed_data_creation": "Test data created with TEST_ prefix and cleaned up after tests",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "All 4 bug fixes verified working. (1) Commission Paid Date saves on blur via defaultValue + onBlur pattern. (2) Add Additional Applicant button in client creation form works - adds Applicant 2 section with Name/DOB/Email/Phone fields. (3) Currency fields show raw number when typing, £X,XXX format on blur using CurrencyInput component. (4) Expiring Soon section shows '6 months' label and backend uses timedelta(days=180). Case creation and deletion work correctly. Charts show console warnings about dimensions but render correctly."
+}
