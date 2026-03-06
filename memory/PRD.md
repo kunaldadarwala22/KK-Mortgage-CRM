@@ -71,6 +71,17 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - [x] Admin wipe-data endpoint (DELETE /api/admin/wipe-data)
 - [x] Database wiped clean for production use
 
+### March 2026 Updates (Session 6)
+- [x] Client Fee (£) currency field added to case commission section (CaseDetail edit/display, Cases new form)
+- [x] Commission Dashboard: Total Client Fees, Total Commission + Client Fees, Client Fees This Month, Client Fees Last 30 Days cards
+- [x] Analytics: Commission Analytics tab includes Total Client Fees in summary stats
+- [x] Reports: 4 tabs - Cases Completed, Commission Only, Client Fees Only, Commission + Client Fees Combined
+- [x] Excel export includes Client Fee column
+- [x] Backend: /api/dashboard/forecast, /api/commission/analytics, /api/commission/monthly all return client_fee data
+- [x] Reports: /api/reports/commission-paid accepts report_type param (commission, client_fees, both)
+- [x] Export: /api/reports/export supports client_fees and commission_and_fees report types
+- [x] Database wiped clean for production use
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
@@ -87,10 +98,10 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - `/api/clients`, `/api/clients/search?q=`, `/api/clients/{id}`
 - `/api/cases`, `/api/cases/{id}` (GET/POST/PUT/DELETE)
 - `/api/tasks`, `/api/tasks/{id}`
-- `/api/dashboard/forecast` (returns commission_this_month + commission_last_30_days)
+- `/api/dashboard/forecast` (returns commission_this_month + commission_last_30_days + total_client_fees)
 - `/api/commission/monthly`, `/api/commission/ytd`
 - `/api/analytics/commission`, `/api/analytics/mortgage-types`
-- `/api/reports/cases-completed`, `/api/reports/commission-paid`
+- `/api/reports/cases-completed`, `/api/reports/commission-paid?report_type=commission|client_fees|both`
 - `/api/export/excel` (single sheet), `/api/export/clients`
 - `/api/admin/wipe-data` (DELETE - wipes all clients, cases, tasks)
 - `/api/retention-stats`
@@ -98,4 +109,4 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 ## DB Collections
 - users, clients, cases, tasks, documents, audit_logs, user_sessions
 - Client: `additional_applicants: [{full_name, dob, email, phone}]`
-- Case: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, interest_rate_type, initial_product_term, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider, commission_paid_date
+- Case: property_value, deposit_source, repayment_type, property_type, case_reference, rate_fixed_for, interest_rate_type, initial_product_term, insurance_cover_type, insurance_reference, monthly_premium, guaranteed_or_reviewable, sum_assured, in_trust, insurance_provider, commission_paid_date, client_fee
