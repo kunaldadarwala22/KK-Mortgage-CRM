@@ -559,10 +559,10 @@ const Cases = () => {
 
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Application Date</Label><Input type="date" value={newCase.date_application_submitted || ''} onChange={(e) => setNewCase({ ...newCase, date_application_submitted: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Expected Completion</Label><Input type="date" value={newCase.expected_completion_date || ''} onChange={(e) => setNewCase({ ...newCase, expected_completion_date: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Product Start Date</Label><Input type="date" value={newCase.product_start_date || ''} onChange={(e) => setNewCase({ ...newCase, product_start_date: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Product Expiry Date</Label><Input type="date" value={newCase.product_expiry_date || ''} onChange={(e) => setNewCase({ ...newCase, product_expiry_date: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Application Date</Label><Input type="date" max="9999-12-31" value={newCase.date_application_submitted || ''} onChange={(e) => setNewCase({ ...newCase, date_application_submitted: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Expected Completion</Label><Input type="date" max="9999-12-31" value={newCase.expected_completion_date || ''} onChange={(e) => setNewCase({ ...newCase, expected_completion_date: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Product Start Date</Label><Input type="date" max="9999-12-31" value={newCase.product_start_date || ''} onChange={(e) => setNewCase({ ...newCase, product_start_date: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Product Expiry Date</Label><Input type="date" max="9999-12-31" value={newCase.product_expiry_date || ''} onChange={(e) => setNewCase({ ...newCase, product_expiry_date: e.target.value })} /></div>
             </div>
 
             {/* Commission */}

@@ -733,6 +733,7 @@ const CaseDetail = () => {
                     <Input
                       type="date"
                       className="w-48"
+                      max="9999-12-31"
                       defaultValue={caseData.commission_paid_date || ''}
                       onBlur={async (e) => {
                         const val = e.target.value;
@@ -771,43 +772,23 @@ const CaseDetail = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Application Submitted</Label>
-                    <Input
-                      type="date"
-                      value={editedCase.date_application_submitted || ''}
-                      onChange={(e) => setEditedCase({ ...editedCase, date_application_submitted: e.target.value })}
-                    />
+                    <Input type="date" max="9999-12-31" value={editedCase.date_application_submitted || ''} onChange={(e) => setEditedCase({ ...editedCase, date_application_submitted: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Expected Completion</Label>
-                    <Input
-                      type="date"
-                      value={editedCase.expected_completion_date || ''}
-                      onChange={(e) => setEditedCase({ ...editedCase, expected_completion_date: e.target.value })}
-                    />
+                    <Input type="date" max="9999-12-31" value={editedCase.expected_completion_date || ''} onChange={(e) => setEditedCase({ ...editedCase, expected_completion_date: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Product Start Date</Label>
-                    <Input
-                      type="date"
-                      value={editedCase.product_start_date || ''}
-                      onChange={(e) => setEditedCase({ ...editedCase, product_start_date: e.target.value })}
-                    />
+                    <Input type="date" max="9999-12-31" value={editedCase.product_start_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_start_date: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Product Review Date</Label>
-                    <Input
-                      type="date"
-                      value={editedCase.product_review_date || ''}
-                      onChange={(e) => setEditedCase({ ...editedCase, product_review_date: e.target.value })}
-                    />
+                    <Input type="date" max="9999-12-31" value={editedCase.product_review_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_review_date: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Product Expiry Date</Label>
-                    <Input
-                      type="date"
-                      value={editedCase.product_expiry_date || ''}
-                      onChange={(e) => setEditedCase({ ...editedCase, product_expiry_date: e.target.value })}
-                    />
+                    <Input type="date" max="9999-12-31" value={editedCase.product_expiry_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_expiry_date: e.target.value })} />
                   </div>
                 </div>
               ) : (

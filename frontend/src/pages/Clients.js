@@ -374,7 +374,7 @@ const Clients = () => {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setNewClient({ ...newClient, additional_applicants: [...newClient.additional_applicants, { full_name: '', dob: '', email: '', phone: '' }] })}
+                  onClick={() => setNewClient({ ...newClient, additional_applicants: [...newClient.additional_applicants, { first_name: '', last_name: '', dob: '', email: '', phone: '', income: '', employment_type: '' }] })}
                   data-testid="add-applicant-in-form-btn"
                 >
                   <UserPlus className="h-4 w-4 mr-2" />Add Additional Applicant
@@ -399,10 +399,19 @@ const Clients = () => {
                     </Button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">Full Name *</Label><Input value={ap.full_name} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], full_name: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} data-testid={`new-applicant-name-${idx}`} /></div>
-                    <div className="space-y-1"><Label className="text-xs">Date of Birth</Label><Input type="date" value={ap.dob} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], dob: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
+                    <div className="space-y-1"><Label className="text-xs">First Name *</Label><Input value={ap.first_name} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], first_name: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} data-testid={`new-applicant-fname-${idx}`} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Surname *</Label><Input value={ap.last_name} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], last_name: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} data-testid={`new-applicant-lname-${idx}`} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Date of Birth</Label><Input type="date" max="9999-12-31" value={ap.dob} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], dob: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
                     <div className="space-y-1"><Label className="text-xs">Email</Label><Input type="email" value={ap.email} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], email: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
                     <div className="space-y-1"><Label className="text-xs">Phone</Label><Input value={ap.phone} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], phone: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Income</Label><CurrencyInput value={ap.income} onChange={(e) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], income: e.target.value }; setNewClient({ ...newClient, additional_applicants: u }); }} /></div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">Employment Type</Label>
+                      <Select value={ap.employment_type || 'none'} onValueChange={(v) => { const u = [...newClient.additional_applicants]; u[idx] = { ...u[idx], employment_type: v === 'none' ? '' : v }; setNewClient({ ...newClient, additional_applicants: u }); }}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent><SelectItem value="none">Select...</SelectItem>{EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{formatStatus(t)}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -1,0 +1,87 @@
+{
+  "summary": "Completed testing of 3 bug fixes for Iteration 8. All fixes verified working. Backend: 9/9 pytest tests passed. Frontend: All UI features verified via Playwright. Critical: 2028 case does NOT appear in Expiring Soon section.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Dashboard Charts",
+        "issues": ["Minor: Console warnings about chart width/height being -1 - Recharts rendering before container has dimensions. Not affecting functionality."]
+      }
+    ]
+  },
+
+  "passed_tests": {
+    "fix_1_date_inputs_max_9999": [
+      "CaseDetail.js: All 5 date inputs in Dates tab have max='9999-12-31'",
+      "CaseDetail.js: Commission Paid Date input has max='9999-12-31'",
+      "Cases.js: All 4 date inputs in New Case form have max='9999-12-31'",
+      "ClientDetail.js: Add Applicant DOB has max='9999-12-31'",
+      "Clients.js: Add Client form additional applicant DOB has max='9999-12-31'"
+    ],
+    "fix_2_additional_applicant_fields": [
+      "Clients.js Add Client: Additional Applicant section has First Name + Surname (NOT Full Name)",
+      "Clients.js Add Client: Additional Applicant section has Income field",
+      "Clients.js Add Client: Additional Applicant section has Employment Type dropdown",
+      "ClientDetail.js Add Applicant Dialog: Has First Name, Surname, DOB, Email, Phone, Income, Employment Type",
+      "ClientDetail.js: Applicant display shows First Name, Surname, Income, Employment Type",
+      "Backend: POST /api/clients with additional_applicants correctly stores first_name, last_name, income, employment_type",
+      "Backend: PUT /api/clients/{id} correctly updates additional_applicants"
+    ],
+    "fix_3_expiring_soon_6_months": [
+      "Backend /api/dashboard/retention: Uses timedelta(days=180) for 6-month window",
+      "Backend /api/dashboard/retention: Returns 0 cases with 2028 expiry dates",
+      "Backend /api/dashboard/retention: Returns only 2026-03 case (within 6 months)",
+      "Backend /api/dashboard/stats: expiring_products count uses 6-month window",
+      "Dashboard UI: Shows '1 products in 6 months' text",
+      "Dashboard UI: Shows only 2026-03 in Expiring Soon section",
+      "Dashboard UI: 2028 case (case_04649caf1b1b, expiry 2028-04-15) does NOT appear in Expiring Soon"
+    ],
+    "regression_case_creation": [
+      "Backend: POST /api/cases creates mortgage case successfully",
+      "Backend: Case with loan_amount, lender_name, status returns correct data",
+      "Frontend: New Case form works correctly"
+    ]
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iter8_fixes.py",
+    "/app/test_reports/pytest/pytest_results_iter8.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "GOOD: Date inputs consistently have max='9999-12-31' to prevent 5-digit years",
+    "GOOD: Additional Applicant correctly uses first_name + last_name (not full_name)",
+    "GOOD: Backend retention endpoint uses timedelta(days=180) for accurate 6-month filtering",
+    "VERIFIED: case_04649caf1b1b (2028-04-15 expiry) correctly excluded from Expiring Soon"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iter8_fixes.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "100% (All 3 fixes verified)"
+  },
+
+  "test_credentials": {
+    "email": "kunalkapadia2212@gmail.com",
+    "password": "Admin2468!!!"
+  },
+
+  "seed_data_creation": "Test data created with TEST_ prefix and cleaned up after tests",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "All 3 bug fixes verified working: (1) Date inputs have max='9999-12-31' across CaseDetail, Cases, ClientDetail, Clients pages to prevent 5-digit years. (2) Additional Applicant form uses first_name + last_name (not full_name) plus income and employment_type fields in both Clients.js Add Client form and ClientDetail.js Add Applicant dialog. (3) Expiring Soon dashboard section shows ONLY cases expiring within 6 months - confirmed case_04649caf1b1b (2028-04-15) does NOT appear. Backend retention endpoint at /api/dashboard/retention uses timedelta(days=180)."
+}

@@ -1217,10 +1217,10 @@ async def get_retention_data(request: Request):
         client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
         case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
     
-    # Expiring by month (next 12 months)
+    # Expiring by month (next 6 months only)
     expiring_by_month = await db.cases.aggregate([
         {"$match": {
-            "product_expiry_date": {"$gte": today_str},
+            "product_expiry_date": {"$gte": today_str, "$lte": six_months_ahead},
             "status": CaseStatus.COMPLETED
         }},
         {"$addFields": {
@@ -1232,13 +1232,13 @@ async def get_retention_data(request: Request):
             "value": {"$sum": "$loan_amount"}
         }},
         {"$sort": {"_id": 1}},
-        {"$limit": 12}
-    ]).to_list(12)
+        {"$limit": 6}
+    ]).to_list(6)
     
-    # Total retention pipeline value
+    # Total retention pipeline value (6 months only)
     retention_value = await db.cases.aggregate([
         {"$match": {
-            "product_expiry_date": {"$gte": today_str},
+            "product_expiry_date": {"$gte": today_str, "$lte": six_months_ahead},
             "status": CaseStatus.COMPLETED
         }},
         {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}}}

@@ -61,10 +61,9 @@ const Dashboard = () => {
   const monthlyData = revenue?.monthly_revenue?.map(i => ({ month: i._id || 'N/A', revenue: i.total || 0, proc_fees: i.proc_fees || 0 })) || [];
 
   const expiringThisMonth = retention?.expiring_this_month || [];
-  // Expiring within 90 days — use expiring_by_month which covers next 12 months, take first 3 months
   const expiringByMonth = retention?.expiring_by_month || [];
-  const expiringSoonCount = expiringByMonth.slice(0, 3).reduce((sum, m) => sum + m.count, 0);
-  const expiringSoonValue = expiringByMonth.slice(0, 3).reduce((sum, m) => sum + m.value, 0);
+  const expiringSoonCount = expiringByMonth.reduce((sum, m) => sum + m.count, 0);
+  const expiringSoonValue = expiringByMonth.reduce((sum, m) => sum + m.value, 0);
 
   if (loading) {
     return (<div className="flex items-center justify-center h-96"><div className="animate-spin h-8 w-8 border-4 border-red-600 border-t-transparent rounded-full" /></div>);

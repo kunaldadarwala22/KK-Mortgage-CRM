@@ -41,7 +41,7 @@ const ClientDetail = () => {
   const [showDocDialog, setShowDocDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showApplicantDialog, setShowApplicantDialog] = useState(false);
-  const [newApplicant, setNewApplicant] = useState({ full_name: '', dob: '', email: '', phone: '' });
+  const [newApplicant, setNewApplicant] = useState({ first_name: '', last_name: '', dob: '', email: '', phone: '', income: '', employment_type: '' });
 
   const emptyCase = {
     product_type: '', mortgage_type: '', insurance_type: '',
@@ -156,7 +156,7 @@ const ClientDetail = () => {
       await clientsAPI.update(clientId, { additional_applicants: applicants });
       toast.success('Additional applicant added');
       setShowApplicantDialog(false);
-      setNewApplicant({ full_name: '', dob: '', email: '', phone: '' });
+      setNewApplicant({ first_name: '', last_name: '', dob: '', email: '', phone: '', income: '', employment_type: '' });
       loadData();
     } catch (error) {
       toast.error(error.message || 'Failed to add applicant');
@@ -308,11 +308,14 @@ const ClientDetail = () => {
                           </Button>
                         </div>
                         <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div><p className="text-xs text-slate-500">Full Name</p><p className="font-medium text-sm">{ap.full_name || '-'}</p></div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div><p className="text-xs text-slate-500">First Name</p><p className="font-medium text-sm">{ap.first_name || ap.full_name || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500">Surname</p><p className="font-medium text-sm">{ap.last_name || '-'}</p></div>
                             <div><p className="text-xs text-slate-500">Date of Birth</p><p className="text-sm">{fmtDate(ap.dob)}</p></div>
                             <div><p className="text-xs text-slate-500">Email</p><p className="text-sm">{ap.email || '-'}</p></div>
                             <div><p className="text-xs text-slate-500">Phone</p><p className="text-sm">{ap.phone || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500">Income</p><p className="text-sm">{ap.income ? fmt(ap.income) : '-'}</p></div>
+                            <div><p className="text-xs text-slate-500">Employment Type</p><p className="text-sm">{ap.employment_type ? ap.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p></div>
                           </div>
                         </div>
                       </div>
@@ -583,14 +586,32 @@ const ClientDetail = () => {
             <DialogDescription>Add a joint applicant to {client.first_name}'s profile.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>Full Name *</Label><Input value={newApplicant.full_name} onChange={(e) => setNewApplicant({ ...newApplicant, full_name: e.target.value })} placeholder="e.g. Jane Smith" data-testid="applicant-name" /></div>
-            <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" value={newApplicant.dob} onChange={(e) => setNewApplicant({ ...newApplicant, dob: e.target.value })} data-testid="applicant-dob" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>First Name *</Label><Input value={newApplicant.first_name} onChange={(e) => setNewApplicant({ ...newApplicant, first_name: e.target.value })} data-testid="applicant-first-name" /></div>
+              <div className="space-y-2"><Label>Surname *</Label><Input value={newApplicant.last_name} onChange={(e) => setNewApplicant({ ...newApplicant, last_name: e.target.value })} data-testid="applicant-last-name" /></div>
+            </div>
+            <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" max="9999-12-31" value={newApplicant.dob} onChange={(e) => setNewApplicant({ ...newApplicant, dob: e.target.value })} data-testid="applicant-dob" /></div>
             <div className="space-y-2"><Label>Email</Label><Input type="email" value={newApplicant.email} onChange={(e) => setNewApplicant({ ...newApplicant, email: e.target.value })} data-testid="applicant-email" /></div>
             <div className="space-y-2"><Label>Phone</Label><Input value={newApplicant.phone} onChange={(e) => setNewApplicant({ ...newApplicant, phone: e.target.value })} data-testid="applicant-phone" /></div>
+            <div className="space-y-2"><Label>Income</Label><Input type="number" value={newApplicant.income} onChange={(e) => setNewApplicant({ ...newApplicant, income: e.target.value })} data-testid="applicant-income" /></div>
+            <div className="space-y-2">
+              <Label>Employment Type</Label>
+              <Select value={newApplicant.employment_type || 'none'} onValueChange={(v) => setNewApplicant({ ...newApplicant, employment_type: v === 'none' ? '' : v })}>
+                <SelectTrigger data-testid="applicant-employment"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select...</SelectItem>
+                  <SelectItem value="employed">Employed</SelectItem>
+                  <SelectItem value="self_employed">Self Employed</SelectItem>
+                  <SelectItem value="contractor">Contractor</SelectItem>
+                  <SelectItem value="retired">Retired</SelectItem>
+                  <SelectItem value="unemployed">Unemployed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowApplicantDialog(false)}>Cancel</Button>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddApplicant} disabled={!newApplicant.full_name} data-testid="save-applicant-btn">Add Applicant</Button>
+            <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddApplicant} disabled={!newApplicant.first_name || !newApplicant.last_name} data-testid="save-applicant-btn">Add Applicant</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
