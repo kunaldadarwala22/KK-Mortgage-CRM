@@ -17,7 +17,7 @@ import {
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
-  Search, Plus, Eye, Briefcase, Home, Shield, Filter, X, Trash2,
+  Search, Plus, Eye, Briefcase, Home, Shield, Filter, X, Trash2, RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LenderAutocomplete } from '../components/LenderAutocomplete';
@@ -450,8 +450,15 @@ const Cases = () => {
       <Dialog open={showAddDialog} onOpenChange={(open) => { setShowAddDialog(open); if (!open) resetNewCase(); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Case</DialogTitle>
-            <DialogDescription>Add a new mortgage or insurance case.</DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>Create New Case</DialogTitle>
+                <DialogDescription>Add a new mortgage or insurance case.</DialogDescription>
+              </div>
+              <Button variant="outline" size="sm" data-testid="clear-case-form-btn" className="text-xs h-8 shrink-0" onClick={resetNewCase}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Clear Form
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="pb-2">

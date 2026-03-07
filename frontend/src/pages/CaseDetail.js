@@ -46,6 +46,7 @@ import {
   Trash2,
   ClipboardCheck,
   CircleCheck,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LenderAutocomplete } from '../components/LenderAutocomplete';
@@ -1225,8 +1226,15 @@ const CaseDetail = () => {
       <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Task</DialogTitle>
-            <DialogDescription>Create a new task for this case.</DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>Add Task</DialogTitle>
+                <DialogDescription>Create a new task for this case.</DialogDescription>
+              </div>
+              <Button variant="outline" size="sm" data-testid="clear-task-form-btn" className="text-xs h-8 shrink-0" onClick={() => setNewTask({ title: '', description: '', due_date: '', priority: 'medium' })}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Clear Form
+              </Button>
+            </div>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

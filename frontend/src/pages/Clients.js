@@ -21,7 +21,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Checkbox } from '../components/ui/checkbox';
 import {
-  Search, Plus, MoreHorizontal, Eye, Trash2, Mail, Users, Filter, Download, X, Loader2, UserPlus,
+  Search, Plus, MoreHorizontal, Eye, Trash2, Mail, Users, Filter, Download, X, Loader2, UserPlus, RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScreenshotImport } from '../components/ScreenshotImport';
@@ -320,8 +320,15 @@ const Clients = () => {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
-            <DialogDescription>Enter the client's details below or import from screenshots.</DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>Add New Client</DialogTitle>
+                <DialogDescription>Enter the client's details below or import from screenshots.</DialogDescription>
+              </div>
+              <Button variant="outline" size="sm" data-testid="clear-client-form-btn" className="text-xs h-8 shrink-0" onClick={() => setNewClient({ first_name: '', last_name: '', email: '', phone: '', dob: '', current_address: '', postcode: '', income: '', employment_type: '', credit_issues: false, credit_issues_notes: '', lead_source: '', referral_partner_name: '', fact_find_complete: false, vulnerable_customer: false, advice_type: '', additional_applicants: [] })}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Clear Form
+              </Button>
+            </div>
           </DialogHeader>
           <div className="pb-2">
             <ScreenshotImport type="client" onExtracted={(data) => {

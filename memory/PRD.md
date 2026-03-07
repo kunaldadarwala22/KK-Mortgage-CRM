@@ -126,6 +126,12 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
   - Graceful fallback if extraction fails (manual entry still works)
 - [x] Database wiped clean for production use
 
+### March 2026 Updates (Session 11)
+- [x] "Clear Form" button added to all dialog forms (Add New Client, Create New Case, Add Task)
+  - Positioned in top-right of dialog header with RotateCcw icon
+  - Resets all form fields to initial empty state
+  - data-testid attributes: clear-client-form-btn, clear-case-form-btn, clear-task-form-btn
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
