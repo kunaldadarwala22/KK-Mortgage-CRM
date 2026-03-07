@@ -536,7 +536,7 @@ const ClientDetail = () => {
                                     </div>
                                   ) : '-'}
                                 </TableCell>
-                                <TableCell><Badge className={c.case_status === 'completed' ? 'bg-green-100 text-green-700' : c.case_status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}>{fmtStatus(c.case_status)}</Badge></TableCell>
+                                <TableCell><Badge className={c.status === 'completed' ? 'bg-green-100 text-green-700' : c.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}>{fmtStatus(c.status)}</Badge></TableCell>
                                 <TableCell>
                                   <div className="flex gap-1">
                                     <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`portfolio-view-${c.case_id}`}>View</Button>

@@ -98,6 +98,23 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
   - Keyboard navigation support, fallback allows manual entry
 - [x] Database wiped clean for production use
 
+### March 2026 Updates (Session 8)
+- [x] Lender Usage Analytics tab in Analytics page
+  - 4 ranked tables: All Time, Last 12 Months, Buy To Let, Residential
+  - Auto-updates with new cases, shows case count per lender
+- [x] New Case form changes
+  - Added Security Property Address and Security Post Code fields
+  - Removed Rate Fixed For (Years) field
+- [x] Fact Find Summary tab on CaseDetail page
+  - Structured read-only view: Client Details, Employment, Mortgage Details, Security Address
+  - Auto-pulls from case + client data for lender conversations
+- [x] Client Portfolio tab on ClientDetail page
+  - Summary metrics: Total Properties, Total Loan/Value, Average LTV, Residential/BTL count
+  - Full mortgage portfolio table with all key fields
+  - Expiry warning highlighting for mortgages within 6 months
+  - View Case quick action on each row
+- [x] Database wiped clean for production use
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
