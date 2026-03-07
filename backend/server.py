@@ -39,24 +39,16 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'kk-mortgage-solutions-secret-key-2024
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 
-# Create the main app
-app = FastAPI(title="KK Mortgage Solutions CRM API")
-
 # CORS MUST be added before routers
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-   cors_origins_str = os.environ.get('CORS_ORIGINS', 'https://kk-mortgage-crm.pages.dev')
+cors_origins_str = os.environ.get('CORS_ORIGINS', 'https://kk-mortgage-crm.pages.dev')
 cors_origins = [origin.strip() for origin in cors_origins_str.split(',')]
-cors_origins.append('http://localhost:3000')
+if 'http://localhost:3000' not in cors_origins:
+    cors_origins.append('http://localhost:3000')
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=cors_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
     allow_methods=["*"],
     allow_headers=["*"],
 )
