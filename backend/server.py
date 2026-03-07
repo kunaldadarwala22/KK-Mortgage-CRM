@@ -15,8 +15,7 @@ import jwt as pyjwt
 from bson import ObjectId
 import base64
 import io
-import json
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+from openai import AsyncOpenAI
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -42,6 +41,15 @@ JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 
 # Create the main app
 app = FastAPI(title="KK Mortgage Solutions CRM API")
+
+# CORS MUST be added before routers
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["https://kkmortgagecrm.netlify.app", "http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -103,8 +111,6 @@ class ClientCreate(BaseModel):
     gdpr_consent_date: Optional[str] = None
     # Assignment
     advisor_id: Optional[str] = None
-    # Additional applicants (joint applications)
-    additional_applicants: Optional[List[Dict[str, Any]]] = None
 
 class ClientResponse(BaseModel):
     client_id: str
@@ -177,46 +183,21 @@ class CaseCreate(BaseModel):
     fixed_rate_period: Optional[int] = None
     interest_rate: Optional[float] = None
     lender_name: Optional[str] = None
+    application_reference: Optional[str] = None
     date_application_submitted: Optional[str] = None
     expected_completion_date: Optional[str] = None
     product_start_date: Optional[str] = None
     product_review_date: Optional[str] = None
     product_expiry_date: Optional[str] = None
     loan_amount: Optional[float] = None
-    # New Mortgage Fields
-    property_value: Optional[float] = None
-    ltv: Optional[float] = None
-    deposit: Optional[float] = None
-    deposit_source: Optional[str] = None
-    repayment_type: Optional[str] = None  # interest_only, repayment
-    property_type: Optional[str] = None  # residential, buy_to_let
-    case_reference: Optional[str] = None
-    security_address: Optional[str] = None
-    security_postcode: Optional[str] = None
-    rate_fixed_for: Optional[int] = None  # years
-    interest_rate_type: Optional[str] = None  # fixed, variable, discounted, tracker, capped
-    initial_product_term: Optional[int] = None  # years
-    # Insurance Fields
-    insurance_cover_type: Optional[str] = None  # level_term, decreasing_term, increasing_term, whole_of_life
-    insurance_reference: Optional[str] = None
-    monthly_premium: Optional[float] = None
-    guaranteed_or_reviewable: Optional[str] = None  # guaranteed, reviewable
-    sum_assured: Optional[float] = None
-    in_trust: Optional[bool] = None
-    insurance_provider: Optional[str] = None
     # Commission
-    proc_fee_type: Optional[str] = None
+    proc_fee_type: Optional[str] = None  # "percentage" or "fixed"
     proc_fee_value: Optional[float] = None
     commission_percentage: Optional[float] = None
     gross_commission: Optional[float] = None
     your_commission_share: Optional[float] = None
     proc_fee_total: Optional[float] = None
     commission_status: str = CommissionStatus.PENDING
-    commission_paid_date: Optional[str] = None
-    client_fee: Optional[float] = None
-    client_fee_status: str = CommissionStatus.PENDING
-    client_fee_paid_date: Optional[str] = None
-    compliance_checklist: Optional[list] = None
     # Assignment
     advisor_id: Optional[str] = None
     notes: Optional[str] = None
@@ -232,19 +213,14 @@ class CaseResponse(BaseModel):
     term_years: Optional[int] = None
     fixed_rate_period: Optional[int] = None
     interest_rate: Optional[float] = None
-    interest_rate_type: Optional[str] = None
-    initial_product_term: Optional[int] = None
     lender_name: Optional[str] = None
+    application_reference: Optional[str] = None
     date_application_submitted: Optional[str] = None
     expected_completion_date: Optional[str] = None
     product_start_date: Optional[str] = None
     product_review_date: Optional[str] = None
     product_expiry_date: Optional[str] = None
-    security_address: Optional[str] = None
-    security_postcode: Optional[str] = None
     loan_amount: Optional[float] = None
-    deposit: Optional[float] = None
-    deposit_source: Optional[str] = None
     proc_fee_type: Optional[str] = None
     proc_fee_value: Optional[float] = None
     commission_percentage: Optional[float] = None
@@ -252,10 +228,6 @@ class CaseResponse(BaseModel):
     your_commission_share: Optional[float] = None
     proc_fee_total: Optional[float] = None
     commission_status: str
-    client_fee: Optional[float] = None
-    client_fee_status: Optional[str] = None
-    client_fee_paid_date: Optional[str] = None
-    compliance_checklist: Optional[list] = None
     advisor_id: Optional[str] = None
     advisor_name: Optional[str] = None
     notes: Optional[str] = None
@@ -549,9 +521,6 @@ async def create_client(client: ClientCreate, request: Request):
     await db.clients.insert_one(client_doc)
     await create_audit_log("create", "client", client_id, current_user["user_id"])
     
-    # Create retention reminder tasks if needed
-    # This will be handled in a separate function
-    
     result = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
     return result
 
@@ -601,7 +570,6 @@ async def get_clients(
                 client["case_property_value"] = latest.get("loan_amount")
                 client["case_lender"] = latest.get("lender_name")
                 client["case_loan_amount"] = latest.get("loan_amount")
-                # Check expiry within 90 days
                 for c in cases:
                     expiry = c.get("product_expiry_date")
                     if expiry:
@@ -613,28 +581,10 @@ async def get_clients(
                                 break
                         except:
                             pass
-            # Recalculate LTV from client data
             if client.get("loan_amount") and client.get("property_price") and client["property_price"] > 0:
                 client["ltv"] = round((client["loan_amount"] / client["property_price"]) * 100, 2)
     
     return {"clients": clients, "total": total}
-
-@api_router.get("/clients/search")
-async def search_clients(request: Request, q: str = ""):
-    """Search clients by name for case creation"""
-    await get_current_user(request)
-    
-    if not q or len(q) < 1:
-        clients = await db.clients.find({}, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1, "phone": 1}).limit(20).to_list(20)
-        return clients
-    
-    query = {"$or": [
-        {"first_name": {"$regex": q, "$options": "i"}},
-        {"last_name": {"$regex": q, "$options": "i"}},
-        {"email": {"$regex": q, "$options": "i"}},
-    ]}
-    clients = await db.clients.find(query, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1, "phone": 1}).limit(20).to_list(20)
-    return clients
 
 @api_router.get("/clients/{client_id}")
 async def get_client(client_id: str, request: Request):
@@ -656,7 +606,6 @@ async def update_client(client_id: str, request: Request):
     
     update_data = {k: v for k, v in body.items() if k != "client_id"}
     
-    # Recalculate LTV if needed
     if "loan_amount" in update_data or "property_price" in update_data:
         existing = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
         loan = update_data.get("loan_amount", existing.get("loan_amount"))
@@ -675,6 +624,9 @@ async def update_client(client_id: str, request: Request):
 @api_router.delete("/clients/{client_id}")
 async def delete_client(client_id: str, request: Request):
     current_user = await get_current_user(request)
+    
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can delete clients")
     
     await db.clients.delete_one({"client_id": client_id})
     await db.cases.delete_many({"client_id": client_id})
@@ -704,6 +656,8 @@ async def create_case(case: CaseCreate, request: Request):
     await db.cases.insert_one(case_doc)
     await create_audit_log("create", "case", case_id, current_user["user_id"])
     
+    await create_case_tasks(case_id, case.status, current_user["user_id"])
+    
     result = await db.cases.find_one({"case_id": case_id}, {"_id": 0})
     return result
 
@@ -716,7 +670,6 @@ async def get_cases(
     advisor_id: Optional[str] = None,
     lender_name: Optional[str] = None,
     commission_status: Optional[str] = None,
-    search: Optional[str] = None,
     skip: int = 0,
     limit: int = 100
 ):
@@ -736,21 +689,9 @@ async def get_cases(
     if commission_status:
         query["commission_status"] = commission_status
     
-    # Search by client name
-    if search:
-        matching_clients = await db.clients.find({
-            "$or": [
-                {"first_name": {"$regex": search, "$options": "i"}},
-                {"last_name": {"$regex": search, "$options": "i"}},
-            ]
-        }, {"client_id": 1, "_id": 0}).to_list(500)
-        matching_ids = [c["client_id"] for c in matching_clients]
-        query["client_id"] = {"$in": matching_ids} if matching_ids else "__no_match__"
-    
     cases = await db.cases.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     total = await db.cases.count_documents(query)
     
-    # Enrich with client and advisor names
     for case in cases:
         client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
         case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
@@ -792,7 +733,6 @@ async def update_case(case_id: str, request: Request):
     await db.cases.update_one({"case_id": case_id}, {"$set": update_data})
     await create_audit_log("update", "case", case_id, current_user["user_id"], update_data)
     
-    # Create tasks on status change
     if "status" in update_data and update_data["status"] != old_case["status"]:
         await create_case_tasks(case_id, update_data["status"], current_user["user_id"])
     
@@ -811,26 +751,26 @@ async def delete_case(case_id: str, request: Request):
     return {"message": "Case deleted successfully"}
 
 async def create_case_tasks(case_id: str, status: str, user_id: str):
-    """Create automatic tasks only when case status is set to review"""
-    review_statuses = ["review_due", "for_review"]
+    task_templates = {
+        CaseStatus.APPLICATION_SUBMITTED: {"title": "Follow up on application", "days": 3},
+        CaseStatus.OFFER_ISSUED: {"title": "Review offer with client", "days": 2},
+        CaseStatus.COMPLETED: {"title": "Completion follow-up and review", "days": 1}
+    }
     
-    if status.lower() in review_statuses:
+    if status in task_templates:
+        template = task_templates[status]
         task_id = generate_id("task_")
-        due_date = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d")
-        
-        case = await db.cases.find_one({"case_id": case_id}, {"_id": 0, "client_id": 1})
-        client_id = case.get("client_id") if case else None
+        due_date = (datetime.now(timezone.utc) + timedelta(days=template["days"])).strftime("%Y-%m-%d")
         
         task_doc = {
             "task_id": task_id,
-            "title": f"Review case - {case_id}",
-            "description": "Auto-generated: Case marked for review",
+            "title": template["title"],
+            "description": f"Auto-generated task for status: {status}",
             "due_date": due_date,
             "case_id": case_id,
-            "client_id": client_id,
             "assigned_to": user_id,
-            "priority": "high",
-            "task_type": "auto_review",
+            "priority": "medium",
+            "task_type": "auto",
             "completed": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
@@ -891,7 +831,6 @@ async def get_tasks(
     tasks = await db.tasks.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     total = await db.tasks.count_documents(query)
     
-    # Enrich with names
     for task in tasks:
         if task.get("client_id"):
             client = await db.clients.find_one({"client_id": task["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
@@ -997,77 +936,59 @@ async def delete_document(document_id: str, request: Request):
 async def get_dashboard_stats(request: Request):
     await get_current_user(request)
     
-    # Pipeline stats
     total_clients = await db.clients.count_documents({})
     total_cases = await db.cases.count_documents({})
     
-    # Pipeline value
     pipeline = await db.cases.aggregate([
         {"$match": {"status": {"$ne": CaseStatus.LOST_CASE}}},
         {"$group": {"_id": None, "total_loan": {"$sum": "$loan_amount"}}}
     ]).to_list(1)
     total_pipeline_value = pipeline[0]["total_loan"] if pipeline else 0
     
-    # Commission stats
     commission_agg = await db.cases.aggregate([
         {"$match": {"commission_status": CommissionStatus.PAID}},
         {"$group": {
             "_id": None,
             "total_gross": {"$sum": "$gross_commission"},
             "total_proc": {"$sum": "$proc_fee_total"},
-            "total_share": {"$sum": "$your_commission_share"},
-            "total_client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}}
+            "total_share": {"$sum": "$your_commission_share"}
         }}
     ]).to_list(1)
     
-    commission_stats = commission_agg[0] if commission_agg else {"total_gross": 0, "total_proc": 0, "total_share": 0, "total_client_fees": 0}
+    commission_stats = commission_agg[0] if commission_agg else {"total_gross": 0, "total_proc": 0, "total_share": 0}
     
-    # Client fee pending total
-    cf_pending_agg = await db.cases.aggregate([
-        {"$match": {"client_fee_status": CommissionStatus.PENDING, "client_fee": {"$gt": 0}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}}}
-    ]).to_list(1)
-    
-    # Cases by status
     status_counts = await db.cases.aggregate([
         {"$group": {"_id": "$status", "count": {"$sum": 1}}}
     ]).to_list(100)
     
-    # Completed vs Lost
     completed = await db.cases.count_documents({"status": CaseStatus.COMPLETED})
     lost = await db.cases.count_documents({"status": CaseStatus.LOST_CASE})
     
-    # Conversion rate
     conversion_rate = round((completed / total_cases * 100), 2) if total_cases > 0 else 0
     
-    # Average loan size
     avg_loan = await db.cases.aggregate([
         {"$match": {"loan_amount": {"$gt": 0}}},
         {"$group": {"_id": None, "avg": {"$avg": "$loan_amount"}}}
     ]).to_list(1)
     avg_loan_size = round(avg_loan[0]["avg"], 2) if avg_loan else 0
     
-    # Expiring products (next 6 months)
-    six_months = (datetime.now(timezone.utc) + timedelta(days=180)).strftime("%Y-%m-%d")
+    ninety_days = (datetime.now(timezone.utc) + timedelta(days=90)).strftime("%Y-%m-%d")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     expiring_count = await db.cases.count_documents({
-        "product_expiry_date": {"$gte": today, "$lte": six_months},
+        "product_expiry_date": {"$gte": today, "$lte": ninety_days},
         "status": CaseStatus.COMPLETED
     })
     
-    # Tasks due today
     tasks_today = await db.tasks.count_documents({
         "due_date": today,
         "completed": False
     })
     
-    # Overdue tasks
     overdue_tasks = await db.tasks.count_documents({
         "due_date": {"$lt": today},
         "completed": False
     })
     
-    # Mortgage vs Insurance split
     mortgage_comm = await db.cases.aggregate([
         {"$match": {"product_type": ProductType.MORTGAGE, "commission_status": CommissionStatus.PAID}},
         {"$group": {"_id": None, "total": {"$sum": "$gross_commission"}}}
@@ -1094,9 +1015,7 @@ async def get_dashboard_stats(request: Request):
         "tasks_due_today": tasks_today,
         "overdue_tasks": overdue_tasks,
         "mortgage_commission": mortgage_comm[0]["total"] if mortgage_comm else 0,
-        "insurance_commission": insurance_comm[0]["total"] if insurance_comm else 0,
-        "total_client_fees": commission_stats.get("total_client_fees", 0),
-        "client_fee_pending": cf_pending_agg[0]["total"] if cf_pending_agg else 0
+        "insurance_commission": insurance_comm[0]["total"] if insurance_comm else 0
     }
 
 @api_router.get("/dashboard/revenue")
@@ -1107,7 +1026,6 @@ async def get_revenue_analytics(
 ):
     await get_current_user(request)
     
-    # Monthly revenue
     monthly_revenue = await db.cases.aggregate([
         {"$match": {"commission_status": CommissionStatus.PAID}},
         {"$addFields": {
@@ -1122,7 +1040,6 @@ async def get_revenue_analytics(
         {"$limit": 12}
     ]).to_list(12)
     
-    # Revenue by lender
     by_lender = await db.cases.aggregate([
         {"$match": {"commission_status": CommissionStatus.PAID, "lender_name": {"$ne": None}}},
         {"$group": {
@@ -1134,7 +1051,6 @@ async def get_revenue_analytics(
         {"$limit": 10}
     ]).to_list(10)
     
-    # Revenue by lead source
     by_source = await db.cases.aggregate([
         {"$lookup": {
             "from": "clients",
@@ -1152,7 +1068,6 @@ async def get_revenue_analytics(
         {"$sort": {"total": -1}}
     ]).to_list(10)
     
-    # Revenue by product type
     by_product = await db.cases.aggregate([
         {"$match": {"commission_status": CommissionStatus.PAID}},
         {"$group": {
@@ -1170,101 +1085,34 @@ async def get_revenue_analytics(
     }
 
 @api_router.get("/dashboard/forecast")
-async def get_commission_summary(request: Request):
-    """Commission & Client Fee stats: This Month, Last 30 Days, Totals, Pending"""
+async def get_commission_forecast(request: Request):
     await get_current_user(request)
     
     today = datetime.now(timezone.utc)
-    month_start = today.replace(day=1).strftime("%Y-%m-%d")
-    month_end = today.strftime("%Y-%m-%d")
-    thirty_days_ago = (today - timedelta(days=30)).strftime("%Y-%m-%d")
     
-    # --- Commission Paid This Month (by commission_paid_date) ---
-    comm_this_month = await db.cases.aggregate([
-        {"$match": {
-            "commission_status": CommissionStatus.PAID,
-            "$or": [
-                {"commission_paid_date": {"$gte": month_start, "$lte": month_end}},
-                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": month_start, "$lte": month_end}}
-            ]
-        }},
-        {"$group": {
-            "_id": None,
-            "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
-            "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
-            "count": {"$sum": 1}
-        }}
-    ]).to_list(1)
+    forecasts = {}
+    for days in [30, 60, 90]:
+        future_date = (today + timedelta(days=days)).strftime("%Y-%m-%d")
+        today_str = today.strftime("%Y-%m-%d")
+        
+        result = await db.cases.aggregate([
+            {"$match": {
+                "expected_completion_date": {"$gte": today_str, "$lte": future_date},
+                "commission_status": {"$in": [CommissionStatus.PENDING, CommissionStatus.SUBMITTED]}
+            }},
+            {"$group": {
+                "_id": None,
+                "total": {"$sum": "$gross_commission"},
+                "count": {"$sum": 1}
+            }}
+        ]).to_list(1)
+        
+        forecasts[f"next_{days}_days"] = {
+            "amount": result[0]["total"] if result else 0,
+            "cases": result[0]["count"] if result else 0
+        }
     
-    # --- Commission Paid Last 30 Days (by commission_paid_date) ---
-    comm_last_30 = await db.cases.aggregate([
-        {"$match": {
-            "commission_status": CommissionStatus.PAID,
-            "$or": [
-                {"commission_paid_date": {"$gte": thirty_days_ago, "$lte": month_end}},
-                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": thirty_days_ago, "$lte": month_end}}
-            ]
-        }},
-        {"$group": {
-            "_id": None,
-            "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
-            "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
-            "count": {"$sum": 1}
-        }}
-    ]).to_list(1)
-    
-    # --- Client Fees Paid This Month (by client_fee_paid_date) ---
-    cf_this_month = await db.cases.aggregate([
-        {"$match": {
-            "client_fee_status": CommissionStatus.PAID,
-            "$or": [
-                {"client_fee_paid_date": {"$gte": month_start, "$lte": month_end}},
-                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": month_start, "$lte": month_end}}
-            ]
-        }},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}, "count": {"$sum": 1}}}
-    ]).to_list(1)
-    
-    # --- Client Fees Paid Last 30 Days (by client_fee_paid_date) ---
-    cf_last_30 = await db.cases.aggregate([
-        {"$match": {
-            "client_fee_status": CommissionStatus.PAID,
-            "$or": [
-                {"client_fee_paid_date": {"$gte": thirty_days_ago, "$lte": month_end}},
-                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": thirty_days_ago, "$lte": month_end}}
-            ]
-        }},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}, "count": {"$sum": 1}}}
-    ]).to_list(1)
-    
-    # --- Total Client Fees (paid only) ---
-    total_cf_paid = await db.cases.aggregate([
-        {"$match": {"client_fee_status": CommissionStatus.PAID}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}}}
-    ]).to_list(1)
-    
-    # --- Client Fee Pending ---
-    cf_pending = await db.cases.aggregate([
-        {"$match": {"client_fee_status": CommissionStatus.PENDING, "client_fee": {"$gt": 0}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$client_fee", 0]}}, "count": {"$sum": 1}}}
-    ]).to_list(1)
-    
-    return {
-        "commission_this_month": {
-            "amount": comm_this_month[0]["total"] if comm_this_month else 0,
-            "proc_fees": comm_this_month[0]["proc_fees"] if comm_this_month else 0,
-            "cases": comm_this_month[0]["count"] if comm_this_month else 0
-        },
-        "commission_last_30_days": {
-            "amount": comm_last_30[0]["total"] if comm_last_30 else 0,
-            "proc_fees": comm_last_30[0]["proc_fees"] if comm_last_30 else 0,
-            "cases": comm_last_30[0]["count"] if comm_last_30 else 0
-        },
-        "client_fees_paid_this_month": cf_this_month[0]["total"] if cf_this_month else 0,
-        "client_fees_paid_last_30_days": cf_last_30[0]["total"] if cf_last_30 else 0,
-        "total_client_fees_paid": total_cf_paid[0]["total"] if total_cf_paid else 0,
-        "client_fee_pending": cf_pending[0]["total"] if cf_pending else 0
-    }
+    return forecasts
 
 @api_router.get("/dashboard/retention")
 async def get_retention_data(request: Request):
@@ -1273,23 +1121,21 @@ async def get_retention_data(request: Request):
     today = datetime.now(timezone.utc)
     today_str = today.strftime("%Y-%m-%d")
     
-    # Products expiring within the next 6 months
-    six_months_ahead = (today + timedelta(days=180)).strftime("%Y-%m-%d")
+    month_end = (today.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    month_end_str = month_end.strftime("%Y-%m-%d")
     
     expiring_this_month = await db.cases.find({
-        "product_expiry_date": {"$gte": today_str, "$lte": six_months_ahead},
+        "product_expiry_date": {"$gte": today_str, "$lte": month_end_str},
         "status": CaseStatus.COMPLETED
-    }, {"_id": 0}).sort("product_expiry_date", 1).to_list(100)
+    }, {"_id": 0}).to_list(100)
     
-    # Enrich with client names
     for case in expiring_this_month:
         client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
         case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
     
-    # Expiring by month (next 6 months only)
     expiring_by_month = await db.cases.aggregate([
         {"$match": {
-            "product_expiry_date": {"$gte": today_str, "$lte": six_months_ahead},
+            "product_expiry_date": {"$gte": today_str},
             "status": CaseStatus.COMPLETED
         }},
         {"$addFields": {
@@ -1301,13 +1147,12 @@ async def get_retention_data(request: Request):
             "value": {"$sum": "$loan_amount"}
         }},
         {"$sort": {"_id": 1}},
-        {"$limit": 6}
-    ]).to_list(6)
+        {"$limit": 12}
+    ]).to_list(12)
     
-    # Total retention pipeline value (6 months only)
     retention_value = await db.cases.aggregate([
         {"$match": {
-            "product_expiry_date": {"$gte": today_str, "$lte": six_months_ahead},
+            "product_expiry_date": {"$gte": today_str},
             "status": CaseStatus.COMPLETED
         }},
         {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}}}
@@ -1323,7 +1168,6 @@ async def get_retention_data(request: Request):
 async def get_lead_analytics(request: Request):
     await get_current_user(request)
     
-    # Conversion rate by source
     source_stats = await db.cases.aggregate([
         {"$lookup": {
             "from": "clients",
@@ -1344,7 +1188,6 @@ async def get_lead_analytics(request: Request):
     for stat in source_stats:
         stat["conversion_rate"] = round((stat["completed"] / stat["total"] * 100), 2) if stat["total"] > 0 else 0
     
-    # Revenue by referral partner
     referral_stats = await db.cases.aggregate([
         {"$lookup": {
             "from": "clients",
@@ -1380,6 +1223,9 @@ async def get_audit_logs(
 ):
     current_user = await get_current_user(request)
     
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can view audit logs")
+    
     query = {}
     if entity_type:
         query["entity_type"] = entity_type
@@ -1390,119 +1236,11 @@ async def get_audit_logs(
     
     logs = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
     
-    # Enrich with user names
     for log in logs:
         user = await db.users.find_one({"user_id": log["user_id"]}, {"_id": 0, "name": 1})
         log["user_name"] = user["name"] if user else None
     
     return logs
-
-# ==================== GLOBAL SEARCH ====================
-
-@api_router.get("/search")
-async def global_search(request: Request, q: str = ""):
-    """Search across clients and cases"""
-    await get_current_user(request)
-    
-    if not q or len(q) < 2:
-        return {"clients": [], "cases": []}
-    
-    # Search clients
-    client_query = {"$or": [
-        {"first_name": {"$regex": q, "$options": "i"}},
-        {"last_name": {"$regex": q, "$options": "i"}},
-        {"email": {"$regex": q, "$options": "i"}},
-        {"phone": {"$regex": q, "$options": "i"}},
-        {"postcode": {"$regex": q, "$options": "i"}},
-    ]}
-    clients = await db.clients.find(client_query, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1, "phone": 1}).limit(10).to_list(10)
-    
-    # Search cases
-    case_query = {"$or": [
-        {"case_id": {"$regex": q, "$options": "i"}},
-        {"lender_name": {"$regex": q, "$options": "i"}},
-        {"case_reference": {"$regex": q, "$options": "i"}},
-        {"case_reference": {"$regex": q, "$options": "i"}},
-        {"insurance_reference": {"$regex": q, "$options": "i"}},
-    ]}
-    cases = await db.cases.find(case_query, {"_id": 0, "case_id": 1, "client_id": 1, "product_type": 1, "status": 1, "lender_name": 1}).limit(10).to_list(10)
-    
-    # Enrich cases with client names
-    for case in cases:
-        client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
-        case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
-    
-    return {"clients": clients, "cases": cases}
-
-# ==================== NOTIFICATIONS ====================
-
-@api_router.get("/notifications")
-async def get_notifications(request: Request):
-    """Get notifications: overdue tasks, expiring products, upcoming tasks"""
-    await get_current_user(request)
-    
-    now = datetime.now(timezone.utc)
-    today = now.strftime("%Y-%m-%d")
-    week_ahead = (now + timedelta(days=7)).strftime("%Y-%m-%d")
-    month_ahead = (now + timedelta(days=30)).strftime("%Y-%m-%d")
-    
-    notifications = []
-    
-    # Overdue tasks
-    overdue_tasks = await db.tasks.find({
-        "completed": False,
-        "due_date": {"$lt": today}
-    }, {"_id": 0}).sort("due_date", 1).limit(10).to_list(10)
-    
-    for task in overdue_tasks:
-        notifications.append({
-            "type": "overdue_task",
-            "title": f"Overdue: {task['title']}",
-            "description": f"Due: {task.get('due_date', '')}",
-            "link": f"/tasks",
-            "severity": "high",
-            "created_at": task.get("created_at", "")
-        })
-    
-    # Tasks due this week
-    upcoming_tasks = await db.tasks.find({
-        "completed": False,
-        "due_date": {"$gte": today, "$lte": week_ahead}
-    }, {"_id": 0}).sort("due_date", 1).limit(10).to_list(10)
-    
-    for task in upcoming_tasks:
-        notifications.append({
-            "type": "upcoming_task",
-            "title": f"Due soon: {task['title']}",
-            "description": f"Due: {task.get('due_date', '')}",
-            "link": f"/tasks",
-            "severity": "medium",
-            "created_at": task.get("created_at", "")
-        })
-    
-    # Expiring products (cases with product_expiry_date coming up)
-    expiring_cases = await db.cases.find({
-        "product_expiry_date": {"$gte": today, "$lte": month_ahead},
-        "status": {"$ne": "completed"}
-    }, {"_id": 0, "case_id": 1, "client_id": 1, "product_type": 1, "product_expiry_date": 1, "lender_name": 1}).limit(10).to_list(10)
-    
-    for case in expiring_cases:
-        client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
-        client_name = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
-        notifications.append({
-            "type": "expiring_product",
-            "title": f"Product expiring: {client_name}",
-            "description": f"{case.get('lender_name', case.get('product_type', ''))} - Expires: {case.get('product_expiry_date', '')}",
-            "link": f"/cases/{case['case_id']}",
-            "severity": "high",
-            "created_at": case.get("product_expiry_date", "")
-        })
-    
-    return {"notifications": notifications, "count": len(notifications)}
-
-# ==================== CLIENT SEARCH (for case creation) ====================
-
-# (Moved to before /clients/{client_id} to avoid path conflicts)
 
 # ==================== UTILITY ROUTES ====================
 
@@ -1523,36 +1261,20 @@ async def get_commission_monthly(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ):
-    """Monthly commission breakdown with status grouping, using commission_paid_date for paid cases"""
     await get_current_user(request)
     
     match_stage = {}
     if start_date and end_date:
-        match_stage["$or"] = [
-            {"commission_paid_date": {"$gte": start_date, "$lte": end_date}},
-            {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}},
-            {"commission_paid_date": None, "expected_completion_date": {"$gte": start_date, "$lte": end_date}},
-        ]
+        match_stage["expected_completion_date"] = {"$gte": start_date, "$lte": end_date}
     elif year:
-        match_stage["$or"] = [
-            {"commission_paid_date": {"$regex": f"^{year}"}},
-            {"commission_paid_date": {"$exists": False}, "expected_completion_date": {"$regex": f"^{year}"}},
-            {"commission_paid_date": None, "expected_completion_date": {"$regex": f"^{year}"}},
-        ]
+        match_stage["expected_completion_date"] = {"$regex": f"^{year}"}
     
     pipeline = [
         {"$match": match_stage} if match_stage else {"$match": {}},
         {"$addFields": {
-            "effective_date": {"$cond": {
-                "if": {"$and": [{"$ne": ["$commission_paid_date", None]}, {"$ne": ["$commission_paid_date", ""]}]},
-                "then": "$commission_paid_date",
-                "else": "$expected_completion_date"
-            }},
-        }},
-        {"$addFields": {
             "month": {"$cond": {
-                "if": {"$and": [{"$ne": ["$effective_date", None]}, {"$ne": ["$effective_date", ""]}]},
-                "then": {"$substr": ["$effective_date", 0, 7]},
+                "if": {"$and": [{"$ne": ["$expected_completion_date", None]}, {"$ne": ["$expected_completion_date", ""]}]},
+                "then": {"$substr": ["$expected_completion_date", 0, 7]},
                 "else": "unknown"
             }}
         }},
@@ -1560,7 +1282,6 @@ async def get_commission_monthly(
             "_id": {"month": "$month", "commission_status": "$commission_status", "product_type": "$product_type"},
             "total_commission": {"$sum": {"$ifNull": ["$gross_commission", 0]}},
             "total_proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
-            "total_client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "case_count": {"$sum": 1}
         }},
         {"$sort": {"_id.month": 1}}
@@ -1579,12 +1300,11 @@ async def get_commission_monthly(
                 "month": month,
                 "pending": 0, "submitted": 0, "paid": 0, "clawed_back": 0,
                 "mortgage_commission": 0, "insurance_commission": 0,
-                "proc_fees": 0, "client_fees": 0, "total_commission": 0, "case_count": 0
+                "proc_fees": 0, "total_commission": 0, "case_count": 0
             }
         
         commission = r["total_commission"]
         proc = r["total_proc_fees"]
-        client_fees = r["total_client_fees"]
         
         status_key = {"pending": "pending", "submitted_to_lender": "submitted", "paid": "paid", "clawed_back": "clawed_back"}.get(status, "pending")
         months[month][status_key] += commission
@@ -1595,7 +1315,6 @@ async def get_commission_monthly(
             months[month]["insurance_commission"] += commission
         
         months[month]["proc_fees"] += proc
-        months[month]["client_fees"] += client_fees
         months[month]["total_commission"] += commission
         months[month]["case_count"] += r["case_count"]
     
@@ -1609,7 +1328,6 @@ async def get_commission_monthly(
         "total_mortgage": sum(m["mortgage_commission"] for m in monthly_data),
         "total_insurance": sum(m["insurance_commission"] for m in monthly_data),
         "total_proc_fees": sum(m["proc_fees"] for m in monthly_data),
-        "total_client_fees": sum(m["client_fees"] for m in monthly_data),
         "grand_total": sum(m["total_commission"] for m in monthly_data),
     }
     
@@ -1623,7 +1341,6 @@ async def get_commission_analytics(
     product_filter: Optional[str] = None,
     commission_status: Optional[str] = None
 ):
-    """Comprehensive commission analytics"""
     await get_current_user(request)
     
     match_stage = {}
@@ -1638,7 +1355,6 @@ async def get_commission_analytics(
     
     base_match = [{"$match": match_stage}] if match_stage else [{"$match": {}}]
     
-    # By month
     by_month = await db.cases.aggregate(base_match + [
         {"$addFields": {"month": {"$cond": {
             "if": {"$and": [{"$ne": ["$expected_completion_date", None]}, {"$ne": ["$expected_completion_date", ""]}]},
@@ -1649,19 +1365,16 @@ async def get_commission_analytics(
         {"$sort": {"_id": 1}}, {"$limit": 24}
     ]).to_list(24)
     
-    # By lender
     by_lender = await db.cases.aggregate(base_match + [
         {"$match": {"lender_name": {"$ne": None}}},
         {"$group": {"_id": "$lender_name", "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}}, "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}}, "count": {"$sum": 1}}},
         {"$sort": {"total": -1}}, {"$limit": 15}
     ]).to_list(15)
     
-    # By product type
     by_product = await db.cases.aggregate(base_match + [
         {"$group": {"_id": "$product_type", "total": {"$sum": {"$ifNull": ["$gross_commission", 0]}}, "proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}}, "count": {"$sum": 1}}}
     ]).to_list(10)
     
-    # By lead source
     by_lead_source = await db.cases.aggregate(base_match + [
         {"$lookup": {"from": "clients", "localField": "client_id", "foreignField": "client_id", "as": "client"}},
         {"$unwind": "$client"},
@@ -1669,7 +1382,6 @@ async def get_commission_analytics(
         {"$sort": {"total": -1}}
     ]).to_list(20)
     
-    # By advisor
     by_advisor = await db.cases.aggregate(base_match + [
         {"$match": {"advisor_id": {"$ne": None}}},
         {"$lookup": {"from": "users", "localField": "advisor_id", "foreignField": "user_id", "as": "advisor"}},
@@ -1678,7 +1390,6 @@ async def get_commission_analytics(
         {"$sort": {"total": -1}}
     ]).to_list(20)
     
-    # Summary totals
     summary = await db.cases.aggregate(base_match + [
         {"$group": {
             "_id": None,
@@ -1687,7 +1398,6 @@ async def get_commission_analytics(
             "total_pending": {"$sum": {"$cond": [{"$eq": ["$commission_status", "pending"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
             "total_clawbacks": {"$sum": {"$cond": [{"$eq": ["$commission_status", "clawed_back"]}, {"$ifNull": ["$gross_commission", 0]}, 0]}},
             "total_proc_fees": {"$sum": {"$ifNull": ["$proc_fee_total", 0]}},
-            "total_client_fees": {"$sum": {"$ifNull": ["$client_fee", 0]}},
             "case_count": {"$sum": 1},
             "avg_commission": {"$avg": {"$ifNull": ["$gross_commission", 0]}}
         }}
@@ -1711,7 +1421,6 @@ async def get_commission_analytics(
 
 @api_router.get("/analytics/mortgage-types")
 async def get_mortgage_type_analytics(request: Request):
-    """Mortgage type breakdown analytics"""
     await get_current_user(request)
     
     pipeline = [
@@ -1749,7 +1458,6 @@ async def get_cases_completed_report(
     start_date: str = Query(...),
     end_date: str = Query(...)
 ):
-    """Cases completed within a date range"""
     await get_current_user(request)
     
     cases = await db.cases.find({
@@ -1782,53 +1490,14 @@ async def get_cases_completed_report(
 async def get_commission_paid_report(
     request: Request,
     start_date: str = Query(...),
-    end_date: str = Query(...),
-    report_type: str = Query(default="commission")
+    end_date: str = Query(...)
 ):
-    """Reports filtered by paid dates. report_type: commission, client_fees, both"""
     await get_current_user(request)
     
-    if report_type == "client_fees":
-        # Filter by client_fee_paid_date for client fee reports
-        cases = await db.cases.find({
-            "client_fee_status": CommissionStatus.PAID,
-            "$or": [
-                {"client_fee_paid_date": {"$gte": start_date, "$lte": end_date}},
-                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
-            ]
-        }, {"_id": 0}).to_list(1000)
-    elif report_type == "both":
-        # Get cases where either commission or client fee was paid in range
-        comm_cases = await db.cases.find({
-            "commission_status": CommissionStatus.PAID,
-            "$or": [
-                {"commission_paid_date": {"$gte": start_date, "$lte": end_date}},
-                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
-            ]
-        }, {"_id": 0}).to_list(1000)
-        cf_cases = await db.cases.find({
-            "client_fee_status": CommissionStatus.PAID,
-            "$or": [
-                {"client_fee_paid_date": {"$gte": start_date, "$lte": end_date}},
-                {"client_fee_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
-            ]
-        }, {"_id": 0}).to_list(1000)
-        # Merge unique cases
-        seen = set()
-        cases = []
-        for c in comm_cases + cf_cases:
-            if c["case_id"] not in seen:
-                seen.add(c["case_id"])
-                cases.append(c)
-    else:
-        # Filter by commission_paid_date for commission reports
-        cases = await db.cases.find({
-            "commission_status": CommissionStatus.PAID,
-            "$or": [
-                {"commission_paid_date": {"$gte": start_date, "$lte": end_date}},
-                {"commission_paid_date": {"$in": [None, ""]}, "expected_completion_date": {"$gte": start_date, "$lte": end_date}}
-            ]
-        }, {"_id": 0}).to_list(1000)
+    cases = await db.cases.find({
+        "commission_status": CommissionStatus.PAID,
+        "expected_completion_date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(1000)
     
     for case in cases:
         client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
@@ -1836,17 +1505,14 @@ async def get_commission_paid_report(
     
     total_commission = sum(c.get("gross_commission", 0) or 0 for c in cases)
     total_proc_fees = sum(c.get("proc_fee_total", 0) or 0 for c in cases)
-    total_client_fees = sum(c.get("client_fee", 0) or 0 for c in cases)
     
     return {
         "cases": cases,
-        "report_type": report_type,
         "summary": {
             "total_cases": len(cases),
             "total_commission_paid": total_commission,
             "total_proc_fees": total_proc_fees,
-            "total_client_fees": total_client_fees,
-            "total_combined_revenue": total_commission + total_client_fees
+            "total_combined_revenue": total_commission + total_proc_fees
         }
     }
 
@@ -1858,7 +1524,6 @@ async def export_report(
     end_date: str = Query(...),
     format: str = Query(default="xlsx")
 ):
-    """Export report to Excel or CSV"""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
     from openpyxl.utils import get_column_letter
@@ -1881,8 +1546,8 @@ async def export_report(
                 (c.get("mortgage_type", "") or "").replace("_", " ").title(),
                 c.get("expected_completion_date", ""), c.get("gross_commission", "")
             ]
-    elif report_type == "commission_paid":
-        data = await get_commission_paid_report(request, start_date, end_date, report_type="commission")
+    else:
+        data = await get_commission_paid_report(request, start_date, end_date)
         cases = data["cases"]
         summary = data["summary"]
         title = "Commission Paid Report"
@@ -1893,36 +1558,6 @@ async def export_report(
                 c.get("client_name", ""), c.get("loan_amount", ""), c.get("lender_name", ""),
                 (c.get("product_type", "") or "").replace("_", " ").title(),
                 c.get("gross_commission", ""), c.get("proc_fee_total", ""),
-                c.get("expected_completion_date", "")
-            ]
-    elif report_type == "client_fees":
-        data = await get_commission_paid_report(request, start_date, end_date, report_type="client_fees")
-        cases = data["cases"]
-        summary = data["summary"]
-        title = "Client Fees Report"
-        headers = ["Client Name", "Loan Amount", "Lender", "Product Type", "Client Fee", "Payment Date"]
-        
-        def row_fn(c):
-            return [
-                c.get("client_name", ""), c.get("loan_amount", ""), c.get("lender_name", ""),
-                (c.get("product_type", "") or "").replace("_", " ").title(),
-                c.get("client_fee", ""),
-                c.get("expected_completion_date", "")
-            ]
-    else:  # commission_and_fees (both)
-        data = await get_commission_paid_report(request, start_date, end_date, report_type="both")
-        cases = data["cases"]
-        summary = data["summary"]
-        title = "Commission & Client Fees Report"
-        headers = ["Client Name", "Loan Amount", "Lender", "Product Type", "Commission", "Client Fee", "Combined Total", "Payment Date"]
-        
-        def row_fn(c):
-            comm = c.get("gross_commission", 0) or 0
-            fee = c.get("client_fee", 0) or 0
-            return [
-                c.get("client_name", ""), c.get("loan_amount", ""), c.get("lender_name", ""),
-                (c.get("product_type", "") or "").replace("_", " ").title(),
-                comm, fee, comm + fee,
                 c.get("expected_completion_date", "")
             ]
     
@@ -1939,7 +1574,6 @@ async def export_report(
             headers={"Content-Disposition": f"attachment; filename={title.replace(' ', '_')}_{start_date}_to_{end_date}.csv"}
         )
     
-    # Excel format
     wb = Workbook()
     ws = wb.active
     ws.title = title
@@ -1965,7 +1599,6 @@ async def export_report(
             if isinstance(val, (int, float)) and val:
                 cell.number_format = '£#,##0'
     
-    # Summary row
     sum_row = 3 + len(cases) + 1
     ws.cell(row=sum_row, column=1, value="TOTALS").font = Font(bold=True)
     for key, val in summary.items():
@@ -1991,146 +1624,112 @@ async def export_report(
 
 @api_router.get("/export/excel")
 async def export_all_data(request: Request):
-    """Export all CRM data to a single Excel sheet - one row per case with client data"""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
-    from openpyxl.utils import get_column_letter
     
     current_user = await get_current_user(request)
     
     wb = Workbook()
-    ws = wb.active
-    ws.title = "CRM Data"
     
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
-    alt_fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
     thin_border = Border(
-        left=Side(style='thin', color='E5E7EB'),
-        right=Side(style='thin', color='E5E7EB'),
-        top=Side(style='thin', color='E5E7EB'),
-        bottom=Side(style='thin', color='E5E7EB')
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
     )
     
-    # Title row
-    headers = [
-        "Client Name", "Client Email", "Client Phone", "DOB", "Address", "Postcode",
-        "Income", "Employment Type", "Lead Source",
-        "Case Type", "Case Status", "Lender/Provider", "Mortgage Type", "Insurance Type",
-        "Loan Amount", "Property Value", "Deposit", "Deposit Source", "Property Type", "Repayment Type",
-        "Term (Years)", "Interest Rate", "Interest Rate Type", "Initial Product Term", "Rate Fixed For",
-        "Monthly Premium", "Sum Assured", "Cover Type",
-        "Case Reference", "Application Date", "Product Expiry Date",
-        "Security Address", "Security Postcode",
-        "Proc Fee Total", "Commission %", "Gross Commission", "Client Fee", "Commission Status", "Commission Paid Date",
-        "Client Fee Status", "Client Fee Paid Date"
-    ]
+    ws_clients = wb.active
+    ws_clients.title = "Clients"
     
-    ws.append(headers)
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col)
+    client_headers = [
+        "Client ID", "First Name", "Last Name", "Email", "Phone", "DOB",
+        "Address", "Postcode", "Income", "Employment Type", "Deposit",
+        "Property Price", "Loan Amount", "LTV %", "Credit Issues",
+        "Lead Source", "Referral Partner", "Fact Find Complete",
+        "Vulnerable Customer", "Advice Type", "GDPR Consent Date", "Created At"
+    ]
+    ws_clients.append(client_headers)
+    
+    for col, header in enumerate(client_headers, 1):
+        cell = ws_clients.cell(row=1, column=col)
         cell.font = header_font
         cell.fill = header_fill
         cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-    ws.row_dimensions[1].height = 30
+        cell.alignment = Alignment(horizontal='center')
     
-    # Build client lookup
     clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
-    client_map = {c["client_id"]: c for c in clients}
-    
-    # Fetch all cases
-    cases = await db.cases.find({}, {"_id": 0}).to_list(10000)
-    
-    row_num = 2
-    for idx, case in enumerate(cases):
-        client = client_map.get(case.get("client_id"), {})
-        fill = alt_fill if idx % 2 == 0 else None
-        
-        row_data = [
-            f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
-            client.get("email", ""),
-            client.get("phone", ""),
-            client.get("dob", ""),
-            client.get("current_address", ""),
-            client.get("postcode", ""),
-            client.get("income", ""),
-            (client.get("employment_type", "") or "").replace("_", " ").title(),
-            (client.get("lead_source", "") or "").replace("_", " ").title(),
-            (case.get("product_type", "") or "").replace("_", " ").title(),
-            (case.get("status", "") or "").replace("_", " ").title(),
-            case.get("lender_name", "") or case.get("insurance_provider", ""),
-            (case.get("mortgage_type", "") or "").replace("_", " ").title(),
-            (case.get("insurance_type", "") or "").replace("_", " ").title(),
-            case.get("loan_amount", ""),
-            case.get("property_value", ""),
-            case.get("deposit", ""),
-            case.get("deposit_source", ""),
-            (case.get("property_type", "") or "").replace("_", " ").title(),
-            (case.get("repayment_type", "") or "").replace("_", " ").title(),
-            case.get("term_years", ""),
-            case.get("interest_rate", ""),
-            (case.get("interest_rate_type", "") or "").replace("_", " ").title(),
-            case.get("initial_product_term", ""),
-            case.get("rate_fixed_for", ""),
-            case.get("monthly_premium", ""),
-            case.get("sum_assured", ""),
-            (case.get("insurance_cover_type", "") or "").replace("_", " ").title(),
-            case.get("case_reference", "") or case.get("insurance_reference", ""),
-            case.get("date_application_submitted", ""),
-            case.get("product_expiry_date", ""),
-            case.get("security_address", ""),
-            case.get("security_postcode", ""),
-            case.get("proc_fee_total", ""),
-            case.get("commission_percentage", ""),
-            case.get("gross_commission", ""),
-            case.get("client_fee", ""),
-            (case.get("commission_status", "") or "").replace("_", " ").title(),
-            case.get("commission_paid_date", ""),
-            (case.get("client_fee_status", "") or "").replace("_", " ").title(),
-            case.get("client_fee_paid_date", ""),
+    for client in clients:
+        row = [
+            client.get("client_id", ""), client.get("first_name", ""), client.get("last_name", ""),
+            client.get("email", ""), client.get("phone", ""), client.get("dob", ""),
+            client.get("current_address", ""), client.get("postcode", ""), client.get("income", ""),
+            client.get("employment_type", ""), client.get("deposit", ""), client.get("property_price", ""),
+            client.get("loan_amount", ""), client.get("ltv", ""),
+            "Yes" if client.get("credit_issues") else "No",
+            client.get("lead_source", ""), client.get("referral_partner_name", ""),
+            "Yes" if client.get("fact_find_complete") else "No",
+            "Yes" if client.get("vulnerable_customer") else "No",
+            client.get("advice_type", ""), client.get("gdpr_consent_date", ""), client.get("created_at", "")
         ]
-        
-        for col, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_num, column=col, value=value)
-            cell.border = thin_border
-            cell.alignment = Alignment(vertical='center')
-            if fill:
-                cell.fill = fill
-            if isinstance(value, (int, float)) and value and col in [7, 15, 16, 22, 23, 28, 30]:
-                cell.number_format = '£#,##0'
-        
-        row_num += 1
+        ws_clients.append(row)
     
-    # Also add clients with no cases
-    case_client_ids = set(c.get("client_id") for c in cases)
-    for idx2, client in enumerate(clients):
-        if client.get("client_id") not in case_client_ids:
-            fill = alt_fill if (len(cases) + idx2) % 2 == 0 else None
-            row_data = [
-                f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
-                client.get("email", ""),
-                client.get("phone", ""),
-                client.get("dob", ""),
-                client.get("current_address", ""),
-                client.get("postcode", ""),
-                client.get("income", ""),
-                (client.get("employment_type", "") or "").replace("_", " ").title(),
-                (client.get("lead_source", "") or "").replace("_", " ").title(),
-            ] + [""] * 23
-            
-            for col, value in enumerate(row_data, 1):
-                cell = ws.cell(row=row_num, column=col, value=value)
-                cell.border = thin_border
-                if fill:
-                    cell.fill = fill
-            row_num += 1
+    for col in ws_clients.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_clients.column_dimensions[column].width = min(max_length + 2, 50)
     
-    # Auto-fit columns
-    for col_cells in ws.columns:
-        max_len = max((len(str(cell.value or "")) for cell in col_cells), default=10)
-        ws.column_dimensions[col_cells[0].column_letter].width = min(max_len + 3, 35)
+    ws_cases = wb.create_sheet("Cases")
+    case_headers = [
+        "Case ID", "Client ID", "Product Type", "Mortgage Type", "Insurance Type",
+        "Status", "Lender Name", "Loan Amount", "Term (Years)", "Interest Rate",
+        "Application Reference", "Application Date", "Expected Completion",
+        "Product Start Date", "Product Review Date", "Product Expiry Date",
+        "Proc Fee Type", "Proc Fee Value", "Commission %", "Gross Commission",
+        "Your Share", "Proc Fee Total", "Commission Status", "Created At"
+    ]
+    ws_cases.append(case_headers)
+    for col, header in enumerate(case_headers, 1):
+        cell = ws_cases.cell(row=1, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
     
+    cases = await db.cases.find({}, {"_id": 0}).to_list(10000)
+    for case in cases:
+        row = [
+            case.get("case_id", ""), case.get("client_id", ""), case.get("product_type", ""),
+            case.get("mortgage_type", ""), case.get("insurance_type", ""), case.get("status", ""),
+            case.get("lender_name", ""), case.get("loan_amount", ""), case.get("term_years", ""),
+            case.get("interest_rate", ""), case.get("application_reference", ""),
+            case.get("date_application_submitted", ""), case.get("expected_completion_date", ""),
+            case.get("product_start_date", ""), case.get("product_review_date", ""),
+            case.get("product_expiry_date", ""), case.get("proc_fee_type", ""),
+            case.get("proc_fee_value", ""), case.get("commission_percentage", ""),
+            case.get("gross_commission", ""), case.get("your_commission_share", ""),
+            case.get("proc_fee_total", ""), case.get("commission_status", ""), case.get("created_at", "")
+        ]
+        ws_cases.append(row)
+    
+    for col in ws_cases.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_cases.column_dimensions[column].width = min(max_length + 2, 50)
+
     await create_audit_log("export", "all_data", "excel", current_user["user_id"])
     
     output = io.BytesIO()
@@ -2145,681 +1744,211 @@ async def export_all_data(request: Request):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
-@api_router.get("/export/clients")
-async def export_clients_data(request: Request):
-    """Export all clients data to a professionally formatted Excel file"""
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, NamedStyle
-    from openpyxl.utils import get_column_letter
-    
-    current_user = await get_current_user(request)
-    
-    # Create workbook
-    wb = Workbook()
-    
-    # Style definitions
-    title_font = Font(bold=True, size=18, color="FFFFFF")
-    subtitle_font = Font(bold=True, size=12, color="666666")
-    header_font = Font(bold=True, size=11, color="FFFFFF")
-    data_font = Font(size=10)
-    currency_font = Font(size=10, color="228B22")
-    
-    # Colors - KK Mortgage Solutions branding
-    primary_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")  # Red
-    secondary_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")  # Dark slate
-    header_fill = PatternFill(start_color="374151", end_color="374151", fill_type="solid")  # Gray
-    alt_row_fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")  # Light gray
-    
-    thin_border = Border(
-        left=Side(style='thin', color='E5E7EB'),
-        right=Side(style='thin', color='E5E7EB'),
-        top=Side(style='thin', color='E5E7EB'),
-        bottom=Side(style='thin', color='E5E7EB')
-    )
-    
-    # Fetch all clients with their cases
-    clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
-    
-    # Enrich with advisor names and case counts
-    for client in clients:
-        if client.get("advisor_id"):
-            advisor = await db.users.find_one({"user_id": client["advisor_id"]}, {"_id": 0, "name": 1})
-            client["advisor_name"] = advisor["name"] if advisor else ""
-        else:
-            client["advisor_name"] = ""
-        
-        # Count cases for this client
-        case_count = await db.cases.count_documents({"client_id": client["client_id"]})
-        client["case_count"] = case_count
-        
-        # Get total loan value
-        pipeline = await db.cases.aggregate([
-            {"$match": {"client_id": client["client_id"]}},
-            {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}, "commission": {"$sum": "$gross_commission"}}}
-        ]).to_list(1)
-        client["total_loan_value"] = pipeline[0]["total"] if pipeline else 0
-        client["total_commission"] = pipeline[0]["commission"] if pipeline else 0
-    
-    # ===== SHEET 1: CLIENT SUMMARY =====
-    ws_summary = wb.active
-    ws_summary.title = "Client Summary"
-    
-    # Title row
-    ws_summary.merge_cells('A1:L1')
-    title_cell = ws_summary['A1']
-    title_cell.value = "KK MORTGAGE SOLUTIONS - CLIENT DATABASE"
-    title_cell.font = title_font
-    title_cell.fill = primary_fill
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws_summary.row_dimensions[1].height = 40
-    
-    # Subtitle row
-    ws_summary.merge_cells('A2:L2')
-    subtitle_cell = ws_summary['A2']
-    subtitle_cell.value = f"Generated on {datetime.now(timezone.utc).strftime('%d %B %Y at %H:%M')} | Total Clients: {len(clients)}"
-    subtitle_cell.font = subtitle_font
-    subtitle_cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws_summary.row_dimensions[2].height = 25
-    
-    # Empty row
-    ws_summary.row_dimensions[3].height = 10
-    
-    # Headers for summary
-    summary_headers = [
-        "Client Name", "Email", "Phone", "Postcode", "Income", 
-        "Loan Amount", "LTV %", "Lead Source", "Advisor", 
-        "Cases", "Total Value", "Commission"
-    ]
-    
-    for col, header in enumerate(summary_headers, 1):
-        cell = ws_summary.cell(row=4, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-    ws_summary.row_dimensions[4].height = 30
-    
-    # Data rows
-    row_num = 5
-    for idx, client in enumerate(clients):
-        # Alternate row colors
-        fill = alt_row_fill if idx % 2 == 0 else None
-        
-        row_data = [
-            f"{client.get('first_name', '')} {client.get('last_name', '')}",
-            client.get('email', ''),
-            client.get('phone', ''),
-            client.get('postcode', ''),
-            client.get('income', ''),
-            client.get('loan_amount', ''),
-            f"{client.get('ltv', '')}%" if client.get('ltv') else '',
-            (client.get('lead_source', '') or '').replace('_', ' ').title(),
-            client.get('advisor_name', ''),
-            client.get('case_count', 0),
-            client.get('total_loan_value', 0),
-            client.get('total_commission', 0)
-        ]
-        
-        for col, value in enumerate(row_data, 1):
-            cell = ws_summary.cell(row=row_num, column=col, value=value)
-            cell.font = data_font
-            cell.border = thin_border
-            cell.alignment = Alignment(vertical='center')
-            if fill:
-                cell.fill = fill
-            
-            # Format currency columns
-            if col in [5, 6, 11, 12] and isinstance(value, (int, float)) and value:
-                cell.number_format = '£#,##0'
-                cell.font = currency_font
-        
-        row_num += 1
-    
-    # Auto-fit columns
-    column_widths = [25, 30, 15, 12, 12, 15, 8, 15, 20, 8, 15, 12]
-    for col, width in enumerate(column_widths, 1):
-        ws_summary.column_dimensions[get_column_letter(col)].width = width
-    
-    # ===== SHEET 2: FULL CLIENT DETAILS =====
-    ws_details = wb.create_sheet("Client Details")
-    
-    # Title
-    ws_details.merge_cells('A1:V1')
-    title_cell = ws_details['A1']
-    title_cell.value = "COMPLETE CLIENT INFORMATION"
-    title_cell.font = title_font
-    title_cell.fill = secondary_fill
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws_details.row_dimensions[1].height = 35
-    
-    # Headers
-    detail_headers = [
-        "ID", "First Name", "Last Name", "DOB", "Email", "Phone",
-        "Address", "Postcode", "Security Property",
-        "Income", "Employment", "Deposit", "Property Price", "Loan Amount", "LTV %",
-        "Credit Issues", "Credit Notes", "Lead Source", "Referral Partner",
-        "Fact Find", "Vulnerable", "Advice Type", "GDPR Date", "Advisor", "Created"
-    ]
-    
-    for col, header in enumerate(detail_headers, 1):
-        cell = ws_details.cell(row=2, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-    ws_details.row_dimensions[2].height = 35
-    
-    # Data rows
-    row_num = 3
-    for idx, client in enumerate(clients):
-        fill = alt_row_fill if idx % 2 == 0 else None
-        
-        row_data = [
-            client.get('client_id', ''),
-            client.get('first_name', ''),
-            client.get('last_name', ''),
-            client.get('dob', ''),
-            client.get('email', ''),
-            client.get('phone', ''),
-            client.get('current_address', ''),
-            client.get('postcode', ''),
-            client.get('security_property_address', ''),
-            client.get('income', ''),
-            (client.get('employment_type', '') or '').replace('_', ' ').title(),
-            client.get('deposit', ''),
-            client.get('property_price', ''),
-            client.get('loan_amount', ''),
-            client.get('ltv', ''),
-            'Yes' if client.get('credit_issues') else 'No',
-            client.get('credit_issues_notes', ''),
-            (client.get('lead_source', '') or '').replace('_', ' ').title(),
-            client.get('referral_partner_name', ''),
-            'Yes' if client.get('fact_find_complete') else 'No',
-            'Yes' if client.get('vulnerable_customer') else 'No',
-            (client.get('advice_type', '') or '').replace('_', ' ').title(),
-            client.get('gdpr_consent_date', ''),
-            client.get('advisor_name', ''),
-            str(client.get('created_at', ''))[:10] if client.get('created_at') else ''
-        ]
-        
-        for col, value in enumerate(row_data, 1):
-            cell = ws_details.cell(row=row_num, column=col, value=value)
-            cell.font = data_font
-            cell.border = thin_border
-            cell.alignment = Alignment(vertical='center', wrap_text=True)
-            if fill:
-                cell.fill = fill
-            
-            # Format currency columns
-            if col in [10, 12, 13, 14] and isinstance(value, (int, float)) and value:
-                cell.number_format = '£#,##0'
-                cell.font = currency_font
-        
-        row_num += 1
-    
-    # Column widths for details
-    detail_widths = [15, 12, 12, 12, 25, 15, 30, 10, 30, 12, 15, 12, 12, 12, 8, 10, 25, 12, 20, 10, 10, 12, 12, 15, 12]
-    for col, width in enumerate(detail_widths, 1):
-        if col <= len(detail_widths):
-            ws_details.column_dimensions[get_column_letter(col)].width = width
-    
-    # ===== SHEET 3: FINANCIAL SUMMARY =====
-    ws_financial = wb.create_sheet("Financial Summary")
-    
-    # Title
-    ws_financial.merge_cells('A1:H1')
-    title_cell = ws_financial['A1']
-    title_cell.value = "CLIENT FINANCIAL OVERVIEW"
-    title_cell.font = title_font
-    title_cell.fill = primary_fill
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws_financial.row_dimensions[1].height = 35
-    
-    # Headers
-    financial_headers = [
-        "Client Name", "Income", "Employment", "Property Price", 
-        "Loan Amount", "Deposit", "LTV %", "Credit Issues"
-    ]
-    
-    for col, header in enumerate(financial_headers, 1):
-        cell = ws_financial.cell(row=2, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws_financial.row_dimensions[2].height = 25
-    
-    # Data rows - only clients with financial info
-    row_num = 3
-    for idx, client in enumerate(clients):
-        if not client.get('income') and not client.get('loan_amount'):
-            continue
-            
-        fill = alt_row_fill if idx % 2 == 0 else None
-        
-        row_data = [
-            f"{client.get('first_name', '')} {client.get('last_name', '')}",
-            client.get('income', ''),
-            (client.get('employment_type', '') or '').replace('_', ' ').title(),
-            client.get('property_price', ''),
-            client.get('loan_amount', ''),
-            client.get('deposit', ''),
-            f"{client.get('ltv', '')}%" if client.get('ltv') else '',
-            'Yes' if client.get('credit_issues') else 'No'
-        ]
-        
-        for col, value in enumerate(row_data, 1):
-            cell = ws_financial.cell(row=row_num, column=col, value=value)
-            cell.font = data_font
-            cell.border = thin_border
-            cell.alignment = Alignment(vertical='center')
-            if fill:
-                cell.fill = fill
-            
-            if col in [2, 4, 5, 6] and isinstance(value, (int, float)) and value:
-                cell.number_format = '£#,##0'
-                cell.font = currency_font
-        
-        row_num += 1
-    
-    # Add totals row
-    total_income = sum(c.get('income', 0) or 0 for c in clients)
-    total_property = sum(c.get('property_price', 0) or 0 for c in clients)
-    total_loan = sum(c.get('loan_amount', 0) or 0 for c in clients)
-    total_deposit = sum(c.get('deposit', 0) or 0 for c in clients)
-    
-    ws_financial.cell(row=row_num + 1, column=1, value="TOTALS").font = Font(bold=True)
-    ws_financial.cell(row=row_num + 1, column=2, value=total_income).number_format = '£#,##0'
-    ws_financial.cell(row=row_num + 1, column=4, value=total_property).number_format = '£#,##0'
-    ws_financial.cell(row=row_num + 1, column=5, value=total_loan).number_format = '£#,##0'
-    ws_financial.cell(row=row_num + 1, column=6, value=total_deposit).number_format = '£#,##0'
-    
-    for col in range(1, 9):
-        ws_financial.cell(row=row_num + 1, column=col).font = Font(bold=True)
-        ws_financial.cell(row=row_num + 1, column=col).fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
-    
-    # Column widths
-    financial_widths = [25, 15, 15, 15, 15, 15, 10, 12]
-    for col, width in enumerate(financial_widths, 1):
-        ws_financial.column_dimensions[get_column_letter(col)].width = width
-    
-    # ===== SHEET 4: LEAD SOURCE ANALYSIS =====
-    ws_leads = wb.create_sheet("Lead Sources")
-    
-    # Title
-    ws_leads.merge_cells('A1:F1')
-    title_cell = ws_leads['A1']
-    title_cell.value = "LEAD SOURCE ANALYSIS"
-    title_cell.font = title_font
-    title_cell.fill = secondary_fill
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws_leads.row_dimensions[1].height = 35
-    
-    # Aggregate by lead source
-    lead_stats = {}
-    for client in clients:
-        source = client.get('lead_source', 'unknown') or 'unknown'
-        if source not in lead_stats:
-            lead_stats[source] = {'count': 0, 'total_loan': 0, 'total_income': 0}
-        lead_stats[source]['count'] += 1
-        lead_stats[source]['total_loan'] += client.get('loan_amount', 0) or 0
-        lead_stats[source]['total_income'] += client.get('income', 0) or 0
-    
-    # Headers
-    lead_headers = ["Lead Source", "Client Count", "Total Loan Value", "Avg Loan Value", "Total Income", "Avg Income"]
-    for col, header in enumerate(lead_headers, 1):
-        cell = ws_leads.cell(row=2, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center')
-    
-    # Data
-    row_num = 3
-    for source, stats in sorted(lead_stats.items(), key=lambda x: x[1]['count'], reverse=True):
-        avg_loan = stats['total_loan'] / stats['count'] if stats['count'] > 0 else 0
-        avg_income = stats['total_income'] / stats['count'] if stats['count'] > 0 else 0
-        
-        row_data = [
-            source.replace('_', ' ').title(),
-            stats['count'],
-            stats['total_loan'],
-            avg_loan,
-            stats['total_income'],
-            avg_income
-        ]
-        
-        for col, value in enumerate(row_data, 1):
-            cell = ws_leads.cell(row=row_num, column=col, value=value)
-            cell.font = data_font
-            cell.border = thin_border
-            if col in [3, 4, 5, 6] and isinstance(value, (int, float)):
-                cell.number_format = '£#,##0'
-        
-        row_num += 1
-    
-    # Column widths
-    for col, width in enumerate([20, 15, 18, 15, 18, 15], 1):
-        ws_leads.column_dimensions[get_column_letter(col)].width = width
-    
-    # Create audit log
-    await create_audit_log("export", "clients_data", "excel", current_user["user_id"])
-    
-    # Save to bytes
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-    
-    # Generate filename with timestamp
-    filename = f"KK_Mortgage_Clients_Export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
-    
-    return StreamingResponse(
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
-
-# Lender Usage Analytics
-@api_router.get("/analytics/lender-usage")
-async def get_lender_usage(request: Request):
-    await get_current_user(request)
-    
-    twelve_months_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
-    
-    # All time lender usage
-    all_time = await db.cases.aggregate([
-        {"$match": {"lender_name": {"$ne": None, "$ne": ""}}},
-        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}},
-        {"$limit": 20}
-    ]).to_list(20)
-    
-    # Last 12 months
-    last_12 = await db.cases.aggregate([
-        {"$match": {"lender_name": {"$ne": None, "$ne": ""}, "created_at": {"$gte": twelve_months_ago}}},
-        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}},
-        {"$limit": 20}
-    ]).to_list(20)
-    
-    # Buy to let
-    btl = await db.cases.aggregate([
-        {"$match": {"lender_name": {"$ne": None, "$ne": ""}, "property_type": "buy_to_let"}},
-        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}},
-        {"$limit": 20}
-    ]).to_list(20)
-    
-    # Residential
-    residential = await db.cases.aggregate([
-        {"$match": {"lender_name": {"$ne": None, "$ne": ""}, "property_type": "residential"}},
-        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}},
-        {"$limit": 20}
-    ]).to_list(20)
-    
-    return {
-        "all_time": [{"lender": r["_id"], "cases": r["count"]} for r in all_time],
-        "last_12_months": [{"lender": r["_id"], "cases": r["count"]} for r in last_12],
-        "buy_to_let": [{"lender": r["_id"], "cases": r["count"]} for r in btl],
-        "residential": [{"lender": r["_id"], "cases": r["count"]} for r in residential],
-    }
-
-# Screenshot Import - AI extraction
-from PIL import Image, ImageEnhance, ImageFilter
-import io
+# ==================== SCREENSHOT EXTRACT ROUTES ====================
 
 @api_router.post("/extract/client")
-async def extract_client_from_screenshots(request: Request):
-    """Extract client info from uploaded screenshots using GPT-4o vision."""
+async def extract_client_from_screenshots(
+    request: Request,
+    files: List[UploadFile] = File(...)
+):
     await get_current_user(request)
-    form = await request.form()
-    files = form.getlist("files")
-    if not files:
-        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+
+    openai_client = AsyncOpenAI(api_key=openai_api_key)
 
     image_contents = []
-    for f in files:
-        raw = await f.read()
-        img = Image.open(io.BytesIO(raw))
-        # Preprocessing: convert to RGB, enhance contrast, reduce noise
-        img = img.convert("RGB")
-        img = ImageEnhance.Contrast(img).enhance(1.4)
-        img = img.filter(ImageFilter.MedianFilter(size=3))
-        # Resize if too large
-        if max(img.size) > 2000:
-            img.thumbnail((2000, 2000), Image.LANCZOS)
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85)
-        b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-        image_contents.append(ImageContent(image_base64=b64))
+    for file in files:
+        data = await file.read()
+        b64 = base64.b64encode(data).decode("utf-8")
+        mime = file.content_type or "image/png"
+        image_contents.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:{mime};base64,{b64}", "detail": "high"}
+        })
 
-    chat = LlmChat(
-        api_key=os.environ.get("EMERGENT_LLM_KEY"),
-        session_id=f"extract_client_{uuid.uuid4().hex[:8]}",
-        system_message="You are a data extraction assistant. Extract client information from screenshots and return ONLY valid JSON. If a field cannot be confidently identified, set it to null."
-    ).with_model("openai", "gpt-4o")
+    prompt = """You are a mortgage CRM data extraction assistant. Extract client information from these screenshots and return ONLY a valid JSON object with no extra text.
 
-    prompt = """Analyse ALL the uploaded screenshots together. Detect ALL people/applicants present in the screenshots.
-
-IMPORTANT: If more than one person is detected (e.g. joint mortgage applicants, couples), return ALL of them in the "applicants" array. The first person should be the primary applicant.
-
-Return ONLY a JSON object with this exact structure:
+Extract these fields if present:
 {
-  "applicants": [
-    {
-      "first_name": null,
-      "last_name": null,
-      "email": null,
-      "phone": null,
-      "dob": null,
-      "address": null,
-      "postcode": null,
-      "employment_type": null,
-      "income": null
-    }
-  ]
+  "first_name": "",
+  "last_name": "",
+  "dob": "YYYY-MM-DD format if found",
+  "phone": "",
+  "email": "",
+  "current_address": "",
+  "postcode": "",
+  "income": null,
+  "employment_type": "",
+  "deposit": null,
+  "property_price": null,
+  "loan_amount": null,
+  "credit_issues": false,
+  "credit_issues_notes": "",
+  "existing_mortgage_balance": null,
+  "lead_source": "",
+  "advice_type": "",
+  "additional_applicants": []
 }
 
-Rules:
-- If only ONE person is found, the "applicants" array should have exactly 1 object.
-- If TWO or more people are found, include each as a separate object in the array.
-- Assign each person's details to the correct applicant object. Do NOT mix data between applicants.
-- If the same field appears in multiple screenshots, use the most complete value.
-- If a field cannot be confidently identified for a specific applicant, set it to null.
-- dob should be in YYYY-MM-DD format if found.
-- income should be a number only (no currency symbols).
-- employment_type should be one of: employed, self_employed, retired, unemployed, contractor
-- Return ONLY the JSON object, no markdown or explanation."""
+For additional_applicants, if you detect a second person, include:
+[{"first_name": "", "last_name": "", "dob": "", "phone": "", "email": "", "income": null, "employment_type": ""}]
 
-    msg = UserMessage(text=prompt, file_contents=image_contents)
-    response = await chat.send_message(msg)
+Return null for missing numeric fields, empty string for missing text fields. Return ONLY the JSON object."""
+
+    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}] + image_contents}]
 
     try:
-        clean = response.strip()
-        if clean.startswith("```"):
-            clean = clean.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        data = json.loads(clean)
-    except json.JSONDecodeError:
-        data = {}
+        response = await openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            max_tokens=2000,
+            temperature=0
+        )
+        raw = response.choices[0].message.content.strip()
+        # Strip markdown fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        import json
+        extracted = json.loads(raw.strip())
+        return {"success": True, "data": extracted}
+    except Exception as e:
+        logger.error(f"OpenAI extraction error: {e}")
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
 
-    return {"extracted_data": data, "screenshots_processed": len(files)}
 
 @api_router.post("/extract/case")
-async def extract_case_from_screenshots(request: Request):
-    """Extract case info from uploaded screenshots using GPT-4o vision."""
+async def extract_case_from_screenshots(
+    request: Request,
+    files: List[UploadFile] = File(...)
+):
     await get_current_user(request)
-    form = await request.form()
-    files = form.getlist("files")
-    if not files:
-        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+
+    openai_client = AsyncOpenAI(api_key=openai_api_key)
 
     image_contents = []
-    for f in files:
-        raw = await f.read()
-        img = Image.open(io.BytesIO(raw))
-        img = img.convert("RGB")
-        img = ImageEnhance.Contrast(img).enhance(1.4)
-        img = img.filter(ImageFilter.MedianFilter(size=3))
-        if max(img.size) > 2000:
-            img.thumbnail((2000, 2000), Image.LANCZOS)
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85)
-        b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-        image_contents.append(ImageContent(image_base64=b64))
+    for file in files:
+        data = await file.read()
+        b64 = base64.b64encode(data).decode("utf-8")
+        mime = file.content_type or "image/png"
+        image_contents.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:{mime};base64,{b64}", "detail": "high"}
+        })
 
-    chat = LlmChat(
-        api_key=os.environ.get("EMERGENT_LLM_KEY"),
-        session_id=f"extract_case_{uuid.uuid4().hex[:8]}",
-        system_message="You are a data extraction assistant for UK mortgage and insurance cases. Extract case information from screenshots and return ONLY valid JSON. If a field cannot be confidently identified, set it to null."
-    ).with_model("openai", "gpt-4o")
+    prompt = """You are a mortgage CRM data extraction assistant. Extract mortgage case information from these screenshots and return ONLY a valid JSON object with no extra text.
 
-    prompt = """Analyse ALL the uploaded screenshots together. Extract mortgage/insurance case information and return ONLY a JSON object with these exact keys:
+Extract these fields if present:
 {
-  "lender_name": null,
+  "product_type": "mortgage or insurance",
+  "mortgage_type": "purchase, remortgage, product_transfer, or remortgage_additional_borrowing",
+  "lender_name": "",
   "loan_amount": null,
   "property_value": null,
   "deposit": null,
-  "interest_rate": null,
-  "interest_rate_type": null,
   "term_years": null,
-  "initial_product_term": null,
-  "mortgage_type": null,
-  "property_type": null,
-  "repayment_type": null,
-  "case_reference": null,
-  "security_address": null,
-  "security_postcode": null,
-  "product_type": null,
-  "ltv": null,
-  "deposit_source": null,
-  "insurance_type": null,
-  "insurance_provider": null,
-  "monthly_premium": null,
-  "sum_assured": null
+  "interest_rate": null,
+  "fixed_rate_period": null,
+  "application_reference": "",
+  "date_application_submitted": "YYYY-MM-DD",
+  "expected_completion_date": "YYYY-MM-DD",
+  "product_start_date": "YYYY-MM-DD",
+  "product_expiry_date": "YYYY-MM-DD",
+  "gross_commission": null,
+  "proc_fee_total": null,
+  "notes": ""
 }
-Rules:
-- If the same field appears in multiple screenshots, use the most complete value.
-- If a field cannot be confidently identified, set it to null.
-- mortgage_type should be one of: purchase, remortgage, remortgage_additional_borrowing, product_transfer
-- property_type should be one of: residential, buy_to_let
-- repayment_type should be one of: repayment, interest_only
-- interest_rate_type should be one of: fixed, variable, discounted, tracker, capped
-- product_type should be "mortgage" or "insurance"
-- insurance_type should be one of: life_insurance, home_insurance, buildings_insurance, critical_illness, income_protection
-- Numeric fields (loan_amount, property_value, interest_rate, term_years, ltv, monthly_premium, sum_assured, initial_product_term) should be numbers only.
-- Return ONLY the JSON object, no markdown or explanation."""
 
-    msg = UserMessage(text=prompt, file_contents=image_contents)
-    response = await chat.send_message(msg)
+Return null for missing numeric fields, empty string for missing text. Return ONLY the JSON object."""
+
+    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}] + image_contents}]
 
     try:
-        clean = response.strip()
-        if clean.startswith("```"):
-            clean = clean.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        data = json.loads(clean)
-    except json.JSONDecodeError:
-        data = {}
+        response = await openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            max_tokens=2000,
+            temperature=0
+        )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        import json
+        extracted = json.loads(raw.strip())
+        return {"success": True, "data": extracted}
+    except Exception as e:
+        logger.error(f"OpenAI extraction error: {e}")
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
 
-    return {"extracted_data": data, "screenshots_processed": len(files)}
 
+# ==================== NOTIFICATIONS ROUTE ====================
 
-
-
-# Compliance Checklist Logic
-COMPLIANCE_CHECKLISTS = {
-    "purchase": [
-        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
-        "Proof of ID", "Proof of Address", "Latest 3 Payslips (if employed)",
-        "Latest 2 Years SA302 & Overview (if self-employed)",
-        "Latest 3 Months Bank Statements", "Proc Fees", "FMA", "Suitability Letter"
-    ],
-    "remortgage": [
-        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
-        "Proof of ID", "Proof of Address", "Latest 3 Payslips (if employed)",
-        "Latest 2 Years SA302 & Overview (if self-employed)",
-        "Latest 3 Months Bank Statements", "Proc Fees", "FMA", "Suitability Letter"
-    ],
-    "remortgage_additional_borrowing": [
-        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
-        "Proof of ID", "Proof of Address", "Latest 3 Payslips (if employed)",
-        "Latest 2 Years SA302 & Overview (if self-employed)",
-        "Latest 3 Months Bank Statements", "Proc Fees", "FMA", "Suitability Letter"
-    ],
-    "product_transfer": [
-        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
-        "Proof of ID", "Credit Search", "Mortgage Offer", "Suitability Letter"
-    ],
-    "life_insurance": [
-        "Client Pack", "Sanction Search", "Client Budget Noted", "Evidence of Research",
-        "Proof of ID (if premium over £75)", "Proof of Address (if premium over £75)",
-        "Application Form", "Suitability Letter"
-    ],
-    "home_insurance": [
-        "Client Pack", "Sanction Search", "Document Pack"
-    ],
-    "buildings_insurance": [
-        "Client Pack", "Sanction Search", "Document Pack"
-    ],
-}
-
-def get_compliance_checklist_for_case(case_doc):
-    """Generate the correct checklist items based on case type."""
-    product_type = case_doc.get("product_type", "")
-    if product_type == "mortgage":
-        mortgage_type = case_doc.get("mortgage_type", "purchase")
-        items = COMPLIANCE_CHECKLISTS.get(mortgage_type, COMPLIANCE_CHECKLISTS["purchase"])
-    else:
-        insurance_type = case_doc.get("insurance_type", "life_insurance")
-        items = COMPLIANCE_CHECKLISTS.get(insurance_type, COMPLIANCE_CHECKLISTS.get("life_insurance", []))
-    return [{"item": item, "completed": False} for item in items]
-
-@api_router.get("/cases/{case_id}/compliance")
-async def get_compliance_checklist(case_id: str, request: Request):
+@api_router.get("/notifications")
+async def get_notifications(request: Request):
     await get_current_user(request)
-    case = await db.cases.find_one({"case_id": case_id}, {"_id": 0})
-    if not case:
-        raise HTTPException(status_code=404, detail="Case not found")
-    
-    checklist = case.get("compliance_checklist")
-    if not checklist:
-        checklist = get_compliance_checklist_for_case(case)
-        await db.cases.update_one({"case_id": case_id}, {"$set": {"compliance_checklist": checklist}})
-    
-    return {"case_id": case_id, "checklist": checklist}
 
-@api_router.put("/cases/{case_id}/compliance")
-async def update_compliance_checklist(case_id: str, request: Request):
-    await get_current_user(request)
-    body = await request.json()
-    checklist = body.get("checklist", [])
-    
-    await db.cases.update_one({"case_id": case_id}, {"$set": {"compliance_checklist": checklist}})
-    return {"case_id": case_id, "checklist": checklist}
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    in_7_days = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d")
+    in_90_days = (datetime.now(timezone.utc) + timedelta(days=90)).strftime("%Y-%m-%d")
 
-# Admin: Wipe all data
-@api_router.delete("/admin/wipe-data")
-async def wipe_all_data(request: Request):
-    current_user = await get_current_user(request)
-    result = {
-        "clients_deleted": (await db.clients.delete_many({})).deleted_count,
-        "cases_deleted": (await db.cases.delete_many({})).deleted_count,
-        "tasks_deleted": (await db.tasks.delete_many({})).deleted_count,
-    }
-    await create_audit_log("admin", "wipe_data", "all", current_user["user_id"])
-    return {"message": "All data wiped successfully", **result}
+    notifications = []
+
+    # Overdue tasks
+    overdue_tasks = await db.tasks.find({
+        "due_date": {"$lt": today},
+        "completed": False
+    }, {"_id": 0, "title": 1, "due_date": 1, "task_id": 1}).to_list(10)
+    for t in overdue_tasks:
+        notifications.append({
+            "type": "overdue_task",
+            "message": f"Overdue task: {t['title']} (due {t['due_date']})",
+            "entity_id": t["task_id"],
+            "severity": "high"
+        })
+
+    # Tasks due in 7 days
+    upcoming_tasks = await db.tasks.find({
+        "due_date": {"$gte": today, "$lte": in_7_days},
+        "completed": False
+    }, {"_id": 0, "title": 1, "due_date": 1, "task_id": 1}).to_list(10)
+    for t in upcoming_tasks:
+        notifications.append({
+            "type": "upcoming_task",
+            "message": f"Task due soon: {t['title']} (due {t['due_date']})",
+            "entity_id": t["task_id"],
+            "severity": "medium"
+        })
+
+    # Products expiring in 90 days
+    expiring = await db.cases.find({
+        "product_expiry_date": {"$gte": today, "$lte": in_90_days},
+        "status": "completed"
+    }, {"_id": 0, "case_id": 1, "client_id": 1, "product_expiry_date": 1, "lender_name": 1}).to_list(10)
+    for c in expiring:
+        client = await db.clients.find_one({"client_id": c["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+        name = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
+        notifications.append({
+            "type": "expiring_product",
+            "message": f"Product expiring: {name} with {c.get('lender_name', 'unknown lender')} on {c['product_expiry_date']}",
+            "entity_id": c["case_id"],
+            "severity": "medium"
+        })
+
+    return {"notifications": notifications, "count": len(notifications)}
+
 
 # Include the router in the main app
 app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.on_event("startup")
 async def seed_default_user():
