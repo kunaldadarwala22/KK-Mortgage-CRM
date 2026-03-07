@@ -44,19 +44,19 @@ export const ScreenshotImport = ({ type, onExtracted }) => {
       clearInterval(progressInterval);
       setProgress({ current: validFiles.length, total: validFiles.length });
 
-      if (result.extracted_data && Object.keys(result.extracted_data).length > 0) {
-        // Filter out null values
-        const cleanData = {};
-        Object.entries(result.extracted_data).forEach(([key, val]) => {
-          if (val !== null && val !== undefined && val !== '') {
-            cleanData[key] = val;
-          }
-        });
-        onExtracted(cleanData);
-        toast.success(`Data extracted from ${result.screenshots_processed} screenshot${result.screenshots_processed > 1 ? 's' : ''}`);
-      } else {
-        toast.error('Unable to extract data from uploaded screenshots.');
-      }
+      const extractedData = result.data || result.extracted_data;
+if (extractedData && Object.keys(extractedData).length > 0) {
+  const cleanData = {};
+  Object.entries(extractedData).forEach(([key, val]) => {
+    if (val !== null && val !== undefined && val !== '') {
+      cleanData[key] = val;
+    }
+  });
+  onExtracted(cleanData);
+  toast.success('Data extracted successfully from screenshots!');
+} else {
+  toast.error('Unable to extract data from uploaded screenshots.');
+}
     } catch (err) {
       clearInterval(progressInterval);
       console.error('Extraction error:', err);
