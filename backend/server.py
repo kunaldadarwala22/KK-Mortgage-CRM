@@ -46,7 +46,17 @@ app = FastAPI(title="KK Mortgage Solutions CRM API")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["https://kkmortgagecrm.netlify.app", "http://localhost:3000"],
+   cors_origins_str = os.environ.get('CORS_ORIGINS', 'https://kk-mortgage-crm.pages.dev')
+cors_origins = [origin.strip() for origin in cors_origins_str.split(',')]
+cors_origins.append('http://localhost:3000')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
     allow_methods=["*"],
     allow_headers=["*"],
 )
