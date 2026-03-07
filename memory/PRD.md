@@ -115,6 +115,17 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
   - View Case quick action on each row
 - [x] Database wiped clean for production use
 
+### March 2026 Updates (Session 9)
+- [x] Screenshot Import feature using GPT-4o vision model
+  - "Import from Screenshots" button on both New Client and New Case forms
+  - Uploads multiple JPG/PNG screenshots, preprocesses images (contrast, noise reduction, resize)
+  - All screenshots sent in single GPT-4o request for cost efficiency
+  - Returns structured JSON that auto-fills form fields
+  - Progress indicator with per-screenshot status
+  - Screenshots never stored — deleted immediately after processing
+  - Graceful fallback if extraction fails (manual entry still works)
+- [x] Database wiped clean for production use
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
