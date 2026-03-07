@@ -1194,7 +1194,7 @@ Extract ALL of these fields if present:
   "deposit_source": "",
   "ltv": null,
   "term_years": null,
-  "initial_product_term": null,
+  "initial_product_term": null,  // look for "Product Term", "Initial Term", "Fixed Term" or similar
   "interest_rate": null,
   "interest_rate_type": "one of: fixed, variable, discounted, tracker, capped or empty string",
   "repayment_type": "one of: repayment, interest_only or empty string",
