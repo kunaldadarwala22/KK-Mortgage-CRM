@@ -88,6 +88,16 @@ Comprehensive web-based CRM system for a UK Mortgage & Insurance Broker business
 - [x] Reports: Commission report filters by commission_paid_date, Client Fees report by client_fee_paid_date, Both report merges both
 - [x] Database wiped clean for production use
 
+### March 2026 Updates (Session 7)
+- [x] Compliance Checklist tab on CaseDetail page
+  - Auto-populates based on case type: Purchase/Remortgage/Remortgage+AB (12 items), Product Transfer (8 items), Life Insurance (8 items), Home/Buildings Insurance (3 items)
+  - Individually tickable checkboxes, green tick on completion, progress bar (X/Y completed)
+  - Green highlight when 100% complete, persists to database
+- [x] Lender Autocomplete across all lender name fields (New Case form + Case Detail edit)
+  - 105 UK lenders in predefined list, case-insensitive search, real-time filtering
+  - Keyboard navigation support, fallback allows manual entry
+- [x] Database wiped clean for production use
+
 ## Upcoming Tasks (P1)
 - Backend refactoring (break server.py into modular routes)
 - Document Management improvements (cloud storage)
