@@ -1,0 +1,80 @@
+{
+  "summary": "Iteration 13: Tested 4 new features - Lender Usage Analytics, Security Address fields, Fact Find Summary tab, and Client Portfolio tab. All features working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Client Portfolio tab",
+        "issues": [
+          "LTV column shows '-' because existing cases don't have ltv field populated",
+          "Status column shows '-' for all cases - consider showing actual case status"
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter13_new_features.py",
+    "/app/test_reports/pytest/iter13_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iter13_new_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 tests passed)",
+    "frontend": "100% (all 10 test items verified)"
+  },
+  "test_credentials": "Email: kunalkapadia2212@gmail.com, Password: Admin2468!!!",
+  "seed_data_creation": "Test clients TEST_SecurityAddr and TEST_CaseModel created during backend testing (auto-cleaned)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 new features working: 1) Lender Analytics tab with 4 ranked tables, 2) Security Address fields in New Case form, 3) Fact Find Summary tab in CaseDetail, 4) Portfolio tab in ClientDetail with expiry warnings. John Smith client has 2 cases - one residential (Halifax, expiring 2026-08-15 with warning icon) and one BTL (NatWest, expiring 2028-12-01). LTV values are not set on existing cases so Average LTV shows 0%.",
+  "features_tested": {
+    "1_lender_analytics_tab": {
+      "status": "PASS",
+      "details": "Found data-testid='lender-analytics-tab'. All 4 sections render: All Time, Last 12 Months, Buy To Let, Residential"
+    },
+    "2_backend_lender_usage_api": {
+      "status": "PASS",
+      "details": "GET /api/analytics/lender-usage returns all_time, last_12_months, buy_to_let, residential arrays with correct structure"
+    },
+    "3_new_case_form_security_fields": {
+      "status": "PASS",
+      "details": "Security Property Address and Security Post Code fields present. Rate Fixed For field removed."
+    },
+    "4_backend_security_address": {
+      "status": "PASS",
+      "details": "POST /api/cases accepts and returns security_address and security_postcode fields"
+    },
+    "5_fact_find_tab": {
+      "status": "PASS",
+      "details": "Found data-testid='tab-factfind'. Shows Client Details, Employment, Mortgage Details, Security Address sections"
+    },
+    "6_case_edit_mode": {
+      "status": "PASS",
+      "details": "Security Property Address and Security Post Code fields present. Fixed Rate Period removed, Initial Product Term field shown"
+    },
+    "7_portfolio_tab": {
+      "status": "PASS",
+      "details": "Found data-testid='tab-portfolio'. Shows 6 summary metrics (Total Properties, Total Loan Amount, etc.)"
+    },
+    "8_portfolio_table": {
+      "status": "PASS",
+      "details": "Table shows Property Address, Type, Lender, Loan Amount, Property Value, Rate, LTV, Term, Product Term, Expiry, Status, Actions columns"
+    },
+    "9_portfolio_view_action": {
+      "status": "PASS",
+      "details": "Found 2 View action buttons for the 2 mortgage cases"
+    },
+    "10_expiry_warning": {
+      "status": "PASS",
+      "details": "Halifax case (expiring 2026-08-15) shows amber warning icon. NatWest case (expiring 2028-12-01) does not."
+    }
+  }
+}

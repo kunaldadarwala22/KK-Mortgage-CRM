@@ -302,6 +302,12 @@ export const analyticsAPI = {
       credentials: 'include',
       headers: getHeaders(),
     }).then(handleResponse),
+
+  getLenderUsage: () =>
+    fetch(`${API_URL}/api/analytics/lender-usage`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    }).then(handleResponse),
 };
 
 // Reports API

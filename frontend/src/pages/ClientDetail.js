@@ -16,6 +16,9 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from '../components/ui/dialog';
 import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '../components/ui/table';
+import {
   ArrowLeft, Edit, Save, X, Plus, FileText, Briefcase, CheckSquare,
   Phone, Mail, MapPin, PoundSterling, User, Building2, AlertTriangle,
   Upload, Trash2, Copy, Users,
@@ -176,6 +179,7 @@ const ClientDetail = () => {
   };
   const fmtDate = (d) => { if (!d) return '-'; const p = d.split('T')[0].split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; };
   const fmtStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
+  const fmtCurrency = (v) => { if (!v && v !== 0) return '-'; return `£${Number(v).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; };
   const statusColor = (s) => ({ new_lead: 'bg-blue-100 text-blue-800', fact_find_complete: 'bg-purple-100 text-purple-800', application_submitted: 'bg-yellow-100 text-yellow-800', valuation_booked: 'bg-orange-100 text-orange-800', offer_issued: 'bg-indigo-100 text-indigo-800', completed: 'bg-green-100 text-green-800', lost_case: 'bg-red-100 text-red-800' }[s] || 'bg-slate-100 text-slate-800');
   const commStatusColor = (s) => ({ pending: 'bg-yellow-100 text-yellow-800', submitted_to_lender: 'bg-blue-100 text-blue-800', paid: 'bg-green-100 text-green-800', clawed_back: 'bg-red-100 text-red-800' }[s] || 'bg-slate-100 text-slate-800');
 
@@ -229,9 +233,10 @@ const ClientDetail = () => {
       </div>
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
           <TabsTrigger value="cases" data-testid="tab-cases">Applications ({cases.length})</TabsTrigger>
+          <TabsTrigger value="portfolio" data-testid="tab-portfolio">Portfolio</TabsTrigger>
           <TabsTrigger value="documents" data-testid="tab-documents">Documents ({documents.length})</TabsTrigger>
           <TabsTrigger value="tasks" data-testid="tab-tasks">Tasks ({tasks.length})</TabsTrigger>
         </TabsList>
@@ -452,6 +457,102 @@ const ClientDetail = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Portfolio Tab */}
+        <TabsContent value="portfolio" className="mt-6">
+          {(() => {
+            const mortgageCases = cases.filter(c => c.product_type === 'mortgage');
+            const totalLoan = mortgageCases.reduce((sum, c) => sum + (c.loan_amount || 0), 0);
+            const totalPropValue = mortgageCases.reduce((sum, c) => sum + (c.property_value || 0), 0);
+            const avgLtv = mortgageCases.length > 0 ? (mortgageCases.reduce((sum, c) => sum + (c.ltv || 0), 0) / mortgageCases.length).toFixed(0) : 0;
+            const residential = mortgageCases.filter(c => c.property_type === 'residential').length;
+            const btl = mortgageCases.filter(c => c.property_type === 'buy_to_let').length;
+            const today = new Date();
+            const sixMonths = new Date(today.getFullYear(), today.getMonth() + 6, today.getDate());
+            const isExpiringSoon = (date) => {
+              if (!date) return false;
+              const d = new Date(date);
+              return d >= today && d <= sixMonths;
+            };
+            return (
+              <div className="space-y-6">
+                {/* Portfolio Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Total Properties</p><p className="text-2xl font-bold text-slate-900">{mortgageCases.length}</p></CardContent></Card>
+                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Total Loan Amount</p><p className="text-2xl font-bold text-slate-900">{fmtCurrency(totalLoan)}</p></CardContent></Card>
+                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Total Property Value</p><p className="text-2xl font-bold text-slate-900">{fmtCurrency(totalPropValue)}</p></CardContent></Card>
+                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Average LTV</p><p className="text-2xl font-bold text-slate-900">{avgLtv}%</p></CardContent></Card>
+                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Residential</p><p className="text-2xl font-bold text-blue-700">{residential}</p></CardContent></Card>
+                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Buy-To-Let</p><p className="text-2xl font-bold text-amber-700">{btl}</p></CardContent></Card>
+                </div>
+                {/* Portfolio Table */}
+                <Card className="border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5 text-slate-500" />Mortgage Portfolio</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {mortgageCases.length === 0 ? (
+                      <div className="text-center py-12 text-slate-500"><Building2 className="h-12 w-12 mx-auto text-slate-300 mb-4" /><p>No mortgage cases linked to this client.</p></div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Property Address</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Lender</TableHead>
+                              <TableHead>Loan Amount</TableHead>
+                              <TableHead>Property Value</TableHead>
+                              <TableHead>Rate</TableHead>
+                              <TableHead>LTV</TableHead>
+                              <TableHead>Term</TableHead>
+                              <TableHead>Product Term</TableHead>
+                              <TableHead>Expiry</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {mortgageCases.map((c) => (
+                              <TableRow key={c.case_id} className={isExpiringSoon(c.product_expiry_date) ? 'bg-amber-50' : ''}>
+                                <TableCell className="font-medium text-sm max-w-[180px]">
+                                  <div>{c.security_address || '-'}</div>
+                                  {c.security_postcode && <div className="text-xs text-slate-500">{c.security_postcode}</div>}
+                                </TableCell>
+                                <TableCell><Badge variant="outline" className="text-xs">{c.property_type === 'buy_to_let' ? 'BTL' : 'Res'}</Badge></TableCell>
+                                <TableCell className="text-sm">{c.lender_name || '-'}</TableCell>
+                                <TableCell className="text-sm font-medium">{fmtCurrency(c.loan_amount)}</TableCell>
+                                <TableCell className="text-sm">{fmtCurrency(c.property_value)}</TableCell>
+                                <TableCell className="text-sm">{c.interest_rate ? `${c.interest_rate}%` : '-'}</TableCell>
+                                <TableCell className="text-sm">{c.ltv ? `${c.ltv}%` : '-'}</TableCell>
+                                <TableCell className="text-sm">{c.term_years ? `${c.term_years}y` : '-'}</TableCell>
+                                <TableCell className="text-sm">{c.initial_product_term ? `${c.initial_product_term}y` : '-'}</TableCell>
+                                <TableCell className="text-sm">
+                                  {c.product_expiry_date ? (
+                                    <div className="flex items-center gap-1">
+                                      <span>{fmtDate(c.product_expiry_date)}</span>
+                                      {isExpiringSoon(c.product_expiry_date) && <AlertTriangle className="h-4 w-4 text-amber-500" title="Expiring Soon" />}
+                                    </div>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell><Badge className={c.case_status === 'completed' ? 'bg-green-100 text-green-700' : c.case_status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}>{fmtStatus(c.case_status)}</Badge></TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`portfolio-view-${c.case_id}`}>View</Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
         </TabsContent>
 
         {/* Documents Tab */}

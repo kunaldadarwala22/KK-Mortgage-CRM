@@ -179,7 +179,6 @@ const CaseDetail = () => {
         ...editedCase,
         loan_amount: editedCase.loan_amount ? parseFloat(editedCase.loan_amount) : null,
         term_years: editedCase.term_years ? parseInt(editedCase.term_years) : null,
-        fixed_rate_period: editedCase.fixed_rate_period ? parseInt(editedCase.fixed_rate_period) : null,
         interest_rate: editedCase.interest_rate ? parseFloat(editedCase.interest_rate) : null,
         initial_product_term: editedCase.initial_product_term ? parseInt(editedCase.initial_product_term) : null,
         proc_fee_total: procFee,
@@ -402,11 +401,12 @@ const CaseDetail = () => {
       </Card>
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="details" data-testid="tab-details">Case Details</TabsTrigger>
           <TabsTrigger value="commission" data-testid="tab-commission">Commission</TabsTrigger>
           <TabsTrigger value="compliance" data-testid="tab-compliance" onClick={loadCompliance}>Compliance</TabsTrigger>
-          <TabsTrigger value="dates" data-testid="tab-dates">Dates & Timeline</TabsTrigger>
+          <TabsTrigger value="factfind" data-testid="tab-factfind">Fact Find</TabsTrigger>
+          <TabsTrigger value="dates" data-testid="tab-dates">Dates</TabsTrigger>
           <TabsTrigger value="tasks" data-testid="tab-tasks">Tasks ({tasks.length})</TabsTrigger>
         </TabsList>
 
@@ -565,11 +565,30 @@ const CaseDetail = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Fixed Rate Period (years)</Label>
+                        <Label>LTV (%)</Label>
                         <Input
                           type="number"
-                          value={editedCase.fixed_rate_period || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, fixed_rate_period: e.target.value })}
+                          step="0.01"
+                          value={editedCase.ltv || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, ltv: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Security Property Address</Label>
+                        <Input
+                          value={editedCase.security_address || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, security_address: e.target.value })}
+                          placeholder="Property address"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Security Post Code</Label>
+                        <Input
+                          value={editedCase.security_postcode || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, security_postcode: e.target.value })}
+                          placeholder="e.g. SW1A 1AA"
                         />
                       </div>
                     </div>
@@ -622,8 +641,8 @@ const CaseDetail = () => {
                         <p className="font-medium">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">Fixed Period</p>
-                        <p className="font-medium">{caseData.fixed_rate_period ? `${caseData.fixed_rate_period} years` : '-'}</p>
+                        <p className="text-sm text-slate-500">LTV</p>
+                        <p className="font-medium">{caseData.ltv ? `${caseData.ltv}%` : '-'}</p>
                       </div>
                     </div>
                     <div>
@@ -984,6 +1003,65 @@ const CaseDetail = () => {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Fact Find Summary Tab */}
+        <TabsContent value="factfind" className="mt-6">
+          <Card className="border-slate-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-slate-500" />
+                Fact Find Summary
+              </CardTitle>
+              <p className="text-sm text-slate-500">Quick reference for lender conversations</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Client Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Client Details</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div><p className="text-xs text-slate-500">Name</p><p className="font-medium text-sm">{client ? `${client.first_name} ${client.last_name}` : '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Email</p><p className="font-medium text-sm">{client?.email || '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Phone</p><p className="font-medium text-sm">{client?.phone || '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Date of Birth</p><p className="font-medium text-sm">{client?.dob ? formatDate(client.dob) : '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Current Address</p><p className="font-medium text-sm">{client?.address || '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Post Code</p><p className="font-medium text-sm">{client?.postcode || '-'}</p></div>
+                </div>
+              </div>
+              {/* Employment */}
+              <div>
+                <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Employment</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div><p className="text-xs text-slate-500">Employment Type</p><p className="font-medium text-sm">{client?.employment_type ? client.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Income</p><p className="font-medium text-sm">{client?.income ? formatCurrency(client.income) : '-'}</p></div>
+                </div>
+              </div>
+              {/* Mortgage Details */}
+              {caseData.product_type === 'mortgage' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Mortgage Details</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><p className="text-xs text-slate-500">Mortgage Type</p><p className="font-medium text-sm">{caseData.mortgage_type ? caseData.mortgage_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Lender</p><p className="font-medium text-sm">{caseData.lender_name || '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Interest Rate</p><p className="font-medium text-sm">{caseData.interest_rate ? `${caseData.interest_rate}%` : '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">LTV</p><p className="font-medium text-sm">{caseData.ltv ? `${caseData.ltv}%` : '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Loan Amount</p><p className="font-medium text-sm">{formatCurrency(caseData.loan_amount)}</p></div>
+                    <div><p className="text-xs text-slate-500">Property Value</p><p className="font-medium text-sm">{formatCurrency(caseData.property_value)}</p></div>
+                    <div><p className="text-xs text-slate-500">Term</p><p className="font-medium text-sm">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Initial Product Term</p><p className="font-medium text-sm">{caseData.initial_product_term ? `${caseData.initial_product_term} years` : '-'}</p></div>
+                  </div>
+                </div>
+              )}
+              {/* Security Address */}
+              <div>
+                <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Security Address</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div><p className="text-xs text-slate-500">Security Address</p><p className="font-medium text-sm">{caseData.security_address || '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Security Post Code</p><p className="font-medium text-sm">{caseData.security_postcode || '-'}</p></div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

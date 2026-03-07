@@ -183,10 +183,13 @@ class CaseCreate(BaseModel):
     loan_amount: Optional[float] = None
     # New Mortgage Fields
     property_value: Optional[float] = None
+    ltv: Optional[float] = None
     deposit_source: Optional[str] = None
     repayment_type: Optional[str] = None  # interest_only, repayment
     property_type: Optional[str] = None  # residential, buy_to_let
     case_reference: Optional[str] = None
+    security_address: Optional[str] = None
+    security_postcode: Optional[str] = None
     rate_fixed_for: Optional[int] = None  # years
     interest_rate_type: Optional[str] = None  # fixed, variable, discounted, tracker, capped
     initial_product_term: Optional[int] = None  # years
@@ -234,6 +237,8 @@ class CaseResponse(BaseModel):
     product_start_date: Optional[str] = None
     product_review_date: Optional[str] = None
     product_expiry_date: Optional[str] = None
+    security_address: Optional[str] = None
+    security_postcode: Optional[str] = None
     loan_amount: Optional[float] = None
     proc_fee_type: Optional[str] = None
     proc_fee_value: Optional[float] = None
@@ -2011,6 +2016,7 @@ async def export_all_data(request: Request):
         "Term (Years)", "Interest Rate", "Interest Rate Type", "Initial Product Term", "Rate Fixed For",
         "Monthly Premium", "Sum Assured", "Cover Type",
         "Case Reference", "Application Date", "Product Expiry Date",
+        "Security Address", "Security Postcode",
         "Proc Fee Total", "Commission %", "Gross Commission", "Client Fee", "Commission Status", "Commission Paid Date",
         "Client Fee Status", "Client Fee Paid Date"
     ]
@@ -2066,6 +2072,8 @@ async def export_all_data(request: Request):
             case.get("case_reference", "") or case.get("insurance_reference", ""),
             case.get("date_application_submitted", ""),
             case.get("product_expiry_date", ""),
+            case.get("security_address", ""),
+            case.get("security_postcode", ""),
             case.get("proc_fee_total", ""),
             case.get("commission_percentage", ""),
             case.get("gross_commission", ""),
@@ -2503,6 +2511,54 @@ async def export_clients_data(request: Request):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# Lender Usage Analytics
+@api_router.get("/analytics/lender-usage")
+async def get_lender_usage(request: Request):
+    await get_current_user(request)
+    
+    twelve_months_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
+    
+    # All time lender usage
+    all_time = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None, "$ne": ""}}},
+        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]).to_list(20)
+    
+    # Last 12 months
+    last_12 = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None, "$ne": ""}, "created_at": {"$gte": twelve_months_ago}}},
+        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]).to_list(20)
+    
+    # Buy to let
+    btl = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None, "$ne": ""}, "property_type": "buy_to_let"}},
+        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]).to_list(20)
+    
+    # Residential
+    residential = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None, "$ne": ""}, "property_type": "residential"}},
+        {"$group": {"_id": "$lender_name", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]).to_list(20)
+    
+    return {
+        "all_time": [{"lender": r["_id"], "cases": r["count"]} for r in all_time],
+        "last_12_months": [{"lender": r["_id"], "cases": r["count"]} for r in last_12],
+        "buy_to_let": [{"lender": r["_id"], "cases": r["count"]} for r in btl],
+        "residential": [{"lender": r["_id"], "cases": r["count"]} for r in residential],
+    }
+
 
 # Compliance Checklist Logic
 COMPLIANCE_CHECKLISTS = {

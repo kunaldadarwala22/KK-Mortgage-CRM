@@ -203,7 +203,7 @@ const Cases = () => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseFloat(caseData[f]);
         else caseData[f] = null;
       });
-      ['term_years', 'rate_fixed_for', 'fixed_rate_period', 'initial_product_term'].forEach(f => {
+      ['term_years', 'fixed_rate_period', 'initial_product_term'].forEach(f => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseInt(caseData[f]);
         else caseData[f] = null;
       });
@@ -530,7 +530,10 @@ const Cases = () => {
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Case Reference Number</Label><Input value={newCase.case_reference || ''} onChange={(e) => setNewCase({ ...newCase, case_reference: e.target.value })} data-testid="case-reference" /></div>
-                <div className="space-y-2"><Label>Rate Fixed For (Years)</Label><Input type="number" value={newCase.rate_fixed_for || ''} onChange={(e) => setNewCase({ ...newCase, rate_fixed_for: e.target.value })} data-testid="case-rate-fixed" /></div>
+                <div className="col-span-2 grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Security Property Address</Label><Input value={newCase.security_address || ''} onChange={(e) => setNewCase({ ...newCase, security_address: e.target.value })} placeholder="Property address" data-testid="case-security-address" /></div>
+                  <div className="space-y-2"><Label>Security Post Code</Label><Input value={newCase.security_postcode || ''} onChange={(e) => setNewCase({ ...newCase, security_postcode: e.target.value })} placeholder="e.g. SW1A 1AA" data-testid="case-security-postcode" /></div>
+                </div>
               </div>
             )}
 

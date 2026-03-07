@@ -30,6 +30,7 @@ const Analytics = () => {
   const [retention, setRetention] = useState(null);
   const [mortgageTypes, setMortgageTypes] = useState(null);
   const [commAnalytics, setCommAnalytics] = useState(null);
+  const [lenderUsage, setLenderUsage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [commFilters, setCommFilters] = useState({ start_date: '', end_date: '', product_filter: 'all', commission_status: 'all' });
 
@@ -38,13 +39,14 @@ const Analytics = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsD, revenueD, leadD, retentionD, mtD, commD] = await Promise.all([
+      const [statsD, revenueD, leadD, retentionD, mtD, commD, lenderD] = await Promise.all([
         dashboardAPI.getStats(),
         dashboardAPI.getRevenue(),
         dashboardAPI.getLeadAnalytics(),
         dashboardAPI.getRetention(),
         analyticsAPI.getMortgageTypes(),
         commissionAPI.getAnalytics({}),
+        analyticsAPI.getLenderUsage(),
       ]);
       setStats(statsD);
       setRevenue(revenueD);
@@ -52,6 +54,7 @@ const Analytics = () => {
       setRetention(retentionD);
       setMortgageTypes(mtD);
       setCommAnalytics(commD);
+      setLenderUsage(lenderD);
     } catch (err) {
       console.error('Failed to load:', err);
       toast.error('Failed to load analytics data');
@@ -137,6 +140,7 @@ const Analytics = () => {
           <TabsTrigger value="leads">Lead Analytics</TabsTrigger>
           <TabsTrigger value="mortgage-types" data-testid="mortgage-types-tab">Mortgage Types</TabsTrigger>
           <TabsTrigger value="commission-analytics" data-testid="commission-analytics-tab">Commission Analytics</TabsTrigger>
+          <TabsTrigger value="lender-analytics" data-testid="lender-analytics-tab">Lender Analytics</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="retention">Retention</TabsTrigger>
@@ -407,6 +411,51 @@ const Analytics = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Lender Analytics Tab */}
+        <TabsContent value="lender-analytics" className="space-y-6 mt-6">
+          {lenderUsage && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[
+                { title: 'Most Used Lenders (All Time)', data: lenderUsage.all_time, color: 'red' },
+                { title: 'Most Used Lenders (Last 12 Months)', data: lenderUsage.last_12_months, color: 'blue' },
+                { title: 'Most Used Lenders - Buy To Let', data: lenderUsage.buy_to_let, color: 'amber' },
+                { title: 'Most Used Lenders - Residential', data: lenderUsage.residential, color: 'green' },
+              ].map((section) => (
+                <Card key={section.title} className="border-slate-200">
+                  <CardHeader><CardTitle className="text-base">{section.title}</CardTitle></CardHeader>
+                  <CardContent>
+                    {section.data && section.data.length > 0 ? (
+                      <div className="space-y-2">
+                        {section.data.map((item, idx) => (
+                          <div key={item.lender} className="flex items-center gap-3">
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? `bg-${section.color}-100 text-${section.color}-700` : 'bg-slate-100 text-slate-600'}`}>
+                              {idx + 1}
+                            </span>
+                            <div className="flex-1 flex items-center justify-between">
+                              <span className="text-sm font-medium">{item.lender}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-red-500"
+                                    style={{ width: `${Math.min((item.cases / (section.data[0]?.cases || 1)) * 100, 100)}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm font-bold text-slate-700 w-8 text-right">{item.cases}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500 text-center py-6">No data available</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
