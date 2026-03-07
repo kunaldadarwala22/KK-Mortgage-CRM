@@ -1125,7 +1125,34 @@ async def extract_client_from_screenshots(request: Request, files: List[UploadFi
         b64 = base64.b64encode(data).decode("utf-8")
         mime = file.content_type or "image/png"
         image_contents.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}", "detail": "high"}})
-    prompt = """You are a mortgage CRM data extraction assistant. Extract client information from these screenshots and return ONLY a valid JSON object with no extra text.\n\nExtract these fields if present:\n{\n  \"first_name\": \"\",\n  \"last_name\": \"\",\n  \"dob\": \"YYYY-MM-DD format if found\",\n  \"phone\": \"\",\n  \"email\": \"\",\n  \"current_address\": \"\",\n  \"postcode\": \"\",\n  \"income\": null,\n  \"employment_type\": \"\",\n  \"deposit\": null,\n  \"property_price\": null,\n  \"loan_amount\": null,\n  \"credit_issues\": false,\n  \"credit_issues_notes\": \"\",\n  \"existing_mortgage_balance\": null,\n  \"lead_source\": \"\",\n  \"advice_type\": \"\",\n  \"additional_applicants\": []\n}\n\nReturn null for missing numeric fields, empty string for missing text fields. Return ONLY the JSON object."""
+    prompt = """You are a mortgage CRM data extraction assistant. Extract ALL applicant information from these screenshots and return ONLY a valid JSON object with no extra text.
+
+IMPORTANT: If the screenshot contains multiple applicants (e.g. Applicant 1 and Applicant 2, or joint application), extract ALL of them into the applicants array. The first entry is the primary applicant.
+
+Return this structure:
+{
+  "applicants": [
+    {
+      "first_name": "",
+      "last_name": "",
+      "dob": "YYYY-MM-DD format if found, else empty string",
+      "phone": "",
+      "email": "",
+      "current_address": "",
+      "postcode": "",
+      "income": null,
+      "employment_type": "one of: employed, self_employed, contractor, retired, unemployed or empty string",
+      "credit_issues": false,
+      "credit_issues_notes": "",
+      "existing_mortgage_balance": null,
+      "lead_source": "",
+      "advice_type": ""
+    }
+  ]
+}
+
+If there is only one applicant, still return the applicants array with one entry.
+Return null for missing numeric fields, empty string for missing text fields. Return ONLY the JSON object."""
     messages = [{"role": "user", "content": [{"type": "text", "text": prompt}] + image_contents}]
     try:
         response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, max_tokens=2000, temperature=0)
@@ -1154,7 +1181,43 @@ async def extract_case_from_screenshots(request: Request, files: List[UploadFile
         b64 = base64.b64encode(data).decode("utf-8")
         mime = file.content_type or "image/png"
         image_contents.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}", "detail": "high"}})
-    prompt = """You are a mortgage CRM data extraction assistant. Extract mortgage case information from these screenshots and return ONLY a valid JSON object with no extra text.\n\nExtract these fields if present:\n{\n  \"product_type\": \"mortgage or insurance\",\n  \"mortgage_type\": \"purchase, remortgage, product_transfer, or remortgage_additional_borrowing\",\n  \"lender_name\": \"\",\n  \"loan_amount\": null,\n  \"property_value\": null,\n  \"deposit\": null,\n  \"term_years\": null,\n  \"interest_rate\": null,\n  \"fixed_rate_period\": null,\n  \"application_reference\": \"\",\n  \"date_application_submitted\": \"YYYY-MM-DD\",\n  \"expected_completion_date\": \"YYYY-MM-DD\",\n  \"product_start_date\": \"YYYY-MM-DD\",\n  \"product_expiry_date\": \"YYYY-MM-DD\",\n  \"gross_commission\": null,\n  \"proc_fee_total\": null,\n  \"notes\": \"\"\n}\n\nReturn null for missing numeric fields, empty string for missing text. Return ONLY the JSON object."""
+    prompt = """You are a mortgage CRM data extraction assistant. Extract mortgage/insurance case information from these screenshots and return ONLY a valid JSON object with no extra text.
+
+Extract ALL of these fields if present:
+{
+  "product_type": "mortgage or insurance",
+  "mortgage_type": "one of: purchase, remortgage, product_transfer, remortgage_additional_borrowing or empty string",
+  "lender_name": "",
+  "loan_amount": null,
+  "property_value": null,
+  "deposit": null,
+  "deposit_source": "",
+  "ltv": null,
+  "term_years": null,
+  "initial_product_term": null,
+  "interest_rate": null,
+  "interest_rate_type": "one of: fixed, variable, discounted, tracker, capped or empty string",
+  "repayment_type": "one of: repayment, interest_only or empty string",
+  "property_type": "one of: residential, buy_to_let or empty string",
+  "case_reference": "",
+  "security_address": "",
+  "security_postcode": "",
+  "date_application_submitted": "YYYY-MM-DD or empty string",
+  "expected_completion_date": "YYYY-MM-DD or empty string",
+  "product_start_date": "YYYY-MM-DD or empty string",
+  "product_expiry_date": "YYYY-MM-DD or empty string",
+  "proc_fee_total": null,
+  "commission_percentage": null,
+  "client_fee": null,
+  "insurance_type": "one of: life_insurance, buildings_insurance, home_insurance or empty string",
+  "insurance_provider": "",
+  "insurance_cover_type": "one of: level_term, decreasing_term, increasing_term, whole_of_life or empty string",
+  "monthly_premium": null,
+  "sum_assured": null,
+  "notes": ""
+}
+
+Return null for missing numeric fields, empty string for missing text fields. Return ONLY the JSON object."""
     messages = [{"role": "user", "content": [{"type": "text", "text": prompt}] + image_contents}]
     try:
         response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, max_tokens=2000, temperature=0)
