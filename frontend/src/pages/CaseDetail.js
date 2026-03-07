@@ -44,8 +44,11 @@ import {
   Home,
   Shield,
   Trash2,
+  ClipboardCheck,
+  CircleCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { LenderAutocomplete } from '../components/LenderAutocomplete';
 
 const CASE_STATUSES = [
   { key: 'new_lead', label: 'New Lead', color: 'bg-blue-100 text-blue-800' },
@@ -103,6 +106,8 @@ const CaseDetail = () => {
   const [editedCase, setEditedCase] = useState(null);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [complianceChecklist, setComplianceChecklist] = useState([]);
+  const [complianceLoading, setComplianceLoading] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -136,6 +141,31 @@ const CaseDetail = () => {
       toast.error('Failed to load case data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCompliance = async () => {
+    try {
+      setComplianceLoading(true);
+      const data = await casesAPI.getCompliance(caseId);
+      setComplianceChecklist(data.checklist || []);
+    } catch (err) {
+      console.error('Failed to load compliance:', err);
+    } finally {
+      setComplianceLoading(false);
+    }
+  };
+
+  const toggleComplianceItem = async (index) => {
+    const updated = complianceChecklist.map((item, i) =>
+      i === index ? { ...item, completed: !item.completed } : item
+    );
+    setComplianceChecklist(updated);
+    try {
+      await casesAPI.updateCompliance(caseId, updated);
+    } catch (err) {
+      toast.error('Failed to save checklist');
+      setComplianceChecklist(complianceChecklist);
     }
   };
 
@@ -372,9 +402,10 @@ const CaseDetail = () => {
       </Card>
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="details" data-testid="tab-details">Case Details</TabsTrigger>
           <TabsTrigger value="commission" data-testid="tab-commission">Commission</TabsTrigger>
+          <TabsTrigger value="compliance" data-testid="tab-compliance" onClick={loadCompliance}>Compliance</TabsTrigger>
           <TabsTrigger value="dates" data-testid="tab-dates">Dates & Timeline</TabsTrigger>
           <TabsTrigger value="tasks" data-testid="tab-tasks">Tasks ({tasks.length})</TabsTrigger>
         </TabsList>
@@ -447,10 +478,10 @@ const CaseDetail = () => {
                     )}
                     <div className="space-y-2">
                       <Label>Lender Name</Label>
-                      <Input
+                      <LenderAutocomplete
                         value={editedCase.lender_name || ''}
                         onChange={(e) => setEditedCase({ ...editedCase, lender_name: e.target.value })}
-                        placeholder="Halifax, Nationwide, etc."
+                        placeholder="Start typing lender name..."
                       />
                     </div>
                     <div className="space-y-2">
@@ -883,6 +914,78 @@ const CaseDetail = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Compliance Tab */}
+        <TabsContent value="compliance" className="mt-6">
+          <Card className="border-slate-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-slate-500" />
+                  Compliance Checklist
+                </CardTitle>
+                {complianceChecklist.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-slate-600">
+                      {complianceChecklist.filter(i => i.completed).length}/{complianceChecklist.length} completed
+                    </span>
+                    <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${(complianceChecklist.filter(i => i.completed).length / complianceChecklist.length) * 100}%`,
+                          backgroundColor: complianceChecklist.every(i => i.completed) ? '#16a34a' : '#dc2626'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {complianceLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin h-8 w-8 border-4 border-red-600 border-t-transparent rounded-full" />
+                </div>
+              ) : complianceChecklist.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <ClipboardCheck className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                  <p>No compliance checklist available for this case type.</p>
+                </div>
+              ) : (
+                <div className={`rounded-lg border ${complianceChecklist.every(i => i.completed) ? 'border-green-300 bg-green-50' : 'border-slate-200'}`}>
+                  {complianceChecklist.every(i => i.completed) && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-green-100 rounded-t-lg border-b border-green-200" data-testid="compliance-complete-banner">
+                      <CircleCheck className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-semibold text-green-700">All compliance items completed</span>
+                    </div>
+                  )}
+                  <div className="divide-y divide-slate-100">
+                    {complianceChecklist.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-slate-50 ${item.completed ? 'bg-green-50/50' : ''}`}
+                        onClick={() => toggleComplianceItem(index)}
+                        data-testid={`compliance-item-${index}`}
+                      >
+                        <Checkbox
+                          checked={item.completed}
+                          onCheckedChange={() => toggleComplianceItem(index)}
+                          className={item.completed ? 'border-green-600 bg-green-600 text-white data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600' : ''}
+                          data-testid={`compliance-checkbox-${index}`}
+                        />
+                        <span className={`text-sm ${item.completed ? 'text-green-700 font-medium' : 'text-slate-700'}`}>
+                          {item.item}
+                        </span>
+                        {item.completed && <CircleCheck className="h-4 w-4 text-green-500 ml-auto" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Dates Tab */}

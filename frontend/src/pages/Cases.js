@@ -20,6 +20,7 @@ import {
   Search, Plus, Eye, Briefcase, Home, Shield, Filter, X, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { LenderAutocomplete } from '../components/LenderAutocomplete';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -500,7 +501,7 @@ const Cases = () => {
                     <SelectContent><SelectItem value="none">Select...</SelectItem>{MORTGAGE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Lender Name</Label><Input value={newCase.lender_name || ''} onChange={(e) => setNewCase({ ...newCase, lender_name: e.target.value })} data-testid="case-lender" /></div>
+                <div className="space-y-2"><Label>Lender Name</Label><LenderAutocomplete value={newCase.lender_name || ''} onChange={(e) => setNewCase({ ...newCase, lender_name: e.target.value })} data-testid="case-lender" /></div>
                 <div className="space-y-2"><Label>Loan Amount (£)</Label><CurrencyInput value={newCase.loan_amount || ''} onChange={(e) => setNewCase({ ...newCase, loan_amount: e.target.value })} data-testid="case-loan-amount" /></div>
                 <div className="space-y-2"><Label>Property Value (£)</Label><CurrencyInput value={newCase.property_value || ''} onChange={(e) => setNewCase({ ...newCase, property_value: e.target.value })} data-testid="case-property-value" /></div>
                 <div className="space-y-2"><Label>Interest Rate (%)</Label><Input type="number" step="0.01" value={newCase.interest_rate || ''} onChange={(e) => setNewCase({ ...newCase, interest_rate: e.target.value })} data-testid="case-interest-rate" /></div>

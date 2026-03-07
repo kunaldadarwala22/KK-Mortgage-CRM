@@ -210,6 +210,7 @@ class CaseCreate(BaseModel):
     client_fee: Optional[float] = None
     client_fee_status: str = CommissionStatus.PENDING
     client_fee_paid_date: Optional[str] = None
+    compliance_checklist: Optional[list] = None
     # Assignment
     advisor_id: Optional[str] = None
     notes: Optional[str] = None
@@ -244,6 +245,7 @@ class CaseResponse(BaseModel):
     client_fee: Optional[float] = None
     client_fee_status: Optional[str] = None
     client_fee_paid_date: Optional[str] = None
+    compliance_checklist: Optional[list] = None
     advisor_id: Optional[str] = None
     advisor_name: Optional[str] = None
     notes: Optional[str] = None
@@ -2501,6 +2503,77 @@ async def export_clients_data(request: Request):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+# Compliance Checklist Logic
+COMPLIANCE_CHECKLISTS = {
+    "purchase": [
+        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
+        "Proof of ID", "Proof of Address", "Latest 3 Payslips (if employed)",
+        "Latest 2 Years SA302 & Overview (if self-employed)",
+        "Latest 3 Months Bank Statements", "Proc Fees", "FMA", "Suitability Letter"
+    ],
+    "remortgage": [
+        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
+        "Proof of ID", "Proof of Address", "Latest 3 Payslips (if employed)",
+        "Latest 2 Years SA302 & Overview (if self-employed)",
+        "Latest 3 Months Bank Statements", "Proc Fees", "FMA", "Suitability Letter"
+    ],
+    "remortgage_additional_borrowing": [
+        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
+        "Proof of ID", "Proof of Address", "Latest 3 Payslips (if employed)",
+        "Latest 2 Years SA302 & Overview (if self-employed)",
+        "Latest 3 Months Bank Statements", "Proc Fees", "FMA", "Suitability Letter"
+    ],
+    "product_transfer": [
+        "Client Pack", "Sanction Search", "Evidence of Research", "ESIS",
+        "Proof of ID", "Credit Search", "Mortgage Offer", "Suitability Letter"
+    ],
+    "life_insurance": [
+        "Client Pack", "Sanction Search", "Client Budget Noted", "Evidence of Research",
+        "Proof of ID (if premium over £75)", "Proof of Address (if premium over £75)",
+        "Application Form", "Suitability Letter"
+    ],
+    "home_insurance": [
+        "Client Pack", "Sanction Search", "Document Pack"
+    ],
+    "buildings_insurance": [
+        "Client Pack", "Sanction Search", "Document Pack"
+    ],
+}
+
+def get_compliance_checklist_for_case(case_doc):
+    """Generate the correct checklist items based on case type."""
+    product_type = case_doc.get("product_type", "")
+    if product_type == "mortgage":
+        mortgage_type = case_doc.get("mortgage_type", "purchase")
+        items = COMPLIANCE_CHECKLISTS.get(mortgage_type, COMPLIANCE_CHECKLISTS["purchase"])
+    else:
+        insurance_type = case_doc.get("insurance_type", "life_insurance")
+        items = COMPLIANCE_CHECKLISTS.get(insurance_type, COMPLIANCE_CHECKLISTS.get("life_insurance", []))
+    return [{"item": item, "completed": False} for item in items]
+
+@api_router.get("/cases/{case_id}/compliance")
+async def get_compliance_checklist(case_id: str, request: Request):
+    await get_current_user(request)
+    case = await db.cases.find_one({"case_id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    checklist = case.get("compliance_checklist")
+    if not checklist:
+        checklist = get_compliance_checklist_for_case(case)
+        await db.cases.update_one({"case_id": case_id}, {"$set": {"compliance_checklist": checklist}})
+    
+    return {"case_id": case_id, "checklist": checklist}
+
+@api_router.put("/cases/{case_id}/compliance")
+async def update_compliance_checklist(case_id: str, request: Request):
+    await get_current_user(request)
+    body = await request.json()
+    checklist = body.get("checklist", [])
+    
+    await db.cases.update_one({"case_id": case_id}, {"$set": {"compliance_checklist": checklist}})
+    return {"case_id": case_id, "checklist": checklist}
 
 # Admin: Wipe all data
 @api_router.delete("/admin/wipe-data")

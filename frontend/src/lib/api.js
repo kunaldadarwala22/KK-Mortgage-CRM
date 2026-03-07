@@ -149,6 +149,20 @@ export const casesAPI = {
       credentials: 'include',
       headers: getHeaders(),
     }).then(handleResponse),
+
+  getCompliance: (caseId) =>
+    fetch(`${API_URL}/api/cases/${caseId}/compliance`, {
+      credentials: 'include',
+      headers: getHeaders(),
+    }).then(handleResponse),
+
+  updateCompliance: (caseId, checklist) =>
+    fetch(`${API_URL}/api/cases/${caseId}/compliance`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: getHeaders(),
+      body: JSON.stringify({ checklist }),
+    }).then(handleResponse),
 };
 
 // Tasks API
