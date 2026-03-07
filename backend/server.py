@@ -186,6 +186,7 @@ class CaseCreate(BaseModel):
     # New Mortgage Fields
     property_value: Optional[float] = None
     ltv: Optional[float] = None
+    deposit: Optional[float] = None
     deposit_source: Optional[str] = None
     repayment_type: Optional[str] = None  # interest_only, repayment
     property_type: Optional[str] = None  # residential, buy_to_let
@@ -242,6 +243,8 @@ class CaseResponse(BaseModel):
     security_address: Optional[str] = None
     security_postcode: Optional[str] = None
     loan_amount: Optional[float] = None
+    deposit: Optional[float] = None
+    deposit_source: Optional[str] = None
     proc_fee_type: Optional[str] = None
     proc_fee_value: Optional[float] = None
     commission_percentage: Optional[float] = None
@@ -2014,7 +2017,7 @@ async def export_all_data(request: Request):
         "Client Name", "Client Email", "Client Phone", "DOB", "Address", "Postcode",
         "Income", "Employment Type", "Lead Source",
         "Case Type", "Case Status", "Lender/Provider", "Mortgage Type", "Insurance Type",
-        "Loan Amount", "Property Value", "Property Type", "Repayment Type",
+        "Loan Amount", "Property Value", "Deposit", "Deposit Source", "Property Type", "Repayment Type",
         "Term (Years)", "Interest Rate", "Interest Rate Type", "Initial Product Term", "Rate Fixed For",
         "Monthly Premium", "Sum Assured", "Cover Type",
         "Case Reference", "Application Date", "Product Expiry Date",
@@ -2061,6 +2064,8 @@ async def export_all_data(request: Request):
             (case.get("insurance_type", "") or "").replace("_", " ").title(),
             case.get("loan_amount", ""),
             case.get("property_value", ""),
+            case.get("deposit", ""),
+            case.get("deposit_source", ""),
             (case.get("property_type", "") or "").replace("_", " ").title(),
             (case.get("repayment_type", "") or "").replace("_", " ").title(),
             case.get("term_years", ""),
@@ -2596,21 +2601,33 @@ async def extract_client_from_screenshots(request: Request):
         system_message="You are a data extraction assistant. Extract client information from screenshots and return ONLY valid JSON. If a field cannot be confidently identified, set it to null."
     ).with_model("openai", "gpt-4o")
 
-    prompt = """Analyse ALL the uploaded screenshots together. Extract the following client information and return ONLY a JSON object with these exact keys:
+    prompt = """Analyse ALL the uploaded screenshots together. Detect ALL people/applicants present in the screenshots.
+
+IMPORTANT: If more than one person is detected (e.g. joint mortgage applicants, couples), return ALL of them in the "applicants" array. The first person should be the primary applicant.
+
+Return ONLY a JSON object with this exact structure:
 {
-  "first_name": null,
-  "last_name": null,
-  "email": null,
-  "phone": null,
-  "dob": null,
-  "address": null,
-  "postcode": null,
-  "employment_type": null,
-  "income": null
+  "applicants": [
+    {
+      "first_name": null,
+      "last_name": null,
+      "email": null,
+      "phone": null,
+      "dob": null,
+      "address": null,
+      "postcode": null,
+      "employment_type": null,
+      "income": null
+    }
+  ]
 }
+
 Rules:
+- If only ONE person is found, the "applicants" array should have exactly 1 object.
+- If TWO or more people are found, include each as a separate object in the array.
+- Assign each person's details to the correct applicant object. Do NOT mix data between applicants.
 - If the same field appears in multiple screenshots, use the most complete value.
-- If a field cannot be confidently identified, set it to null.
+- If a field cannot be confidently identified for a specific applicant, set it to null.
 - dob should be in YYYY-MM-DD format if found.
 - income should be a number only (no currency symbols).
 - employment_type should be one of: employed, self_employed, retired, unemployed, contractor
@@ -2663,6 +2680,7 @@ async def extract_case_from_screenshots(request: Request):
   "lender_name": null,
   "loan_amount": null,
   "property_value": null,
+  "deposit": null,
   "interest_rate": null,
   "interest_rate_type": null,
   "term_years": null,

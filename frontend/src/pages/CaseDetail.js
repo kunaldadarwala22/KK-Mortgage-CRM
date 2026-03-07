@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LenderAutocomplete } from '../components/LenderAutocomplete';
+import CurrencyInput from '../components/CurrencyInput';
 
 const CASE_STATUSES = [
   { key: 'new_lead', label: 'New Lead', color: 'bg-blue-100 text-blue-800' },
@@ -178,6 +179,7 @@ const CaseDetail = () => {
       const updateData = {
         ...editedCase,
         loan_amount: editedCase.loan_amount ? parseFloat(editedCase.loan_amount) : null,
+        deposit: editedCase.deposit ? parseFloat(String(editedCase.deposit).replace(/[£,]/g, '')) : null,
         term_years: editedCase.term_years ? parseInt(editedCase.term_years) : null,
         interest_rate: editedCase.interest_rate ? parseFloat(editedCase.interest_rate) : null,
         initial_product_term: editedCase.initial_product_term ? parseInt(editedCase.initial_product_term) : null,
@@ -592,6 +594,23 @@ const CaseDetail = () => {
                         />
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Deposit Source</Label>
+                        <Input
+                          value={editedCase.deposit_source || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, deposit_source: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Deposit (£)</Label>
+                        <CurrencyInput
+                          value={editedCase.deposit || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, deposit: e.target.value })}
+                          data-testid="case-detail-deposit"
+                        />
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label>Interest Rate (%)</Label>
                       <Input
@@ -634,6 +653,20 @@ const CaseDetail = () => {
                     <div>
                       <p className="text-sm text-slate-500">Loan Amount</p>
                       <p className="text-2xl font-bold text-slate-900">{formatCurrency(caseData.loan_amount)}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-slate-500">Deposit</p>
+                        <p className="font-medium">{formatCurrency(caseData.deposit)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">Deposit Source</p>
+                        <p className="font-medium">{caseData.deposit_source || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">Property Value</p>
+                        <p className="font-medium">{formatCurrency(caseData.property_value)}</p>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -1049,6 +1082,7 @@ const CaseDetail = () => {
                     <div><p className="text-xs text-slate-500">LTV</p><p className="font-medium text-sm">{caseData.ltv ? `${caseData.ltv}%` : '-'}</p></div>
                     <div><p className="text-xs text-slate-500">Loan Amount</p><p className="font-medium text-sm">{formatCurrency(caseData.loan_amount)}</p></div>
                     <div><p className="text-xs text-slate-500">Property Value</p><p className="font-medium text-sm">{formatCurrency(caseData.property_value)}</p></div>
+                    <div><p className="text-xs text-slate-500">Deposit</p><p className="font-medium text-sm">{formatCurrency(caseData.deposit)}</p></div>
                     <div><p className="text-xs text-slate-500">Term</p><p className="font-medium text-sm">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p></div>
                     <div><p className="text-xs text-slate-500">Initial Product Term</p><p className="font-medium text-sm">{caseData.initial_product_term ? `${caseData.initial_product_term} years` : '-'}</p></div>
                   </div>

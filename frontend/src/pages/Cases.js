@@ -200,7 +200,7 @@ const Cases = () => {
     try {
       const caseData = cleanData({ ...newCase });
       // Parse numeric fields
-      ['loan_amount', 'property_value', 'interest_rate', 'monthly_premium', 'sum_assured', 'proc_fee_total', 'commission_percentage', 'proc_fee_value', 'client_fee'].forEach(f => {
+      ['loan_amount', 'property_value', 'interest_rate', 'monthly_premium', 'sum_assured', 'proc_fee_total', 'commission_percentage', 'proc_fee_value', 'client_fee', 'deposit'].forEach(f => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseFloat(caseData[f]);
         else caseData[f] = null;
       });
@@ -473,6 +473,7 @@ const Cases = () => {
                 security_postcode: data.security_postcode || prev.security_postcode,
                 product_type: data.product_type || prev.product_type,
                 ltv: data.ltv ? String(data.ltv) : prev.ltv,
+                deposit: data.deposit ? String(data.deposit) : prev.deposit,
                 deposit_source: data.deposit_source || prev.deposit_source,
                 insurance_type: data.insurance_type || prev.insurance_type,
                 insurance_provider: data.insurance_provider || prev.insurance_provider,
@@ -544,6 +545,7 @@ const Cases = () => {
                 <div className="space-y-2"><Label>Initial Product Term (Years)</Label><Input type="number" value={newCase.initial_product_term || ''} onChange={(e) => setNewCase({ ...newCase, initial_product_term: e.target.value })} data-testid="case-initial-product-term" /></div>
                 <div className="space-y-2"><Label>Term (Years)</Label><Input type="number" value={newCase.term_years || ''} onChange={(e) => setNewCase({ ...newCase, term_years: e.target.value })} data-testid="case-term" /></div>
                 <div className="space-y-2"><Label>Deposit Source</Label><Input value={newCase.deposit_source || ''} onChange={(e) => setNewCase({ ...newCase, deposit_source: e.target.value })} data-testid="case-deposit-source" /></div>
+                <div className="space-y-2"><Label>Deposit (£)</Label><CurrencyInput value={newCase.deposit || ''} onChange={(e) => setNewCase({ ...newCase, deposit: e.target.value })} data-testid="case-deposit" /></div>
                 <div className="space-y-2">
                   <Label>Repayment Type</Label>
                   <Select value={newCase.repayment_type || 'none'} onValueChange={(v) => setNewCase({ ...newCase, repayment_type: v === 'none' ? '' : v })}>

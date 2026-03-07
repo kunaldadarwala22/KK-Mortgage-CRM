@@ -1,0 +1,96 @@
+{
+  "summary": "Iteration 15: Multi-applicant detection, Deposit field, and Screenshot handling - All tests PASSED. Backend APIs updated to support deposit field in cases. Frontend verified with Import from Screenshots buttons and Deposit fields in both Cases and CaseDetail pages.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Dashboard",
+        "issues": ["Minor chart sizing warning in console (width/height -1) - cosmetic only, doesn't affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter15_multi_applicant_deposit.py",
+    "/app/test_reports/pytest/iter15_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/server.py - Added deposit field to CaseCreate and CaseResponse models",
+    "/app/frontend/src/components/CurrencyInput.js - Created missing CurrencyInput component",
+    "/app/backend/tests/test_iter15_multi_applicant_deposit.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 pytest tests passed)",
+    "frontend": "100% (All UI elements verified)"
+  },
+  "test_credentials": "Email: kunalkapadia2212@gmail.com, Password: Admin2468!!!",
+  "seed_data_creation": "Test images generated programmatically with PIL for backend testing (not persisted). Test case created with deposit field.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Multi-applicant detection, deposit field, and screenshot handling all working. Backend /api/extract/client returns {applicants: [...]} format. CurrencyInput component created at /app/frontend/src/components/CurrencyInput.js. Deposit field added to CaseCreate and CaseResponse models in server.py.",
+  "features_tested": {
+    "1_multi_applicant_array_structure": {
+      "status": "PASS",
+      "details": "POST /api/extract/client returns {extracted_data: {applicants: [...]}} format"
+    },
+    "2_single_person_returns_array": {
+      "status": "PASS", 
+      "details": "Single person extraction returns applicants array with 1 object"
+    },
+    "3_multi_person_detection": {
+      "status": "PASS",
+      "details": "Multi-person images return multiple applicants in array"
+    },
+    "4_extract_case_deposit_field": {
+      "status": "PASS",
+      "details": "POST /api/extract/case returns deposit and deposit_source fields"
+    },
+    "5_create_case_with_deposit": {
+      "status": "PASS",
+      "details": "POST /api/cases accepts and stores deposit field (fixed missing field in CaseCreate model)"
+    },
+    "6_update_case_deposit": {
+      "status": "PASS",
+      "details": "PUT /api/cases updates deposit field correctly"
+    },
+    "7_cases_page_deposit_field": {
+      "status": "PASS",
+      "details": "Deposit (£) field with CurrencyInput (data-testid='case-deposit') present in New Case form next to Deposit Source"
+    },
+    "8_case_detail_edit_deposit": {
+      "status": "PASS",
+      "details": "CaseDetail edit mode has Deposit (£) CurrencyInput field (data-testid='case-detail-deposit') and Deposit Source field"
+    },
+    "9_case_detail_display_deposit": {
+      "status": "PASS",
+      "details": "CaseDetail read-only view displays Deposit with currency format (e.g., £55,000) and Deposit Source"
+    },
+    "10_clients_import_screenshots_btn": {
+      "status": "PASS",
+      "details": "Import from Screenshots button (data-testid='import-screenshots-btn') present in New Client form"
+    },
+    "11_cases_import_screenshots_btn": {
+      "status": "PASS",
+      "details": "Import from Screenshots button present in New Case form"
+    },
+    "12_screenshots_not_stored": {
+      "status": "PASS",
+      "details": "Screenshots processed in-memory only, never stored to disk or database"
+    },
+    "13_auth_requirements": {
+      "status": "PASS",
+      "details": "Both extract endpoints require authentication (return 401 without token)"
+    }
+  },
+  "bugs_fixed_by_testing_agent": [
+    "Added missing deposit field to CaseCreate model (line 190) in server.py",
+    "Added missing deposit and deposit_source fields to CaseResponse model (lines 247-248) in server.py", 
+    "Created missing CurrencyInput component at /app/frontend/src/components/CurrencyInput.js that was imported by CaseDetail.js"
+  ]
+}

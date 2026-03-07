@@ -325,17 +325,31 @@ const Clients = () => {
           </DialogHeader>
           <div className="pb-2">
             <ScreenshotImport type="client" onExtracted={(data) => {
+              // Handle multi-applicant format
+              const applicants = data.applicants || [data];
+              const primary = applicants[0] || {};
               setNewClient(prev => ({
                 ...prev,
-                first_name: data.first_name || prev.first_name,
-                last_name: data.last_name || prev.last_name,
-                email: data.email || prev.email,
-                phone: data.phone || prev.phone,
-                dob: data.dob || prev.dob,
-                current_address: data.address || prev.current_address,
-                postcode: data.postcode || prev.postcode,
-                employment_type: data.employment_type || prev.employment_type,
-                income: data.income ? String(data.income) : prev.income,
+                first_name: primary.first_name || prev.first_name,
+                last_name: primary.last_name || prev.last_name,
+                email: primary.email || prev.email,
+                phone: primary.phone || prev.phone,
+                dob: primary.dob || prev.dob,
+                current_address: primary.address || prev.current_address,
+                postcode: primary.postcode || prev.postcode,
+                employment_type: primary.employment_type || prev.employment_type,
+                income: primary.income ? String(primary.income) : prev.income,
+                additional_applicants: applicants.length > 1
+                  ? applicants.slice(1).map(ap => ({
+                      first_name: ap.first_name || '',
+                      last_name: ap.last_name || '',
+                      dob: ap.dob || '',
+                      email: ap.email || '',
+                      phone: ap.phone || '',
+                      income: ap.income ? String(ap.income) : '',
+                      employment_type: ap.employment_type || '',
+                    }))
+                  : prev.additional_applicants,
               }));
             }} />
           </div>
