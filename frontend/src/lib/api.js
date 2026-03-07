@@ -343,3 +343,20 @@ export default {
   analytics: analyticsAPI,
   reports: reportsAPI,
 };
+
+export const extractAPI = {
+  extractClient: (formData) =>
+    fetch(`${API_URL}/api/extract/client`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: formData,
+    }).then(handleResponse),
+  extractCase: (formData) =>
+    fetch(`${API_URL}/api/extract/case`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: formData,
+    }).then(handleResponse),
+};

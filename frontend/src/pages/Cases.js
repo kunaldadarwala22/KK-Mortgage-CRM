@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LenderAutocomplete } from '../components/LenderAutocomplete';
+import { ScreenshotImport } from '../components/ScreenshotImport';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -452,6 +453,34 @@ const Cases = () => {
             <DialogTitle>Create New Case</DialogTitle>
             <DialogDescription>Add a new mortgage or insurance case.</DialogDescription>
           </DialogHeader>
+
+          <div className="pb-2">
+            <ScreenshotImport type="case" onExtracted={(data) => {
+              setNewCase(prev => ({
+                ...prev,
+                lender_name: data.lender_name || prev.lender_name,
+                loan_amount: data.loan_amount ? String(data.loan_amount) : prev.loan_amount,
+                property_value: data.property_value ? String(data.property_value) : prev.property_value,
+                interest_rate: data.interest_rate ? String(data.interest_rate) : prev.interest_rate,
+                interest_rate_type: data.interest_rate_type || prev.interest_rate_type,
+                term_years: data.term_years ? String(data.term_years) : prev.term_years,
+                initial_product_term: data.initial_product_term ? String(data.initial_product_term) : prev.initial_product_term,
+                mortgage_type: data.mortgage_type || prev.mortgage_type,
+                property_type: data.property_type || prev.property_type,
+                repayment_type: data.repayment_type || prev.repayment_type,
+                case_reference: data.case_reference || prev.case_reference,
+                security_address: data.security_address || prev.security_address,
+                security_postcode: data.security_postcode || prev.security_postcode,
+                product_type: data.product_type || prev.product_type,
+                ltv: data.ltv ? String(data.ltv) : prev.ltv,
+                deposit_source: data.deposit_source || prev.deposit_source,
+                insurance_type: data.insurance_type || prev.insurance_type,
+                insurance_provider: data.insurance_provider || prev.insurance_provider,
+                monthly_premium: data.monthly_premium ? String(data.monthly_premium) : prev.monthly_premium,
+                sum_assured: data.sum_assured ? String(data.sum_assured) : prev.sum_assured,
+              }));
+            }} />
+          </div>
 
           <div className="space-y-6 py-4">
             {/* Client Search */}

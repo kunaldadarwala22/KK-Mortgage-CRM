@@ -15,6 +15,8 @@ import jwt as pyjwt
 from bson import ObjectId
 import base64
 import io
+import json
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -2558,6 +2560,153 @@ async def get_lender_usage(request: Request):
         "buy_to_let": [{"lender": r["_id"], "cases": r["count"]} for r in btl],
         "residential": [{"lender": r["_id"], "cases": r["count"]} for r in residential],
     }
+
+# Screenshot Import - AI extraction
+from PIL import Image, ImageEnhance, ImageFilter
+import io
+
+@api_router.post("/extract/client")
+async def extract_client_from_screenshots(request: Request):
+    """Extract client info from uploaded screenshots using GPT-4o vision."""
+    await get_current_user(request)
+    form = await request.form()
+    files = form.getlist("files")
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    image_contents = []
+    for f in files:
+        raw = await f.read()
+        img = Image.open(io.BytesIO(raw))
+        # Preprocessing: convert to RGB, enhance contrast, reduce noise
+        img = img.convert("RGB")
+        img = ImageEnhance.Contrast(img).enhance(1.4)
+        img = img.filter(ImageFilter.MedianFilter(size=3))
+        # Resize if too large
+        if max(img.size) > 2000:
+            img.thumbnail((2000, 2000), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+        image_contents.append(ImageContent(image_base64=b64))
+
+    chat = LlmChat(
+        api_key=os.environ.get("EMERGENT_LLM_KEY"),
+        session_id=f"extract_client_{uuid.uuid4().hex[:8]}",
+        system_message="You are a data extraction assistant. Extract client information from screenshots and return ONLY valid JSON. If a field cannot be confidently identified, set it to null."
+    ).with_model("openai", "gpt-4o")
+
+    prompt = """Analyse ALL the uploaded screenshots together. Extract the following client information and return ONLY a JSON object with these exact keys:
+{
+  "first_name": null,
+  "last_name": null,
+  "email": null,
+  "phone": null,
+  "dob": null,
+  "address": null,
+  "postcode": null,
+  "employment_type": null,
+  "income": null
+}
+Rules:
+- If the same field appears in multiple screenshots, use the most complete value.
+- If a field cannot be confidently identified, set it to null.
+- dob should be in YYYY-MM-DD format if found.
+- income should be a number only (no currency symbols).
+- employment_type should be one of: employed, self_employed, retired, unemployed, contractor
+- Return ONLY the JSON object, no markdown or explanation."""
+
+    msg = UserMessage(text=prompt, file_contents=image_contents)
+    response = await chat.send_message(msg)
+
+    try:
+        clean = response.strip()
+        if clean.startswith("```"):
+            clean = clean.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        data = json.loads(clean)
+    except json.JSONDecodeError:
+        data = {}
+
+    return {"extracted_data": data, "screenshots_processed": len(files)}
+
+@api_router.post("/extract/case")
+async def extract_case_from_screenshots(request: Request):
+    """Extract case info from uploaded screenshots using GPT-4o vision."""
+    await get_current_user(request)
+    form = await request.form()
+    files = form.getlist("files")
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    image_contents = []
+    for f in files:
+        raw = await f.read()
+        img = Image.open(io.BytesIO(raw))
+        img = img.convert("RGB")
+        img = ImageEnhance.Contrast(img).enhance(1.4)
+        img = img.filter(ImageFilter.MedianFilter(size=3))
+        if max(img.size) > 2000:
+            img.thumbnail((2000, 2000), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+        image_contents.append(ImageContent(image_base64=b64))
+
+    chat = LlmChat(
+        api_key=os.environ.get("EMERGENT_LLM_KEY"),
+        session_id=f"extract_case_{uuid.uuid4().hex[:8]}",
+        system_message="You are a data extraction assistant for UK mortgage and insurance cases. Extract case information from screenshots and return ONLY valid JSON. If a field cannot be confidently identified, set it to null."
+    ).with_model("openai", "gpt-4o")
+
+    prompt = """Analyse ALL the uploaded screenshots together. Extract mortgage/insurance case information and return ONLY a JSON object with these exact keys:
+{
+  "lender_name": null,
+  "loan_amount": null,
+  "property_value": null,
+  "interest_rate": null,
+  "interest_rate_type": null,
+  "term_years": null,
+  "initial_product_term": null,
+  "mortgage_type": null,
+  "property_type": null,
+  "repayment_type": null,
+  "case_reference": null,
+  "security_address": null,
+  "security_postcode": null,
+  "product_type": null,
+  "ltv": null,
+  "deposit_source": null,
+  "insurance_type": null,
+  "insurance_provider": null,
+  "monthly_premium": null,
+  "sum_assured": null
+}
+Rules:
+- If the same field appears in multiple screenshots, use the most complete value.
+- If a field cannot be confidently identified, set it to null.
+- mortgage_type should be one of: purchase, remortgage, remortgage_additional_borrowing, product_transfer
+- property_type should be one of: residential, buy_to_let
+- repayment_type should be one of: repayment, interest_only
+- interest_rate_type should be one of: fixed, variable, discounted, tracker, capped
+- product_type should be "mortgage" or "insurance"
+- insurance_type should be one of: life_insurance, home_insurance, buildings_insurance, critical_illness, income_protection
+- Numeric fields (loan_amount, property_value, interest_rate, term_years, ltv, monthly_premium, sum_assured, initial_product_term) should be numbers only.
+- Return ONLY the JSON object, no markdown or explanation."""
+
+    msg = UserMessage(text=prompt, file_contents=image_contents)
+    response = await chat.send_message(msg)
+
+    try:
+        clean = response.strip()
+        if clean.startswith("```"):
+            clean = clean.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        data = json.loads(clean)
+    except json.JSONDecodeError:
+        data = {}
+
+    return {"extracted_data": data, "screenshots_processed": len(files)}
+
+
 
 
 # Compliance Checklist Logic

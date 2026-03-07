@@ -24,6 +24,7 @@ import {
   Search, Plus, MoreHorizontal, Eye, Trash2, Mail, Users, Filter, Download, X, Loader2, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ScreenshotImport } from '../components/ScreenshotImport';
 
 const LEAD_SOURCES = ['walk_in', 'cold_call', 'referral', 'online', 'other'];
 const EMPLOYMENT_TYPES = ['employed', 'self_employed', 'contractor', 'retired', 'unemployed'];
@@ -320,8 +321,24 @@ const Clients = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
-            <DialogDescription>Enter the client's details below.</DialogDescription>
+            <DialogDescription>Enter the client's details below or import from screenshots.</DialogDescription>
           </DialogHeader>
+          <div className="pb-2">
+            <ScreenshotImport type="client" onExtracted={(data) => {
+              setNewClient(prev => ({
+                ...prev,
+                first_name: data.first_name || prev.first_name,
+                last_name: data.last_name || prev.last_name,
+                email: data.email || prev.email,
+                phone: data.phone || prev.phone,
+                dob: data.dob || prev.dob,
+                current_address: data.address || prev.current_address,
+                postcode: data.postcode || prev.postcode,
+                employment_type: data.employment_type || prev.employment_type,
+                income: data.income ? String(data.income) : prev.income,
+              }));
+            }} />
+          </div>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2"><Label>First Name *</Label><Input value={newClient.first_name} onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })} data-testid="client-first-name" /></div>
             <div className="space-y-2"><Label>Last Name *</Label><Input value={newClient.last_name} onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })} data-testid="client-last-name" /></div>
