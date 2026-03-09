@@ -173,7 +173,7 @@ const Cases = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          setClientResults(data);
+          setClientResults(data.clients || data || []);
           if (clientSearch.length > 0) setClientDropdownOpen(true);
         }
       } catch (err) { console.error(err); }
