@@ -1173,7 +1173,7 @@ Return this structure:
       "email": "",
       "current_address": "",
       "postcode": "",
-      "income": null,
+      "income": null,  // look for "Gross Annual Income", "Annual Income", "Salary" or similar"income": null,  // look for "Gross Annual Income", "Annual Income", "Salary" or similar
       "employment_type": "one of: employed, self_employed, contractor, retired, unemployed or empty string",
       "credit_issues": false,
       "credit_issues_notes": "",
