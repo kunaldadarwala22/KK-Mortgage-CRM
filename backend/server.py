@@ -895,6 +895,38 @@ async def get_audit_logs(request: Request, entity_type: Optional[str] = None, en
         log["user_name"] = user["name"] if user else None
     return logs
 
+@api_router.get("/search")
+async def global_search(request: Request, q: Optional[str] = None):
+    await get_current_user(request)
+    if not q or len(q) < 2:
+        return {"clients": [], "cases": []}
+    client_query = {"$or": [
+        {"first_name": {"$regex": q, "$options": "i"}},
+        {"last_name": {"$regex": q, "$options": "i"}},
+        {"email": {"$regex": q, "$options": "i"}},
+        {"phone": {"$regex": q, "$options": "i"}},
+    ]}
+    clients = await db.clients.find(client_query, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1, "phone": 1}).limit(5).to_list(5)
+    case_query = {"$or": [
+        {"lender_name": {"$regex": q, "$options": "i"}},
+        {"case_id": {"$regex": q, "$options": "i"}},
+    ]}
+    cases = await db.cases.find(case_query, {"_id": 0, "case_id": 1, "client_id": 1, "product_type": 1, "lender_name": 1, "status": 1}).limit(5).to_list(5)
+    matching_clients = await db.clients.find(client_query, {"_id": 0, "client_id": 1}).limit(20).to_list(20)
+    if matching_clients:
+        client_ids = [c["client_id"] for c in matching_clients]
+        client_cases = await db.cases.find({"client_id": {"$in": client_ids}}, {"_id": 0, "case_id": 1, "client_id": 1, "product_type": 1, "lender_name": 1, "status": 1}).limit(5).to_list(5)
+        for case in client_cases:
+            client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+            case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
+            if not any(c["case_id"] == case["case_id"] for c in cases):
+                cases.append(case)
+    for case in cases:
+        if not case.get("client_name"):
+            client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+            case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
+    return {"clients": clients, "cases": cases[:5]}
+
 @api_router.get("/")
 async def root():
     return {"message": "KK Mortgage Solutions CRM API", "version": "1.0"}
