@@ -1184,7 +1184,7 @@ Return this structure:
   ]
 }
 
-If there is only one applicant, still return the applicants array with one entry.
+If there is only one applicant, still return the applicants array with one entry. Always include email and phone for every applicant even if they share the same details as another applicant. Never omit a field because it matches another applicant.
 Return null for missing numeric fields, empty string for missing text fields. Return ONLY the JSON object."""
     messages = [{"role": "user", "content": [{"type": "text", "text": prompt}] + image_contents}]
     try:
