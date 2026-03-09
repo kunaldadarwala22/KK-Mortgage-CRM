@@ -342,7 +342,7 @@ const Clients = () => {
                 email: primary.email || prev.email,
                 phone: primary.phone || prev.phone,
                 dob: primary.dob || prev.dob,
-                current_address: primary.address || prev.current_address,
+                current_address: primary.current_address || prev.current_address,
                 postcode: primary.postcode || prev.postcode,
                 employment_type: primary.employment_type || prev.employment_type,
                 income: primary.income ? String(primary.income) : prev.income,
