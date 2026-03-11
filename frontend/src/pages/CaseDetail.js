@@ -90,6 +90,13 @@ const INSURANCE_TYPES = [
   { key: 'buildings_insurance', label: 'Buildings Insurance' },
 ];
 
+const INSURANCE_COVER_TYPES = [
+  { key: 'level_term', label: 'Level Term' },
+  { key: 'decreasing_term', label: 'Decreasing Term' },
+  { key: 'increasing_term', label: 'Increasing Term' },
+  { key: 'whole_of_life', label: 'Whole of Life' },
+];
+
 const COMMISSION_STATUSES = [
   { key: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
   { key: 'submitted_to_lender', label: 'Submitted to Lender', color: 'bg-blue-100 text-blue-800' },
@@ -133,7 +140,6 @@ const CaseDetail = () => {
       setEditedCase(caseResponse);
       setTasks(tasksResponse.tasks || []);
       
-      // Load client data
       if (caseResponse.client_id) {
         const clientResponse = await clientsAPI.get(caseResponse.client_id);
         setClient(clientResponse);
@@ -188,6 +194,8 @@ const CaseDetail = () => {
         commission_percentage: commPct,
         gross_commission: grossComm,
         client_fee: editedCase.client_fee ? parseFloat(editedCase.client_fee) : null,
+        monthly_premium: editedCase.monthly_premium ? parseFloat(editedCase.monthly_premium) : null,
+        sum_assured: editedCase.sum_assured ? parseFloat(editedCase.sum_assured) : null,
       };
       
       await casesAPI.update(caseId, updateData);
@@ -328,6 +336,7 @@ const CaseDetail = () => {
   }
 
   const monthlyPayment = calculateMonthlyPayment();
+  const isInsurance = caseData.product_type === 'insurance';
 
   return (
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="case-detail-page">
@@ -347,7 +356,9 @@ const CaseDetail = () => {
               </Badge>
             </div>
             <p className="text-slate-500 mt-1">
-              {formatStatus(caseData.product_type)} • {caseData.lender_name || 'No lender'} • {caseData.case_id}
+              {formatStatus(caseData.product_type)} •{' '}
+              {isInsurance ? (caseData.insurance_provider || 'No provider') : (caseData.lender_name || 'No lender')}{' '}
+              • {caseData.case_id}
             </p>
           </div>
         </div>
@@ -355,23 +366,19 @@ const CaseDetail = () => {
           {editing ? (
             <>
               <Button variant="outline" onClick={() => { setEditing(false); setEditedCase(caseData); }}>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
+                <X className="h-4 w-4 mr-2" />Cancel
               </Button>
               <Button className="bg-red-600 hover:bg-red-700" onClick={handleSaveCase} data-testid="save-case-btn">
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
+                <Save className="h-4 w-4 mr-2" />Save Changes
               </Button>
             </>
           ) : (
             <>
               <Button variant="outline" onClick={() => setShowDeleteDialog(true)} className="text-red-600 hover:text-red-700">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                <Trash2 className="h-4 w-4 mr-2" />Delete
               </Button>
               <Button variant="outline" onClick={() => setEditing(true)} data-testid="edit-case-btn">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
+                <Edit className="h-4 w-4 mr-2" />Edit
               </Button>
             </>
           )}
@@ -381,23 +388,21 @@ const CaseDetail = () => {
       {/* Quick Status Change */}
       <Card className="border-slate-200">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-600">Update Status:</span>
-              <div className="flex gap-2 flex-wrap">
-                {CASE_STATUSES.map((status) => (
-                  <Button
-                    key={status.key}
-                    variant={caseData.status === status.key ? "default" : "outline"}
-                    size="sm"
-                    className={caseData.status === status.key ? "bg-red-600 hover:bg-red-700" : ""}
-                    onClick={() => handleStatusChange(status.key)}
-                    data-testid={`status-btn-${status.key}`}
-                  >
-                    {status.label}
-                  </Button>
-                ))}
-              </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-600">Update Status:</span>
+            <div className="flex gap-2 flex-wrap">
+              {CASE_STATUSES.map((status) => (
+                <Button
+                  key={status.key}
+                  variant={caseData.status === status.key ? "default" : "outline"}
+                  size="sm"
+                  className={caseData.status === status.key ? "bg-red-600 hover:bg-red-700" : ""}
+                  onClick={() => handleStatusChange(status.key)}
+                  data-testid={`status-btn-${status.key}`}
+                >
+                  {status.label}
+                </Button>
+              ))}
             </div>
           </div>
         </CardContent>
@@ -413,9 +418,10 @@ const CaseDetail = () => {
           <TabsTrigger value="tasks" data-testid="tab-tasks">Tasks ({tasks.length})</TabsTrigger>
         </TabsList>
 
-        {/* Case Details Tab */}
+        {/* ── Case Details Tab ─────────────────────────────────────────── */}
         <TabsContent value="details" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
             {/* Product Information */}
             <Card className="border-slate-200">
               <CardHeader>
@@ -433,9 +439,7 @@ const CaseDetail = () => {
                         value={editedCase.product_type}
                         onValueChange={(value) => setEditedCase({ ...editedCase, product_type: value, mortgage_type: '', insurance_type: '' })}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {PRODUCT_TYPES.map((type) => (
                             <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>
@@ -446,13 +450,8 @@ const CaseDetail = () => {
                     {editedCase.product_type === 'mortgage' && (
                       <div className="space-y-2">
                         <Label>Mortgage Type</Label>
-                        <Select
-                          value={editedCase.mortgage_type || ''}
-                          onValueChange={(value) => setEditedCase({ ...editedCase, mortgage_type: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
+                        <Select value={editedCase.mortgage_type || ''} onValueChange={(value) => setEditedCase({ ...editedCase, mortgage_type: value })}>
+                          <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                           <SelectContent>
                             {MORTGAGE_TYPES.map((type) => (
                               <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>
@@ -464,13 +463,8 @@ const CaseDetail = () => {
                     {editedCase.product_type === 'insurance' && (
                       <div className="space-y-2">
                         <Label>Insurance Type</Label>
-                        <Select
-                          value={editedCase.insurance_type || ''}
-                          onValueChange={(value) => setEditedCase({ ...editedCase, insurance_type: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
+                        <Select value={editedCase.insurance_type || ''} onValueChange={(value) => setEditedCase({ ...editedCase, insurance_type: value })}>
+                          <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                           <SelectContent>
                             {INSURANCE_TYPES.map((type) => (
                               <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>
@@ -479,14 +473,26 @@ const CaseDetail = () => {
                         </Select>
                       </div>
                     )}
-                    <div className="space-y-2">
-                      <Label>Lender Name</Label>
-                      <LenderAutocomplete
-                        value={editedCase.lender_name || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, lender_name: e.target.value })}
-                        placeholder="Start typing lender name..."
-                      />
-                    </div>
+                    {editedCase.product_type === 'mortgage' && (
+                      <div className="space-y-2">
+                        <Label>Lender Name</Label>
+                        <LenderAutocomplete
+                          value={editedCase.lender_name || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, lender_name: e.target.value })}
+                          placeholder="Start typing lender name..."
+                        />
+                      </div>
+                    )}
+                    {editedCase.product_type === 'insurance' && (
+                      <div className="space-y-2">
+                        <Label>Provider</Label>
+                        <Input
+                          value={editedCase.insurance_provider || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, insurance_provider: e.target.value })}
+                          placeholder="e.g. Legal & General"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label>Case Reference Number</Label>
                       <Input
@@ -509,18 +515,18 @@ const CaseDetail = () => {
                       </div>
                       <div>
                         <p className="text-sm text-slate-500">
-                          {caseData.product_type === 'mortgage' ? 'Mortgage Type' : 'Insurance Type'}
+                          {isInsurance ? 'Insurance Type' : 'Mortgage Type'}
                         </p>
                         <p className="font-medium">
-                          {formatStatus(caseData.mortgage_type || caseData.insurance_type)}
+                          {formatStatus(isInsurance ? caseData.insurance_type : caseData.mortgage_type)}
                         </p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Lender</p>
+                      <p className="text-sm text-slate-500">{isInsurance ? 'Provider' : 'Lender'}</p>
                       <p className="font-medium flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-slate-400" />
-                        {caseData.lender_name || '-'}
+                        {isInsurance ? (caseData.insurance_provider || '-') : (caseData.lender_name || '-')}
                       </p>
                     </div>
                     <div>
@@ -539,170 +545,242 @@ const CaseDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Loan Details */}
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PoundSterling className="h-5 w-5 text-slate-500" />
-                  Loan Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {editing ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Loan Amount (£)</Label>
-                      <Input
-                        type="number"
-                        value={editedCase.loan_amount || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, loan_amount: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+            {/* ── MORTGAGE: Loan Details ── */}
+            {!isInsurance && (
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PoundSterling className="h-5 w-5 text-slate-500" />
+                    Loan Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {editing ? (
+                    <>
                       <div className="space-y-2">
-                        <Label>Term (years)</Label>
+                        <Label>Loan Amount (£)</Label>
+                        <Input type="number" value={editedCase.loan_amount || ''} onChange={(e) => setEditedCase({ ...editedCase, loan_amount: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Term (years)</Label>
+                          <Input type="number" value={editedCase.term_years || ''} onChange={(e) => setEditedCase({ ...editedCase, term_years: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>LTV (%)</Label>
+                          <Input type="number" step="0.01" value={editedCase.ltv || ''} onChange={(e) => setEditedCase({ ...editedCase, ltv: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Security Property Address</Label>
+                          <Input value={editedCase.security_address || ''} onChange={(e) => setEditedCase({ ...editedCase, security_address: e.target.value })} placeholder="Property address" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Security Post Code</Label>
+                          <Input value={editedCase.security_postcode || ''} onChange={(e) => setEditedCase({ ...editedCase, security_postcode: e.target.value })} placeholder="e.g. SW1A 1AA" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Deposit Source</Label>
+                          <Input value={editedCase.deposit_source || ''} onChange={(e) => setEditedCase({ ...editedCase, deposit_source: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Deposit (£)</Label>
+                          <CurrencyInput value={editedCase.deposit || ''} onChange={(e) => setEditedCase({ ...editedCase, deposit: e.target.value })} data-testid="case-detail-deposit" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Interest Rate (%)</Label>
+                        <Input type="number" step="0.01" value={editedCase.interest_rate || ''} onChange={(e) => setEditedCase({ ...editedCase, interest_rate: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Interest Rate Type</Label>
+                          <Select value={editedCase.interest_rate_type || ''} onValueChange={(value) => setEditedCase({ ...editedCase, interest_rate_type: value })}>
+                            <SelectTrigger data-testid="case-detail-interest-rate-type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                            <SelectContent>
+                              {INTEREST_RATE_TYPES.map((type) => (
+                                <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Initial Product Term (Years)</Label>
+                          <Input type="number" value={editedCase.initial_product_term || ''} onChange={(e) => setEditedCase({ ...editedCase, initial_product_term: e.target.value })} data-testid="case-detail-initial-product-term" />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-sm text-slate-500">Loan Amount</p>
+                        <p className="text-2xl font-bold text-slate-900">{formatCurrency(caseData.loan_amount)}</p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-slate-500">Deposit</p>
+                          <p className="font-medium">{formatCurrency(caseData.deposit)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Deposit Source</p>
+                          <p className="font-medium">{caseData.deposit_source || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Property Value</p>
+                          <p className="font-medium">{formatCurrency(caseData.property_value)}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-slate-500">Term</p>
+                          <p className="font-medium">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">LTV</p>
+                          <p className="font-medium">{caseData.ltv ? `${caseData.ltv}%` : '-'}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">Interest Rate</p>
+                        <p className="font-medium">{caseData.interest_rate ? `${caseData.interest_rate}%` : '-'}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-slate-500">Interest Rate Type</p>
+                          <p className="font-medium">{caseData.interest_rate_type ? formatStatus(caseData.interest_rate_type) : '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Initial Product Term</p>
+                          <p className="font-medium">{caseData.initial_product_term ? `${caseData.initial_product_term} years` : '-'}</p>
+                        </div>
+                      </div>
+                      {monthlyPayment && (
+                        <div className="p-3 bg-green-50 rounded-lg">
+                          <p className="text-sm text-green-700">Estimated Monthly Payment</p>
+                          <p className="text-xl font-bold text-green-800">{formatCurrency(monthlyPayment)}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── INSURANCE: Policy Details ── */}
+            {isInsurance && (
+              <Card className="border-blue-200 bg-blue-50/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                    Policy Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {editing ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Reference Number</Label>
                         <Input
-                          type="number"
-                          value={editedCase.term_years || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, term_years: e.target.value })}
+                          value={editedCase.insurance_reference || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, insurance_reference: e.target.value })}
+                          placeholder="Policy reference"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>LTV (%)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editedCase.ltv || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, ltv: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Security Property Address</Label>
-                        <Input
-                          value={editedCase.security_address || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, security_address: e.target.value })}
-                          placeholder="Property address"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Security Post Code</Label>
-                        <Input
-                          value={editedCase.security_postcode || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, security_postcode: e.target.value })}
-                          placeholder="e.g. SW1A 1AA"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Deposit Source</Label>
-                        <Input
-                          value={editedCase.deposit_source || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, deposit_source: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Deposit (£)</Label>
-                        <CurrencyInput
-                          value={editedCase.deposit || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, deposit: e.target.value })}
-                          data-testid="case-detail-deposit"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Interest Rate (%)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={editedCase.interest_rate || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, interest_rate: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Interest Rate Type</Label>
-                        <Select
-                          value={editedCase.interest_rate_type || ''}
-                          onValueChange={(value) => setEditedCase({ ...editedCase, interest_rate_type: value })}
-                        >
-                          <SelectTrigger data-testid="case-detail-interest-rate-type">
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
+                        <Label>Type of Cover</Label>
+                        <Select value={editedCase.insurance_cover_type || ''} onValueChange={(value) => setEditedCase({ ...editedCase, insurance_cover_type: value })}>
+                          <SelectTrigger><SelectValue placeholder="Select cover type" /></SelectTrigger>
                           <SelectContent>
-                            {INTEREST_RATE_TYPES.map((type) => (
+                            {INSURANCE_COVER_TYPES.map((type) => (
                               <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Monthly Premium (£)</Label>
+                          <CurrencyInput value={editedCase.monthly_premium || ''} onChange={(e) => setEditedCase({ ...editedCase, monthly_premium: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Sum Assured (£)</Label>
+                          <CurrencyInput value={editedCase.sum_assured || ''} onChange={(e) => setEditedCase({ ...editedCase, sum_assured: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Guaranteed or Reviewable</Label>
+                          <Select value={editedCase.guaranteed_or_reviewable || ''} onValueChange={(value) => setEditedCase({ ...editedCase, guaranteed_or_reviewable: value })}>
+                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="guaranteed">Guaranteed</SelectItem>
+                              <SelectItem value="reviewable">Reviewable</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Term (Years)</Label>
+                          <Input type="number" value={editedCase.term_years || ''} onChange={(e) => setEditedCase({ ...editedCase, term_years: e.target.value })} />
+                        </div>
+                      </div>
                       <div className="space-y-2">
-                        <Label>Initial Product Term (Years)</Label>
-                        <Input
-                          type="number"
-                          value={editedCase.initial_product_term || ''}
-                          onChange={(e) => setEditedCase({ ...editedCase, initial_product_term: e.target.value })}
-                          data-testid="case-detail-initial-product-term"
-                        />
+                        <Label>In Trust</Label>
+                        <Select
+                          value={editedCase.in_trust === true ? 'yes' : editedCase.in_trust === false ? 'no' : ''}
+                          onValueChange={(value) => setEditedCase({ ...editedCase, in_trust: value === 'yes' ? true : value === 'no' ? false : null })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="yes">Yes</SelectItem>
+                            <SelectItem value="no">No</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <p className="text-sm text-slate-500">Loan Amount</p>
-                      <p className="text-2xl font-bold text-slate-900">{formatCurrency(caseData.loan_amount)}</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    </>
+                  ) : (
+                    <>
                       <div>
-                        <p className="text-sm text-slate-500">Deposit</p>
-                        <p className="font-medium">{formatCurrency(caseData.deposit)}</p>
+                        <p className="text-sm text-slate-500">Reference Number</p>
+                        <p className="font-medium">{caseData.insurance_reference || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">Deposit Source</p>
-                        <p className="font-medium">{caseData.deposit_source || '-'}</p>
+                        <p className="text-sm text-slate-500">Type of Cover</p>
+                        <p className="font-medium">{formatStatus(caseData.insurance_cover_type)}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-slate-500">Monthly Premium</p>
+                          <p className="text-2xl font-bold text-blue-700">{formatCurrency(caseData.monthly_premium)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Sum Assured</p>
+                          <p className="text-2xl font-bold text-slate-900">{formatCurrency(caseData.sum_assured)}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-slate-500">Guaranteed or Reviewable</p>
+                          <p className="font-medium">{formatStatus(caseData.guaranteed_or_reviewable)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Term</p>
+                          <p className="font-medium">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p>
+                        </div>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">Property Value</p>
-                        <p className="font-medium">{formatCurrency(caseData.property_value)}</p>
+                        <p className="text-sm text-slate-500">In Trust</p>
+                        <p className="font-medium">
+                          {caseData.in_trust === true ? 'Yes' : caseData.in_trust === false ? 'No' : '-'}
+                        </p>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-slate-500">Term</p>
-                        <p className="font-medium">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">LTV</p>
-                        <p className="font-medium">{caseData.ltv ? `${caseData.ltv}%` : '-'}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Interest Rate</p>
-                      <p className="font-medium">{caseData.interest_rate ? `${caseData.interest_rate}%` : '-'}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-slate-500">Interest Rate Type</p>
-                        <p className="font-medium">{caseData.interest_rate_type ? caseData.interest_rate_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Initial Product Term</p>
-                        <p className="font-medium">{caseData.initial_product_term ? `${caseData.initial_product_term} years` : '-'}</p>
-                      </div>
-                    </div>
-                    {monthlyPayment && (
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <p className="text-sm text-green-700">Estimated Monthly Payment</p>
-                        <p className="text-xl font-bold text-green-800">{formatCurrency(monthlyPayment)}</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Client Information */}
             <Card className="border-slate-200">
@@ -715,7 +793,7 @@ const CaseDetail = () => {
               <CardContent>
                 {client ? (
                   <div className="space-y-4">
-                    <div 
+                    <div
                       className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
                       onClick={() => navigate(`/clients/${client.client_id}`)}
                     >
@@ -723,21 +801,19 @@ const CaseDetail = () => {
                       <p className="text-sm text-slate-500">{client.email}</p>
                       <p className="text-sm text-slate-500">{client.phone}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-slate-500">Property Price</p>
-                        <p className="font-medium">{formatCurrency(client.property_price)}</p>
+                    {!isInsurance && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-slate-500">Property Price</p>
+                          <p className="font-medium">{formatCurrency(client.property_price)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">LTV</p>
+                          <p className="font-medium">{client.ltv ? `${client.ltv}%` : '-'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-slate-500">LTV</p>
-                        <p className="font-medium">{client.ltv ? `${client.ltv}%` : '-'}</p>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => navigate(`/clients/${client.client_id}`)}
-                    >
+                    )}
+                    <Button variant="outline" className="w-full" onClick={() => navigate(`/clients/${client.client_id}`)}>
                       View Full Client Profile
                     </Button>
                   </div>
@@ -788,25 +864,11 @@ const CaseDetail = () => {
                   <>
                     <div className="space-y-2">
                       <Label>Proc Fee (£) — Amount paid by lender</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="e.g. 500"
-                        value={editedCase.proc_fee_total || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, proc_fee_total: e.target.value })}
-                        data-testid="proc-fee-input"
-                      />
+                      <Input type="number" step="0.01" placeholder="e.g. 500" value={editedCase.proc_fee_total || ''} onChange={(e) => setEditedCase({ ...editedCase, proc_fee_total: e.target.value })} data-testid="proc-fee-input" />
                     </div>
                     <div className="space-y-2">
                       <Label>Your Commission Percentage (%)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="e.g. 35"
-                        value={editedCase.commission_percentage || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, commission_percentage: e.target.value })}
-                        data-testid="commission-pct-input"
-                      />
+                      <Input type="number" step="0.01" placeholder="e.g. 35" value={editedCase.commission_percentage || ''} onChange={(e) => setEditedCase({ ...editedCase, commission_percentage: e.target.value })} data-testid="commission-pct-input" />
                     </div>
                     {editedCase.proc_fee_total && editedCase.commission_percentage && (
                       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
@@ -821,14 +883,7 @@ const CaseDetail = () => {
                     )}
                     <div className="space-y-2">
                       <Label>Client Fee (£)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="e.g. 500"
-                        value={editedCase.client_fee || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, client_fee: e.target.value })}
-                        data-testid="client-fee-input"
-                      />
+                      <Input type="number" step="0.01" placeholder="e.g. 500" value={editedCase.client_fee || ''} onChange={(e) => setEditedCase({ ...editedCase, client_fee: e.target.value })} data-testid="client-fee-input" />
                     </div>
                   </>
                 ) : (
@@ -860,9 +915,7 @@ const CaseDetail = () => {
             </Card>
 
             <Card className="border-slate-200 lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Commission Status</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Commission Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-slate-600">Current Status:</span>
@@ -872,14 +925,7 @@ const CaseDetail = () => {
                 </div>
                 <div className="flex gap-2 mt-4 flex-wrap">
                   {COMMISSION_STATUSES.map((status) => (
-                    <Button
-                      key={status.key}
-                      variant={caseData.commission_status === status.key ? "default" : "outline"}
-                      size="sm"
-                      className={caseData.commission_status === status.key ? "bg-red-600 hover:bg-red-700" : ""}
-                      onClick={() => handleCommissionStatusChange(status.key)}
-                      data-testid={`commission-status-btn-${status.key}`}
-                    >
+                    <Button key={status.key} variant={caseData.commission_status === status.key ? "default" : "outline"} size="sm" className={caseData.commission_status === status.key ? "bg-red-600 hover:bg-red-700" : ""} onClick={() => handleCommissionStatusChange(status.key)} data-testid={`commission-status-btn-${status.key}`}>
                       {status.label}
                     </Button>
                   ))}
@@ -887,11 +933,7 @@ const CaseDetail = () => {
                 <div className="mt-4 pt-4 border-t border-slate-200">
                   <Label className="text-sm font-medium text-slate-600">Commission Paid Date</Label>
                   <div className="flex items-center gap-3 mt-2">
-                    <Input
-                      type="date"
-                      className="w-48"
-                      max="9999-12-31"
-                      defaultValue={caseData.commission_paid_date || ''}
+                    <Input type="date" className="w-48" max="9999-12-31" defaultValue={caseData.commission_paid_date || ''}
                       onBlur={async (e) => {
                         const val = e.target.value;
                         if (val !== (caseData.commission_paid_date || '')) {
@@ -914,9 +956,7 @@ const CaseDetail = () => {
             </Card>
 
             <Card className="border-slate-200 lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Client Fee Status</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Client Fee Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-slate-600">Current Status:</span>
@@ -926,14 +966,7 @@ const CaseDetail = () => {
                 </div>
                 <div className="flex gap-2 mt-4 flex-wrap">
                   {COMMISSION_STATUSES.map((status) => (
-                    <Button
-                      key={status.key}
-                      variant={(caseData.client_fee_status || 'pending') === status.key ? "default" : "outline"}
-                      size="sm"
-                      className={(caseData.client_fee_status || 'pending') === status.key ? "bg-purple-600 hover:bg-purple-700" : ""}
-                      onClick={() => handleClientFeeStatusChange(status.key)}
-                      data-testid={`client-fee-status-btn-${status.key}`}
-                    >
+                    <Button key={status.key} variant={(caseData.client_fee_status || 'pending') === status.key ? "default" : "outline"} size="sm" className={(caseData.client_fee_status || 'pending') === status.key ? "bg-purple-600 hover:bg-purple-700" : ""} onClick={() => handleClientFeeStatusChange(status.key)} data-testid={`client-fee-status-btn-${status.key}`}>
                       {status.label}
                     </Button>
                   ))}
@@ -941,11 +974,7 @@ const CaseDetail = () => {
                 <div className="mt-4 pt-4 border-t border-slate-200">
                   <Label className="text-sm font-medium text-slate-600">Client Fee Paid Date</Label>
                   <div className="flex items-center gap-3 mt-2">
-                    <Input
-                      type="date"
-                      className="w-48"
-                      max="9999-12-31"
-                      defaultValue={caseData.client_fee_paid_date || ''}
+                    <Input type="date" className="w-48" max="9999-12-31" defaultValue={caseData.client_fee_paid_date || ''}
                       onBlur={async (e) => {
                         const val = e.target.value;
                         if (val !== (caseData.client_fee_paid_date || '')) {
@@ -1015,7 +1044,7 @@ const CaseDetail = () => {
                     </div>
                   )}
                   <div className="divide-y divide-slate-100">
-                   {complianceChecklist.map((item, index) => (
+                    {complianceChecklist.map((item, index) => (
                       <div
                         key={index}
                         className={`flex items-center px-4 py-3 cursor-pointer transition-colors hover:bg-slate-50 ${item.completed ? 'bg-green-50/50' : ''}`}
@@ -1043,7 +1072,7 @@ const CaseDetail = () => {
           </Card>
         </TabsContent>
 
-        {/* Fact Find Summary Tab */}
+        {/* Fact Find Tab */}
         <TabsContent value="factfind" className="mt-6">
           <Card className="border-slate-200">
             <CardHeader>
@@ -1051,7 +1080,7 @@ const CaseDetail = () => {
                 <FileText className="h-5 w-5 text-slate-500" />
                 Fact Find Summary
               </CardTitle>
-              <p className="text-sm text-slate-500">Quick reference for lender conversations</p>
+              <p className="text-sm text-slate-500">Quick reference for conversations</p>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Client Details */}
@@ -1062,7 +1091,7 @@ const CaseDetail = () => {
                   <div><p className="text-xs text-slate-500">Email</p><p className="font-medium text-sm">{client?.email || '-'}</p></div>
                   <div><p className="text-xs text-slate-500">Phone</p><p className="font-medium text-sm">{client?.phone || '-'}</p></div>
                   <div><p className="text-xs text-slate-500">Date of Birth</p><p className="font-medium text-sm">{client?.dob ? formatDate(client.dob) : '-'}</p></div>
-                  <div><p className="text-xs text-slate-500">Current Address</p><p className="font-medium text-sm">{client?.address || '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Current Address</p><p className="font-medium text-sm">{client?.current_address || '-'}</p></div>
                   <div><p className="text-xs text-slate-500">Post Code</p><p className="font-medium text-sm">{client?.postcode || '-'}</p></div>
                 </div>
               </div>
@@ -1070,16 +1099,16 @@ const CaseDetail = () => {
               <div>
                 <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Employment</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div><p className="text-xs text-slate-500">Employment Type</p><p className="font-medium text-sm">{client?.employment_type ? client.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p></div>
+                  <div><p className="text-xs text-slate-500">Employment Type</p><p className="font-medium text-sm">{client?.employment_type ? formatStatus(client.employment_type) : '-'}</p></div>
                   <div><p className="text-xs text-slate-500">Income</p><p className="font-medium text-sm">{client?.income ? formatCurrency(client.income) : '-'}</p></div>
                 </div>
               </div>
-              {/* Mortgage Details */}
-              {caseData.product_type === 'mortgage' && (
+              {/* Mortgage-specific */}
+              {!isInsurance && (
                 <div>
                   <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Mortgage Details</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div><p className="text-xs text-slate-500">Mortgage Type</p><p className="font-medium text-sm">{caseData.mortgage_type ? caseData.mortgage_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Mortgage Type</p><p className="font-medium text-sm">{formatStatus(caseData.mortgage_type)}</p></div>
                     <div><p className="text-xs text-slate-500">Lender</p><p className="font-medium text-sm">{caseData.lender_name || '-'}</p></div>
                     <div><p className="text-xs text-slate-500">Interest Rate</p><p className="font-medium text-sm">{caseData.interest_rate ? `${caseData.interest_rate}%` : '-'}</p></div>
                     <div><p className="text-xs text-slate-500">LTV</p><p className="font-medium text-sm">{caseData.ltv ? `${caseData.ltv}%` : '-'}</p></div>
@@ -1091,14 +1120,33 @@ const CaseDetail = () => {
                   </div>
                 </div>
               )}
-              {/* Security Address */}
-              <div>
-                <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Security Address</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div><p className="text-xs text-slate-500">Security Address</p><p className="font-medium text-sm">{caseData.security_address || '-'}</p></div>
-                  <div><p className="text-xs text-slate-500">Security Post Code</p><p className="font-medium text-sm">{caseData.security_postcode || '-'}</p></div>
+              {/* Insurance-specific */}
+              {isInsurance && (
+                <div>
+                  <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Insurance Details</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><p className="text-xs text-slate-500">Insurance Type</p><p className="font-medium text-sm">{formatStatus(caseData.insurance_type)}</p></div>
+                    <div><p className="text-xs text-slate-500">Provider</p><p className="font-medium text-sm">{caseData.insurance_provider || '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Reference Number</p><p className="font-medium text-sm">{caseData.insurance_reference || '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Type of Cover</p><p className="font-medium text-sm">{formatStatus(caseData.insurance_cover_type)}</p></div>
+                    <div><p className="text-xs text-slate-500">Monthly Premium</p><p className="font-medium text-sm">{formatCurrency(caseData.monthly_premium)}</p></div>
+                    <div><p className="text-xs text-slate-500">Sum Assured</p><p className="font-medium text-sm">{formatCurrency(caseData.sum_assured)}</p></div>
+                    <div><p className="text-xs text-slate-500">Guaranteed or Reviewable</p><p className="font-medium text-sm">{formatStatus(caseData.guaranteed_or_reviewable)}</p></div>
+                    <div><p className="text-xs text-slate-500">Term</p><p className="font-medium text-sm">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">In Trust</p><p className="font-medium text-sm">{caseData.in_trust === true ? 'Yes' : caseData.in_trust === false ? 'No' : '-'}</p></div>
+                  </div>
                 </div>
-              </div>
+              )}
+              {/* Security Address — mortgage only */}
+              {!isInsurance && (
+                <div>
+                  <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2">Security Address</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><p className="text-xs text-slate-500">Security Address</p><p className="font-medium text-sm">{caseData.security_address || '-'}</p></div>
+                    <div><p className="text-xs text-slate-500">Security Post Code</p><p className="font-medium text-sm">{caseData.security_postcode || '-'}</p></div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1115,53 +1163,20 @@ const CaseDetail = () => {
             <CardContent>
               {editing ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Application Submitted</Label>
-                    <Input type="date" max="9999-12-31" value={editedCase.date_application_submitted || ''} onChange={(e) => setEditedCase({ ...editedCase, date_application_submitted: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Expected Completion</Label>
-                    <Input type="date" max="9999-12-31" value={editedCase.expected_completion_date || ''} onChange={(e) => setEditedCase({ ...editedCase, expected_completion_date: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Product Start Date</Label>
-                    <Input type="date" max="9999-12-31" value={editedCase.product_start_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_start_date: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Product Review Date</Label>
-                    <Input type="date" max="9999-12-31" value={editedCase.product_review_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_review_date: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Product Expiry Date</Label>
-                    <Input type="date" max="9999-12-31" value={editedCase.product_expiry_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_expiry_date: e.target.value })} />
-                  </div>
+                  <div className="space-y-2"><Label>Application Submitted</Label><Input type="date" max="9999-12-31" value={editedCase.date_application_submitted || ''} onChange={(e) => setEditedCase({ ...editedCase, date_application_submitted: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Expected Completion</Label><Input type="date" max="9999-12-31" value={editedCase.expected_completion_date || ''} onChange={(e) => setEditedCase({ ...editedCase, expected_completion_date: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Product Start Date</Label><Input type="date" max="9999-12-31" value={editedCase.product_start_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_start_date: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Product Review Date</Label><Input type="date" max="9999-12-31" value={editedCase.product_review_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_review_date: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Product Expiry Date</Label><Input type="date" max="9999-12-31" value={editedCase.product_expiry_date || ''} onChange={(e) => setEditedCase({ ...editedCase, product_expiry_date: e.target.value })} /></div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-sm text-slate-500 mb-1">Application Submitted</p>
-                    <p className="font-medium text-lg">{formatDate(caseData.date_application_submitted)}</p>
-                  </div>
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-600 mb-1">Expected Completion</p>
-                    <p className="font-medium text-lg">{formatDate(caseData.expected_completion_date)}</p>
-                  </div>
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-sm text-green-600 mb-1">Product Start Date</p>
-                    <p className="font-medium text-lg">{formatDate(caseData.product_start_date)}</p>
-                  </div>
-                  <div className="p-4 bg-yellow-50 rounded-lg">
-                    <p className="text-sm text-yellow-600 mb-1">Product Review Date</p>
-                    <p className="font-medium text-lg">{formatDate(caseData.product_review_date)}</p>
-                  </div>
-                  <div className="p-4 bg-red-50 rounded-lg">
-                    <p className="text-sm text-red-600 mb-1">Product Expiry Date</p>
-                    <p className="font-medium text-lg">{formatDate(caseData.product_expiry_date)}</p>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-sm text-slate-500 mb-1">Case Created</p>
-                    <p className="font-medium text-lg">{formatDate(caseData.created_at)}</p>
-                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg"><p className="text-sm text-slate-500 mb-1">Application Submitted</p><p className="font-medium text-lg">{formatDate(caseData.date_application_submitted)}</p></div>
+                  <div className="p-4 bg-blue-50 rounded-lg"><p className="text-sm text-blue-600 mb-1">Expected Completion</p><p className="font-medium text-lg">{formatDate(caseData.expected_completion_date)}</p></div>
+                  <div className="p-4 bg-green-50 rounded-lg"><p className="text-sm text-green-600 mb-1">Product Start Date</p><p className="font-medium text-lg">{formatDate(caseData.product_start_date)}</p></div>
+                  <div className="p-4 bg-yellow-50 rounded-lg"><p className="text-sm text-yellow-600 mb-1">Product Review Date</p><p className="font-medium text-lg">{formatDate(caseData.product_review_date)}</p></div>
+                  <div className="p-4 bg-red-50 rounded-lg"><p className="text-sm text-red-600 mb-1">Product Expiry Date</p><p className="font-medium text-lg">{formatDate(caseData.product_expiry_date)}</p></div>
+                  <div className="p-4 bg-slate-50 rounded-lg"><p className="text-sm text-slate-500 mb-1">Case Created</p><p className="font-medium text-lg">{formatDate(caseData.created_at)}</p></div>
                 </div>
               )}
             </CardContent>
@@ -1177,8 +1192,7 @@ const CaseDetail = () => {
                 Case Tasks
               </CardTitle>
               <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowTaskDialog(true)} data-testid="add-task-btn">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Task
+                <Plus className="h-4 w-4 mr-2" />Add Task
               </Button>
             </CardHeader>
             <CardContent>
@@ -1190,29 +1204,15 @@ const CaseDetail = () => {
               ) : (
                 <div className="space-y-3">
                   {tasks.map((task) => (
-                    <div
-                      key={task.task_id}
-                      className={`flex items-center justify-between p-4 border rounded-lg ${
-                        task.completed ? 'bg-slate-50 border-slate-200' : 'border-slate-200'
-                      }`}
-                    >
+                    <div key={task.task_id} className={`flex items-center justify-between p-4 border rounded-lg ${task.completed ? 'bg-slate-50 border-slate-200' : 'border-slate-200'}`}>
                       <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={task.completed}
-                          onCheckedChange={() => handleToggleTask(task)}
-                        />
+                        <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task)} />
                         <div className={task.completed ? 'line-through text-slate-400' : ''}>
                           <p className="font-medium">{task.title}</p>
-                          <p className="text-sm text-slate-500">
-                            Due: {task.due_date} • {task.assigned_to_name || 'Unassigned'}
-                          </p>
+                          <p className="text-sm text-slate-500">Due: {task.due_date} • {task.assigned_to_name || 'Unassigned'}</p>
                         </div>
                       </div>
-                      <Badge className={
-                        task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                        task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }>
+                      <Badge className={task.priority === 'high' ? 'bg-red-100 text-red-800' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
                         {task.priority}
                       </Badge>
                     </div>
@@ -1241,38 +1241,21 @@ const CaseDetail = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Title *</Label>
-              <Input
-                value={newTask.title}
-                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                placeholder="Task title"
-              />
+              <Input value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} placeholder="Task title" />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea
-                value={newTask.description}
-                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                placeholder="Task description..."
-              />
+              <Textarea value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} placeholder="Task description..." />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Due Date *</Label>
-                <Input
-                  type="date"
-                  value={newTask.due_date}
-                  onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                />
+                <Input type="date" value={newTask.due_date} onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Priority</Label>
-                <Select
-                  value={newTask.priority}
-                  onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={newTask.priority} onValueChange={(value) => setNewTask({ ...newTask, priority: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="high">High</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -1288,13 +1271,7 @@ const CaseDetail = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTaskDialog(false)}>Cancel</Button>
-            <Button 
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleAddTask}
-              disabled={!newTask.title || !newTask.due_date}
-            >
-              Create Task
-            </Button>
+            <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddTask} disabled={!newTask.title || !newTask.due_date}>Create Task</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1310,9 +1287,7 @@ const CaseDetail = () => {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteCase}>
-              Delete Case
-            </Button>
+            <Button variant="destructive" onClick={handleDeleteCase}>Delete Case</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
