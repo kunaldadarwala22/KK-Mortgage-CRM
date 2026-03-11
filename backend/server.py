@@ -103,6 +103,7 @@ class ClientCreate(BaseModel):
     advice_type: Optional[str] = None
     gdpr_consent_date: Optional[str] = None
     advisor_id: Optional[str] = None
+    additional_applicants: Optional[List[Dict[str, Any]]] = None
 
 class ClientResponse(BaseModel):
     client_id: str
@@ -131,6 +132,7 @@ class ClientResponse(BaseModel):
     gdpr_consent_date: Optional[str] = None
     advisor_id: Optional[str] = None
     advisor_name: Optional[str] = None
+    additional_applicants: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
     updated_at: datetime
 
