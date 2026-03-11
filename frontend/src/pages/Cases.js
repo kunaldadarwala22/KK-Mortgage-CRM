@@ -465,6 +465,7 @@ const Cases = () => {
             <ScreenshotImport type="case" onExtracted={(data) => {
               setNewCase(prev => ({
                 ...prev,
+                // Mortgage fields
                 lender_name: data.lender_name || prev.lender_name,
                 loan_amount: data.loan_amount ? String(data.loan_amount) : prev.loan_amount,
                 property_value: data.property_value ? String(data.property_value) : prev.property_value,
@@ -482,10 +483,15 @@ const Cases = () => {
                 ltv: data.ltv ? String(data.ltv) : prev.ltv,
                 deposit: data.deposit ? String(data.deposit) : prev.deposit,
                 deposit_source: data.deposit_source || prev.deposit_source,
+                // Insurance fields
                 insurance_type: data.insurance_type || prev.insurance_type,
                 insurance_provider: data.insurance_provider || prev.insurance_provider,
+                insurance_reference: data.insurance_reference || prev.insurance_reference,
+                insurance_cover_type: data.insurance_cover_type || prev.insurance_cover_type,
+                guaranteed_or_reviewable: data.guaranteed_or_reviewable || prev.guaranteed_or_reviewable,
                 monthly_premium: data.monthly_premium ? String(data.monthly_premium) : prev.monthly_premium,
                 sum_assured: data.sum_assured ? String(data.sum_assured) : prev.sum_assured,
+                in_trust: (data.in_trust !== null && data.in_trust !== undefined) ? data.in_trust : prev.in_trust,
               }));
             }} />
           </div>
