@@ -171,7 +171,6 @@ const Clients = () => {
   const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
 
   const getRowBg = (client) => {
-    if (client.case_status === 'completed') return 'bg-green-50 hover:bg-green-100';
     if (client.case_status === 'lost_case') return 'bg-red-50 hover:bg-red-100';
     if (client.expiring_soon) return 'bg-amber-50 hover:bg-amber-100';
     return 'hover:bg-slate-50';
@@ -240,7 +239,6 @@ const Clients = () => {
 
       {/* Row Legend */}
       <div className="flex gap-4 text-xs text-slate-500">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-200 inline-block" /> Completed</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block" /> Lost Case</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 inline-block" /> Expiring Soon</span>
       </div>
