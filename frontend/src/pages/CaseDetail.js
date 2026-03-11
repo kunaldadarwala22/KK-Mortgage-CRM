@@ -493,14 +493,25 @@ const CaseDetail = () => {
                         />
                       </div>
                     )}
-                    <div className="space-y-2">
-                      <Label>Case Reference Number</Label>
-                      <Input
-                        value={editedCase.case_reference || ''}
-                        onChange={(e) => setEditedCase({ ...editedCase, case_reference: e.target.value })}
-                        placeholder="REF-12345"
-                      />
-                    </div>
+                    {editedCase.product_type === 'insurance' ? (
+                      <div className="space-y-2">
+                        <Label>Policy Reference Number</Label>
+                        <Input
+                          value={editedCase.insurance_reference || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, insurance_reference: e.target.value })}
+                          placeholder="e.g. POL-12345"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>Case Reference Number</Label>
+                        <Input
+                          value={editedCase.case_reference || ''}
+                          onChange={(e) => setEditedCase({ ...editedCase, case_reference: e.target.value })}
+                          placeholder="REF-12345"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label>Account Manager</Label>
                       <Input value="Kunal Kapadia" disabled className="bg-slate-50" />
@@ -530,8 +541,8 @@ const CaseDetail = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Case Reference Number</p>
-                      <p className="font-medium">{caseData.case_reference || '-'}</p>
+                      <p className="text-sm text-slate-500">{isInsurance ? 'Policy Reference Number' : 'Case Reference Number'}</p>
+                      <p className="font-medium">{isInsurance ? (caseData.insurance_reference || '-') : (caseData.case_reference || '-')}</p>
                     </div>
                     <div>
                       <p className="text-sm text-slate-500">Account Manager</p>
