@@ -210,9 +210,9 @@ class CaseResponse(BaseModel):
     product_start_date: Optional[str] = None
     product_review_date: Optional[str] = None
     product_expiry_date: Optional[str] = None
-  loan_amount: Optional[float] = None
-property_value: Optional[float] = None
-proc_fee_type: Optional[str] = None
+    loan_amount: Optional[float] = None
+    property_value: Optional[float] = None
+    proc_fee_type: Optional[str] = None
     proc_fee_value: Optional[float] = None
     commission_percentage: Optional[float] = None
     gross_commission: Optional[float] = None
