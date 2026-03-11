@@ -808,13 +808,15 @@ const CaseDetail = () => {
                     <div>
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Applicant 1 (Primary)</p>
                       <div
-                        className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
-                        onClick={() => navigate(`/clients/${client.client_id}`)}
-                      >
-                        <p className="font-medium text-lg">{client.first_name} {client.last_name}</p>
-                        <p className="text-sm text-slate-500">{client.email}</p>
-                        <p className="text-sm text-slate-500">{client.phone}</p>
-                      </div>
+  className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+  onClick={() => navigate(`/clients/${client.client_id}`)}
+>
+  <p className="font-medium text-lg">{client.first_name} {client.last_name}</p>
+  {client.email && <p className="text-sm text-slate-500">{client.email}</p>}
+  {client.phone && <p className="text-sm text-slate-500">{client.phone}</p>}
+  {client.dob && <p className="text-sm text-slate-500">DOB: {formatDate(client.dob)}</p>}
+  {client.employment_type && <p className="text-sm text-slate-500">{client.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>}
+</div>
                     </div>
                     {/* Additional Applicants */}
                     {client.additional_applicants && client.additional_applicants.length > 0 && (
@@ -826,7 +828,7 @@ const CaseDetail = () => {
                               <p className="font-medium">{ap.first_name} {ap.last_name}</p>
                               {ap.email && <p className="text-sm text-slate-500">{ap.email}</p>}
                               {ap.phone && <p className="text-sm text-slate-500">{ap.phone}</p>}
-                              {ap.dob && <p className="text-sm text-slate-500">DOB: {ap.dob}</p>}
+                              {ap.dob && <p className="text-sm text-slate-500">DOB: {formatDate(ap.dob)}</p>}
                               {ap.employment_type && <p className="text-sm text-slate-500">{ap.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>}
                             </div>
                           </div>
