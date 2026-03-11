@@ -164,6 +164,7 @@ class CommissionStatus:
     PAID = "paid"
     CLAWED_BACK = "clawed_back"
 
+# ── CaseCreate: includes all insurance-specific fields ──────────────────────
 class CaseCreate(BaseModel):
     client_id: str
     product_type: str
@@ -173,8 +174,14 @@ class CaseCreate(BaseModel):
     term_years: Optional[int] = None
     fixed_rate_period: Optional[int] = None
     interest_rate: Optional[float] = None
+    interest_rate_type: Optional[str] = None
+    repayment_type: Optional[str] = None
+    property_type: Optional[str] = None
     lender_name: Optional[str] = None
     application_reference: Optional[str] = None
+    case_reference: Optional[str] = None
+    security_address: Optional[str] = None
+    security_postcode: Optional[str] = None
     date_application_submitted: Optional[str] = None
     expected_completion_date: Optional[str] = None
     product_start_date: Optional[str] = None
@@ -182,16 +189,30 @@ class CaseCreate(BaseModel):
     product_expiry_date: Optional[str] = None
     loan_amount: Optional[float] = None
     property_value: Optional[float] = None
+    deposit: Optional[float] = None
+    deposit_source: Optional[str] = None
+    ltv: Optional[float] = None
+    initial_product_term: Optional[int] = None
     proc_fee_type: Optional[str] = None
     proc_fee_value: Optional[float] = None
     commission_percentage: Optional[float] = None
     gross_commission: Optional[float] = None
     your_commission_share: Optional[float] = None
     proc_fee_total: Optional[float] = None
+    client_fee: Optional[float] = None
     commission_status: str = CommissionStatus.PENDING
     advisor_id: Optional[str] = None
     notes: Optional[str] = None
+    # Insurance-specific fields
+    insurance_provider: Optional[str] = None
+    insurance_reference: Optional[str] = None
+    insurance_cover_type: Optional[str] = None
+    guaranteed_or_reviewable: Optional[str] = None
+    monthly_premium: Optional[float] = None
+    sum_assured: Optional[float] = None
+    in_trust: Optional[bool] = None
 
+# ── CaseResponse: mirrors CaseCreate plus server-set fields ─────────────────
 class CaseResponse(BaseModel):
     case_id: str
     client_id: str
@@ -203,8 +224,14 @@ class CaseResponse(BaseModel):
     term_years: Optional[int] = None
     fixed_rate_period: Optional[int] = None
     interest_rate: Optional[float] = None
+    interest_rate_type: Optional[str] = None
+    repayment_type: Optional[str] = None
+    property_type: Optional[str] = None
     lender_name: Optional[str] = None
     application_reference: Optional[str] = None
+    case_reference: Optional[str] = None
+    security_address: Optional[str] = None
+    security_postcode: Optional[str] = None
     date_application_submitted: Optional[str] = None
     expected_completion_date: Optional[str] = None
     product_start_date: Optional[str] = None
@@ -212,16 +239,29 @@ class CaseResponse(BaseModel):
     product_expiry_date: Optional[str] = None
     loan_amount: Optional[float] = None
     property_value: Optional[float] = None
+    deposit: Optional[float] = None
+    deposit_source: Optional[str] = None
+    ltv: Optional[float] = None
+    initial_product_term: Optional[int] = None
     proc_fee_type: Optional[str] = None
     proc_fee_value: Optional[float] = None
     commission_percentage: Optional[float] = None
     gross_commission: Optional[float] = None
     your_commission_share: Optional[float] = None
     proc_fee_total: Optional[float] = None
+    client_fee: Optional[float] = None
     commission_status: str
     advisor_id: Optional[str] = None
     advisor_name: Optional[str] = None
     notes: Optional[str] = None
+    # Insurance-specific fields
+    insurance_provider: Optional[str] = None
+    insurance_reference: Optional[str] = None
+    insurance_cover_type: Optional[str] = None
+    guaranteed_or_reviewable: Optional[str] = None
+    monthly_premium: Optional[float] = None
+    sum_assured: Optional[float] = None
+    in_trust: Optional[bool] = None
     created_at: datetime
     updated_at: datetime
 
@@ -1124,7 +1164,7 @@ async def export_all_data(request: Request):
         max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
         ws_clients.column_dimensions[col[0].column_letter].width = min(max_length + 2, 50)
     ws_cases = wb.create_sheet("Cases")
-    case_headers = ["Case ID", "Client ID", "Product Type", "Mortgage Type", "Insurance Type", "Status", "Lender Name", "Loan Amount", "Term (Years)", "Interest Rate", "Application Reference", "Application Date", "Expected Completion", "Product Start Date", "Product Review Date", "Product Expiry Date", "Proc Fee Type", "Proc Fee Value", "Commission %", "Gross Commission", "Your Share", "Proc Fee Total", "Commission Status", "Created At"]
+    case_headers = ["Case ID", "Client ID", "Product Type", "Mortgage Type", "Insurance Type", "Status", "Lender Name", "Loan Amount", "Term (Years)", "Interest Rate", "Application Reference", "Application Date", "Expected Completion", "Product Start Date", "Product Review Date", "Product Expiry Date", "Proc Fee Type", "Proc Fee Value", "Commission %", "Gross Commission", "Your Share", "Proc Fee Total", "Commission Status", "Insurance Provider", "Insurance Reference", "Cover Type", "Guaranteed/Reviewable", "Monthly Premium", "Sum Assured", "In Trust", "Created At"]
     ws_cases.append(case_headers)
     for col, header in enumerate(case_headers, 1):
         cell = ws_cases.cell(row=1, column=col)
@@ -1134,7 +1174,7 @@ async def export_all_data(request: Request):
         cell.alignment = Alignment(horizontal='center')
     cases = await db.cases.find({}, {"_id": 0}).to_list(10000)
     for case in cases:
-        ws_cases.append([case.get("case_id", ""), case.get("client_id", ""), case.get("product_type", ""), case.get("mortgage_type", ""), case.get("insurance_type", ""), case.get("status", ""), case.get("lender_name", ""), case.get("loan_amount", ""), case.get("term_years", ""), case.get("interest_rate", ""), case.get("application_reference", ""), case.get("date_application_submitted", ""), case.get("expected_completion_date", ""), case.get("product_start_date", ""), case.get("product_review_date", ""), case.get("product_expiry_date", ""), case.get("proc_fee_type", ""), case.get("proc_fee_value", ""), case.get("commission_percentage", ""), case.get("gross_commission", ""), case.get("your_commission_share", ""), case.get("proc_fee_total", ""), case.get("commission_status", ""), case.get("created_at", "")])
+        ws_cases.append([case.get("case_id", ""), case.get("client_id", ""), case.get("product_type", ""), case.get("mortgage_type", ""), case.get("insurance_type", ""), case.get("status", ""), case.get("lender_name", ""), case.get("loan_amount", ""), case.get("term_years", ""), case.get("interest_rate", ""), case.get("application_reference", ""), case.get("date_application_submitted", ""), case.get("expected_completion_date", ""), case.get("product_start_date", ""), case.get("product_review_date", ""), case.get("product_expiry_date", ""), case.get("proc_fee_type", ""), case.get("proc_fee_value", ""), case.get("commission_percentage", ""), case.get("gross_commission", ""), case.get("your_commission_share", ""), case.get("proc_fee_total", ""), case.get("commission_status", ""), case.get("insurance_provider", ""), case.get("insurance_reference", ""), case.get("insurance_cover_type", ""), case.get("guaranteed_or_reviewable", ""), case.get("monthly_premium", ""), case.get("sum_assured", ""), "Yes" if case.get("in_trust") else ("No" if case.get("in_trust") is False else ""), case.get("created_at", "")])
     for col in ws_cases.columns:
         max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
         ws_cases.column_dimensions[col[0].column_letter].width = min(max_length + 2, 50)
@@ -1244,13 +1284,16 @@ Extract ALL of these fields if present:
   "client_fee": null,
   "insurance_type": "one of: life_insurance, buildings_insurance, home_insurance or empty string",
   "insurance_provider": "",
-  "insurance_cover_type": "one of: level_term, decreasing_term, increasing_term, whole_of_life or empty string",
+  "insurance_reference": "extract from any field labelled: Insurers Reference, Policy Reference, Reference Number, Policy No, or similar",
+  "insurance_cover_type": "map as follows - 'Life Level' or 'Level Term' or 'Level Cover' = level_term | 'Life Decreasing' or 'Decreasing Term' = decreasing_term | 'Life Increasing' or 'Increasing Term' = increasing_term | 'Whole of Life' = whole_of_life | empty string if not found",
+  "guaranteed_or_reviewable": "if premium/policy is described as Guaranteed return guaranteed | if Reviewable return reviewable | empty string if not found",
   "monthly_premium": null,
   "sum_assured": null,
+  "in_trust": "if 'In Trust' field shows Yes/True/Ticked/Checked return true | if No/False/Unticked/Unchecked return false | if field not present return null",
   "notes": ""
 }
 
-Return null for missing numeric fields, empty string for missing text fields. Return ONLY the JSON object."""
+Return null for missing numeric fields, empty string for missing text fields, null for missing boolean fields. Return ONLY the JSON object."""
     messages = [{"role": "user", "content": [{"type": "text", "text": prompt}] + image_contents}]
     try:
         response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, max_tokens=2000, temperature=0)
@@ -1285,17 +1328,18 @@ async def get_notifications(request: Request):
         name = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
         notifications.append({"type": "expiring_product", "message": f"Product expiring: {name} with {c.get('lender_name', 'unknown lender')} on {c['product_expiry_date']}", "entity_id": c["case_id"], "severity": "medium"})
     return {"notifications": notifications, "count": len(notifications)}
+
 @api_router.get("/cases/{case_id}/compliance")
 async def get_compliance(case_id: str, request: Request):
     await get_current_user(request)
     case = await db.cases.find_one({"case_id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-    
+
     existing = await db.compliance.find_one({"case_id": case_id}, {"_id": 0})
     if existing:
         return {"checklist": existing.get("checklist", [])}
-    
+
     product_type = case.get("product_type", "mortgage")
     mortgage_type = case.get("mortgage_type", "")
     insurance_type = case.get("insurance_type", "")
@@ -1382,7 +1426,6 @@ async def get_compliance(case_id: str, request: Request):
     await db.compliance.insert_one({"case_id": case_id, "checklist": checklist})
     return {"checklist": checklist}
 
-
 @api_router.put("/cases/{case_id}/compliance")
 async def update_compliance(case_id: str, request: Request):
     await get_current_user(request)
@@ -1394,6 +1437,7 @@ async def update_compliance(case_id: str, request: Request):
         upsert=True
     )
     return {"checklist": checklist}
+
 app.include_router(api_router)
 
 @app.on_event("startup")
