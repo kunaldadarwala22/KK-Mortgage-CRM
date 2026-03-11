@@ -804,14 +804,35 @@ const CaseDetail = () => {
               <CardContent>
                 {client ? (
                   <div className="space-y-4">
-                    <div
-                      className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
-                      onClick={() => navigate(`/clients/${client.client_id}`)}
-                    >
-                      <p className="font-medium text-lg">{client.first_name} {client.last_name}</p>
-                      <p className="text-sm text-slate-500">{client.email}</p>
-                      <p className="text-sm text-slate-500">{client.phone}</p>
+                    {/* Primary Applicant */}
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Applicant 1 (Primary)</p>
+                      <div
+                        className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                        onClick={() => navigate(`/clients/${client.client_id}`)}
+                      >
+                        <p className="font-medium text-lg">{client.first_name} {client.last_name}</p>
+                        <p className="text-sm text-slate-500">{client.email}</p>
+                        <p className="text-sm text-slate-500">{client.phone}</p>
+                      </div>
                     </div>
+                    {/* Additional Applicants */}
+                    {client.additional_applicants && client.additional_applicants.length > 0 && (
+                      <div className="space-y-2">
+                        {client.additional_applicants.map((ap, idx) => (
+                          <div key={idx}>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Applicant {idx + 2}</p>
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                              <p className="font-medium">{ap.first_name} {ap.last_name}</p>
+                              {ap.email && <p className="text-sm text-slate-500">{ap.email}</p>}
+                              {ap.phone && <p className="text-sm text-slate-500">{ap.phone}</p>}
+                              {ap.dob && <p className="text-sm text-slate-500">DOB: {ap.dob}</p>}
+                              {ap.employment_type && <p className="text-sm text-slate-500">{ap.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <Button variant="outline" className="w-full" onClick={() => navigate(`/clients/${client.client_id}`)}>
                       View Full Client Profile
                     </Button>
