@@ -1291,39 +1291,93 @@ async def get_compliance(case_id: str, request: Request):
     case = await db.cases.find_one({"case_id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+    
     existing = await db.compliance.find_one({"case_id": case_id}, {"_id": 0})
     if existing:
         return {"checklist": existing.get("checklist", [])}
+    
     product_type = case.get("product_type", "mortgage")
-    mortgage_items = [
-        "ID verified (passport/driving licence)",
-        "Proof of address obtained",
-        "Proof of income obtained (payslips/SA302)",
-        "Bank statements obtained (3 months)",
-        "Credit search completed",
-        "Fact find completed and signed",
-        "Suitability letter issued to client",
-        "ESIS provided to client",
-        "Mortgage illustration provided",
-        "Client fee agreement signed",
-        "Application submitted to lender",
-        "Valuation instructed",
-        "Mortgage offer received and reviewed with client",
-        "Solicitors instructed",
-        "Completion confirmed",
-    ]
-    insurance_items = [
-        "ID verified",
-        "Proof of address obtained",
-        "Health declaration completed",
-        "Policy illustration provided",
-        "Suitability letter issued to client",
-        "Client fee agreement signed",
-        "Policy application submitted",
-        "Policy documents issued to client",
-        "Direct debit confirmed",
-    ]
-    items = mortgage_items if product_type == "mortgage" else insurance_items
+    mortgage_type = case.get("mortgage_type", "")
+    insurance_type = case.get("insurance_type", "")
+
+    CHECKLISTS = {
+        "life_insurance": [
+            "Client Pack",
+            "Sanction Search",
+            "EOR",
+            "KFI",
+            "ID",
+            "Proof of Address (<£75)",
+            "Provider Application",
+            "Protection Suitability",
+        ],
+        "home_buildings_insurance": [
+            "Client Pack",
+            "Upload Payment Shield Research",
+            "Upload Document Pack",
+        ],
+        "purchase": [
+            "Client Pack",
+            "Sanction Search",
+            "EOR",
+            "Proof of ID",
+            "Proof of Address",
+            "Latest 3 Payslips",
+            "Latest 2 Years SA302",
+            "Latest 3 Months Bank Statements",
+            "Proof of Deposit",
+            "Lender FMA",
+            "Proc Fee",
+            "Suitability Report",
+        ],
+        "remortgage": [
+            "Client Pack",
+            "Sanction Search",
+            "EOR",
+            "Proof of ID",
+            "Proof of Address",
+            "Latest 3 Payslips",
+            "Latest 2 Years SA302",
+            "Latest 3 Months Bank Statements",
+            "Proof of Deposit",
+            "Lender FMA",
+            "Proc Fee",
+            "Suitability Report",
+        ],
+        "remortgage_additional_borrowing": [
+            "Client Pack",
+            "Sanction Search",
+            "EOR",
+            "Proof of ID",
+            "Proof of Address",
+            "Latest 3 Payslips",
+            "Latest 2 Years SA302",
+            "Latest 3 Months Bank Statements",
+            "Proof of Deposit",
+            "Lender FMA",
+            "Proc Fee",
+            "Suitability Report",
+        ],
+        "product_transfer": [
+            "Client Pack",
+            "Sanction Search",
+            "EOR",
+            "Proof of ID",
+            "Credit Search",
+            "KFI",
+            "Suitability Letter",
+            "Mortgage Offer",
+        ],
+    }
+
+    if product_type == "insurance":
+        if insurance_type == "life_insurance":
+            items = CHECKLISTS["life_insurance"]
+        else:
+            items = CHECKLISTS["home_buildings_insurance"]
+    else:
+        items = CHECKLISTS.get(mortgage_type, CHECKLISTS["purchase"])
+
     checklist = [{"item": item, "completed": False} for item in items]
     await db.compliance.insert_one({"case_id": case_id, "checklist": checklist})
     return {"checklist": checklist}
