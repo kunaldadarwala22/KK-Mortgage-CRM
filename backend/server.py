@@ -697,28 +697,40 @@ async def delete_case(case_id: str, request: Request):
     return {"message": "Case deleted successfully"}
 
 async def create_case_tasks(case_id: str, status: str, user_id: str):
-    task_templates = {
-        CaseStatus.APPLICATION_SUBMITTED: {"title": "Follow up on application", "days": 3},
-        CaseStatus.OFFER_ISSUED: {"title": "Review offer with client", "days": 2},
-        CaseStatus.COMPLETED: {"title": "Completion follow-up and review", "days": 1}
+    # Only auto-create a task if the product expires within 6 months
+    case = await db.cases.find_one({"case_id": case_id}, {"_id": 0, "product_expiry_date": 1})
+    if not case:
+        return
+    expiry_str = case.get("product_expiry_date")
+    if not expiry_str:
+        return
+    try:
+        expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d")
+    except ValueError:
+        return
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    days_until_expiry = (expiry_date - now).days
+    if days_until_expiry < 0 or days_until_expiry > 180:
+        return
+    # Don't create a duplicate review task
+    existing = await db.tasks.find_one({"case_id": case_id, "task_type": "auto"})
+    if existing:
+        return
+    task_id = generate_id("task_")
+    due_date = (expiry_date - timedelta(days=30)).strftime("%Y-%m-%d")
+    task_doc = {
+        "task_id": task_id,
+        "title": "Product expiry review",
+        "description": f"Product expires on {expiry_str} — contact client to review options.",
+        "due_date": due_date,
+        "case_id": case_id,
+        "assigned_to": user_id,
+        "priority": "high",
+        "task_type": "auto",
+        "completed": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
-    if status in task_templates:
-        template = task_templates[status]
-        task_id = generate_id("task_")
-        due_date = (datetime.now(timezone.utc) + timedelta(days=template["days"])).strftime("%Y-%m-%d")
-        task_doc = {
-            "task_id": task_id,
-            "title": template["title"],
-            "description": f"Auto-generated task for status: {status}",
-            "due_date": due_date,
-            "case_id": case_id,
-            "assigned_to": user_id,
-            "priority": "medium",
-            "task_type": "auto",
-            "completed": False,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.tasks.insert_one(task_doc)
+    await db.tasks.insert_one(task_doc)
 
 @api_router.post("/tasks", status_code=201)
 async def create_task(task: TaskCreate, request: Request):
