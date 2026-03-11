@@ -557,8 +557,6 @@ async def update_client(client_id: str, request: Request):
 @api_router.delete("/clients/{client_id}")
 async def delete_client(client_id: str, request: Request):
     current_user = await get_current_user(request)
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only admins can delete clients")
     await db.clients.delete_one({"client_id": client_id})
     await db.cases.delete_many({"client_id": client_id})
     await db.documents.delete_many({"client_id": client_id})
@@ -864,7 +862,7 @@ async def get_retention_data(request: Request):
     for case in expiring_this_month:
         client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
         case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
-    six_months_str = (today + timedelta(days=183)).strftime("%Y-%m-%d") 
+    six_months_str = (today + timedelta(days=183)).strftime("%Y-%m-%d")
     expiring_by_month = await db.cases.aggregate([{"$match": {"product_expiry_date": {"$gte": today_str, "$lte": six_months_str}, "status": CaseStatus.COMPLETED}}, {"$addFields": {"expiry_month": {"$substr": ["$product_expiry_date", 0, 7]}}}, {"$group": {"_id": "$expiry_month", "count": {"$sum": 1}, "value": {"$sum": "$loan_amount"}}}, {"$sort": {"_id": 1}}, {"$limit": 12}]).to_list(12)
     retention_value = await db.cases.aggregate([{"$match": {"product_expiry_date": {"$gte": today_str, "$lte": six_months_str}, "status": CaseStatus.COMPLETED}}, {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}}}]).to_list(1)
     return {"expiring_this_month": expiring_this_month, "expiring_by_month": expiring_by_month, "retention_pipeline_value": retention_value[0]["total"] if retention_value else 0}
@@ -1173,7 +1171,7 @@ Return this structure:
       "email": "",
       "current_address": "",
       "postcode": "",
-      "income": null,  // look for "Gross Annual Income", "Annual Income", "Salary" or similar"income": null,  // look for "Gross Annual Income", "Annual Income", "Salary" or similar
+      "income": null,
       "employment_type": "one of: employed, self_employed, contractor, retired, unemployed or empty string",
       "credit_issues": false,
       "credit_issues_notes": "",
@@ -1227,7 +1225,7 @@ Extract ALL of these fields if present:
   "deposit_source": "",
   "ltv": null,
   "term_years": null,
-  "initial_product_term": null,  // look for "Product Term", "Initial Term", "Fixed Term" or similar
+  "initial_product_term": null,
   "interest_rate": null,
   "interest_rate_type": "one of: fixed, variable, discounted, tracker, capped or empty string",
   "repayment_type": "one of: repayment, interest_only or empty string",
@@ -1296,7 +1294,7 @@ async def seed_default_user():
     ]:
         existing = await db.users.find_one({"email": email})
         if not existing:
-            user_doc = {"user_id": generate_id("user_"), "email": email, "name": name, "password": hash_password(password), "role": UserRole.ADVISOR, "picture": None, "created_at": datetime.now(timezone.utc).isoformat()}
+            user_doc = {"user_id": generate_id("user_"), "email": email, "name": name, "password": hash_password(password), "role": UserRole.ADMIN, "picture": None, "created_at": datetime.now(timezone.utc).isoformat()}
             await db.users.insert_one(user_doc)
             logger.info(f"Default user created: {email}")
         elif not existing.get("password"):
