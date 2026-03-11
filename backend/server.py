@@ -1285,7 +1285,61 @@ async def get_notifications(request: Request):
         name = f"{client['first_name']} {client['last_name']}" if client else "Unknown"
         notifications.append({"type": "expiring_product", "message": f"Product expiring: {name} with {c.get('lender_name', 'unknown lender')} on {c['product_expiry_date']}", "entity_id": c["case_id"], "severity": "medium"})
     return {"notifications": notifications, "count": len(notifications)}
+@api_router.get("/cases/{case_id}/compliance")
+async def get_compliance(case_id: str, request: Request):
+    await get_current_user(request)
+    case = await db.cases.find_one({"case_id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    existing = await db.compliance.find_one({"case_id": case_id}, {"_id": 0})
+    if existing:
+        return {"checklist": existing.get("checklist", [])}
+    product_type = case.get("product_type", "mortgage")
+    mortgage_items = [
+        "ID verified (passport/driving licence)",
+        "Proof of address obtained",
+        "Proof of income obtained (payslips/SA302)",
+        "Bank statements obtained (3 months)",
+        "Credit search completed",
+        "Fact find completed and signed",
+        "Suitability letter issued to client",
+        "ESIS provided to client",
+        "Mortgage illustration provided",
+        "Client fee agreement signed",
+        "Application submitted to lender",
+        "Valuation instructed",
+        "Mortgage offer received and reviewed with client",
+        "Solicitors instructed",
+        "Completion confirmed",
+    ]
+    insurance_items = [
+        "ID verified",
+        "Proof of address obtained",
+        "Health declaration completed",
+        "Policy illustration provided",
+        "Suitability letter issued to client",
+        "Client fee agreement signed",
+        "Policy application submitted",
+        "Policy documents issued to client",
+        "Direct debit confirmed",
+    ]
+    items = mortgage_items if product_type == "mortgage" else insurance_items
+    checklist = [{"item": item, "completed": False} for item in items]
+    await db.compliance.insert_one({"case_id": case_id, "checklist": checklist})
+    return {"checklist": checklist}
 
+
+@api_router.put("/cases/{case_id}/compliance")
+async def update_compliance(case_id: str, request: Request):
+    await get_current_user(request)
+    body = await request.json()
+    checklist = body if isinstance(body, list) else body.get("checklist", [])
+    await db.compliance.update_one(
+        {"case_id": case_id},
+        {"$set": {"checklist": checklist, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"checklist": checklist}
 app.include_router(api_router)
 
 @app.on_event("startup")
