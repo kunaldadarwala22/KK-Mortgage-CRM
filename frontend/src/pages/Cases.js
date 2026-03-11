@@ -352,7 +352,7 @@ const Cases = () => {
                     </TableHeader>
                     <TableBody>
                       {mortgageCases.map((c) => (
-                        <TableRow key={c.case_id} className="cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
+                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
                           <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
                           <TableCell>{formatStatus(c.mortgage_type)}</TableCell>
                           <TableCell>{c.lender_name || '-'}</TableCell>
@@ -404,7 +404,7 @@ const Cases = () => {
                     </TableHeader>
                     <TableBody>
                       {insuranceCases.map((c) => (
-                        <TableRow key={c.case_id} className="cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
+                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
                           <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
                           <TableCell>{formatStatus(c.insurance_type)}</TableCell>
                           <TableCell>{c.insurance_provider || c.lender_name || '-'}</TableCell>
