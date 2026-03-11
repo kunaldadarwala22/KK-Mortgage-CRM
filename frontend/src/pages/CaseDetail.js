@@ -1018,21 +1018,25 @@ const CaseDetail = () => {
                     {complianceChecklist.map((item, index) => (
                       <div
                         key={index}
-                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-slate-50 ${item.completed ? 'bg-green-50/50' : ''}`}
-                        onClick={() => toggleComplianceItem(index)}
-                        data-testid={`compliance-item-${index}`}
-                      >
-                        <Checkbox
-                          checked={item.completed}
-                          onCheckedChange={() => toggleComplianceItem(index)}
-                          className={item.completed ? 'border-green-600 bg-green-600 text-white data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600' : ''}
-                          data-testid={`compliance-checkbox-${index}`}
-                        />
-                        <span className={`text-sm ${item.completed ? 'text-green-700 font-medium' : 'text-slate-700'}`}>
-                          {item.item}
-                        </span>
-                        {item.completed && <CircleCheck className="h-4 w-4 text-green-500 ml-auto" />}
-                      </div>
+                        <div
+  key={index}
+  className={`flex items-center px-4 py-3 cursor-pointer transition-colors hover:bg-slate-50 ${item.completed ? 'bg-green-50/50' : ''}`}
+  onClick={() => toggleComplianceItem(index)}
+  data-testid={`compliance-item-${index}`}
+>
+  <div className="flex items-center gap-2">
+    <Checkbox
+      checked={item.completed}
+      onCheckedChange={() => toggleComplianceItem(index)}
+      className={item.completed ? 'border-green-600 bg-green-600 text-white data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600' : ''}
+      data-testid={`compliance-checkbox-${index}`}
+    />
+    <span className={`text-sm ${item.completed ? 'text-green-700 font-medium line-through' : 'text-slate-700'}`}>
+      {item.item}
+    </span>
+    {item.completed && <CircleCheck className="h-4 w-4 text-green-500" />}
+  </div>
+</div>
                     ))}
                   </div>
                 </div>
