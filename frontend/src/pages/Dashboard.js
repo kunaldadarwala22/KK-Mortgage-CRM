@@ -62,6 +62,8 @@ const Dashboard = () => {
 
   const expiringThisMonth = retention?.expiring_this_month || [];
   const expiringByMonth = retention?.expiring_by_month || [];
+  // Combine all expiring cases: this month first, then build a flat list from by_month cases if available
+  // We use expiringThisMonth for individual rows (has client_name + case_id), and byMonth for the summary count
   const expiringSoonCount = expiringByMonth.reduce((sum, m) => sum + m.count, 0);
   const expiringSoonValue = expiringByMonth.reduce((sum, m) => sum + m.value, 0);
 
@@ -85,17 +87,17 @@ const Dashboard = () => {
       {/* ========== 1. EXPIRING SOON & CONTACT THIS MONTH ========== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expiring Soon */}
-        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white" data-testid="expiring-soon-section">
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/10 dark:to-slate-800 dark:border-amber-800" data-testid="expiring-soon-section">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
               </div>
-              <CardTitle className="text-lg font-semibold text-amber-900">Expiring Soon</CardTitle>
+              <CardTitle className="text-lg font-semibold text-amber-900 dark:text-amber-400">Expiring Soon</CardTitle>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-amber-700">{expiringSoonCount}</p>
-              <p className="text-xs text-amber-600">products in 6 months</p>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{expiringSoonCount}</p>
+              <p className="text-xs text-amber-600 dark:text-amber-500">products in 6 months</p>
             </div>
           </CardHeader>
           <CardContent>
@@ -106,20 +108,47 @@ const Dashboard = () => {
               </div>
             ) : (
               <>
-                <p className="text-sm text-amber-700 mb-3">Total loan value at risk: <span className="font-bold">{fmt(expiringSoonValue)}</span></p>
+                <p className="text-sm text-amber-700 dark:text-amber-500 mb-3">
+                  Total loan value at risk: <span className="font-bold">{fmt(expiringSoonValue)}</span>
+                </p>
                 <div className="space-y-2">
-                  {expiringByMonth.slice(0, 3).map((m) => (
-                    <div key={m._id} className="flex items-center justify-between p-2 bg-white rounded border border-amber-100">
-                      <span className="text-sm font-medium text-slate-700">{m._id}</span>
+                  {expiringThisMonth.slice(0, 5).map((c) => (
+                    <div
+                      key={c.case_id}
+                      className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800 rounded border border-amber-100 dark:border-amber-900/40 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/cases/${c.case_id}`)}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{c.client_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {c.lender_name} · Expires: {fmtDate(c.product_expiry_date)}
+                        </p>
+                      </div>
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-400">{fmt(c.loan_amount)}</p>
+                    </div>
+                  ))}
+                  {/* If expiringThisMonth is empty but byMonth has data, show month-level rows as fallback */}
+                  {expiringThisMonth.length === 0 && expiringByMonth.slice(0, 3).map((m) => (
+                    <div
+                      key={m._id}
+                      className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-amber-100 dark:border-amber-900/40 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer transition-colors"
+                      onClick={() => navigate('/cases')}
+                    >
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{m._id}</span>
                       <div className="text-right">
-                        <span className="text-sm font-bold text-amber-800">{m.count} products</span>
-                        <span className="text-xs text-slate-500 ml-2">{fmt(m.value)}</span>
+                        <span className="text-sm font-bold text-amber-800 dark:text-amber-400">{m.count} products</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">{fmt(m.value)}</span>
                       </div>
                     </div>
                   ))}
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')} className="mt-3 text-amber-700 hover:text-amber-900">
-                  View Retention Details <ArrowRight className="h-4 w-4 ml-1" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/cases')}
+                  className="mt-3 text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300"
+                >
+                  View All Cases <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </>
             )}
@@ -127,17 +156,17 @@ const Dashboard = () => {
         </Card>
 
         {/* Contact This Month */}
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white" data-testid="contact-this-month-section">
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-slate-800 dark:border-blue-800" data-testid="contact-this-month-section">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                 <Phone className="h-4 w-4 text-blue-600" />
               </div>
-              <CardTitle className="text-lg font-semibold text-blue-900">Contact Soon</CardTitle>
+              <CardTitle className="text-lg font-semibold text-blue-900 dark:text-blue-400">Contact Soon</CardTitle>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-blue-700">{expiringThisMonth.length}</p>
-              <p className="text-xs text-blue-600">clients to contact</p>
+              <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{expiringThisMonth.length}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-500">clients to contact</p>
             </div>
           </CardHeader>
           <CardContent>
@@ -149,16 +178,16 @@ const Dashboard = () => {
             ) : (
               <div className="space-y-2">
                 {expiringThisMonth.slice(0, 5).map((c) => (
-                  <div key={c.case_id} className="flex items-center justify-between p-2.5 bg-white rounded border border-blue-100 hover:bg-blue-50 cursor-pointer transition-colors" onClick={() => navigate(`/cases/${c.case_id}`)}>
+                  <div key={c.case_id} className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900/40 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors" onClick={() => navigate(`/cases/${c.case_id}`)}>
                     <div>
-                      <p className="text-sm font-medium text-slate-800">{c.client_name}</p>
-                      <p className="text-xs text-slate-500">{c.lender_name} · Expires: {fmtDate(c.product_expiry_date)}</p>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{c.client_name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{c.lender_name} · Expires: {fmtDate(c.product_expiry_date)}</p>
                     </div>
-                    <p className="text-sm font-bold text-slate-700">{fmt(c.loan_amount)}</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{fmt(c.loan_amount)}</p>
                   </div>
                 ))}
                 {expiringThisMonth.length > 5 && (
-                  <p className="text-xs text-blue-600 text-center mt-2">+ {expiringThisMonth.length - 5} more</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-500 text-center mt-2">+ {expiringThisMonth.length - 5} more</p>
                 )}
               </div>
             )}
@@ -363,10 +392,10 @@ const Dashboard = () => {
             <div className="space-y-2">
               {recentCases.map((c) => (
                 <div key={c.case_id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors" onClick={() => navigate(`/cases/${c.case_id}`)}>
-  <div>
+                  <div>
                     <p className="font-medium text-slate-900 dark:text-white">{c.client_name}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{c.lender_name || 'No lender'} · {fmt(c.loan_amount)}</p>
-  </div>
+                  </div>
                   <Badge className={statusColor(c.status)}>{fmtStatus(c.status)}</Badge>
                 </div>
               ))}
