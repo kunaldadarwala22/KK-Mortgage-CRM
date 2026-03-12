@@ -1050,7 +1050,52 @@ async def get_commission_analytics(request: Request, start_date: Optional[str] =
     if "_id" in summary_data:
         del summary_data["_id"]
     return {"by_month": by_month, "by_lender": by_lender, "by_product": by_product, "by_lead_source": by_lead_source, "by_advisor": [{"name": r["_id"]["name"], "advisor_id": r["_id"]["id"], "total": r["total"], "proc_fees": r["proc_fees"], "count": r["count"]} for r in by_advisor], "summary": summary_data}
+@api_router.get("/analytics/lender-usage")
+async def get_lender_usage(request: Request):
+    await get_current_user(request)
 
+    # All time
+    all_time = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None}, "product_type": "mortgage"}},
+        {"$group": {"_id": "$lender_name", "cases": {"$sum": 1}}},
+        {"$sort": {"cases": -1}},
+        {"$limit": 10}
+    ]).to_list(10)
+
+    # Last 12 months
+    twelve_months_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
+    last_12 = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None}, "product_type": "mortgage", "created_at": {"$gte": twelve_months_ago}}},
+        {"$group": {"_id": "$lender_name", "cases": {"$sum": 1}}},
+        {"$sort": {"cases": -1}},
+        {"$limit": 10}
+    ]).to_list(10)
+
+    # Buy to let
+    btl = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None}, "property_type": "buy_to_let"}},
+        {"$group": {"_id": "$lender_name", "cases": {"$sum": 1}}},
+        {"$sort": {"cases": -1}},
+        {"$limit": 10}
+    ]).to_list(10)
+
+    # Residential
+    residential = await db.cases.aggregate([
+        {"$match": {"lender_name": {"$ne": None}, "property_type": "residential"}},
+        {"$group": {"_id": "$lender_name", "cases": {"$sum": 1}}},
+        {"$sort": {"cases": -1}},
+        {"$limit": 10}
+    ]).to_list(10)
+
+    def fmt(data):
+        return [{"lender": i["_id"], "cases": i["cases"]} for i in data]
+
+    return {
+        "all_time": fmt(all_time),
+        "last_12_months": fmt(last_12),
+        "buy_to_let": fmt(btl),
+        "residential": fmt(residential),
+    }
 @api_router.get("/analytics/mortgage-types")
 async def get_mortgage_type_analytics(request: Request):
     await get_current_user(request)
