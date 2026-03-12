@@ -172,7 +172,7 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-grow bg-gradient-to-b from-slate-900 to-slate-800 overflow-y-auto">
@@ -200,7 +200,7 @@ const Layout = ({ children }) => {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between px-4 h-16">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -244,14 +244,14 @@ const Layout = ({ children }) => {
       {/* Main Content */}
       <div className="lg:pl-64">
         {/* Top Bar - Desktop */}
-        <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-slate-200">
+        <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-4 flex-1 max-w-xl relative" ref={searchRef}>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 type="search"
                 placeholder="Search clients, cases..."
-                className="pl-10 bg-slate-50 border-slate-200"
+                className="pl-10 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400 border-slate-200"
                 data-testid="global-search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
