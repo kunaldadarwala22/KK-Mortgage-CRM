@@ -111,8 +111,8 @@ const Analytics = () => {
   return (
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="analytics-page">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Analytics & Reports</h1>
-        <p className="text-slate-500 mt-1">Comprehensive business intelligence and insights</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>Analytics & Reports</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Comprehensive business intelligence and insights</p>
       </div>
 
       {/* KPI Summary */}
@@ -124,11 +124,11 @@ const Analytics = () => {
           { icon: Target, color: 'red', value: stats?.completed_cases || 0, label: 'Completed Cases' },
           { icon: Building2, color: 'orange', value: fmt(retention?.retention_pipeline_value), label: 'Retention Value' },
         ].map(({ icon: Icon, color, value, label }) => (
-          <Card key={label} className="border-slate-200">
+          <Card key={label} className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className={`h-10 w-10 rounded-full bg-${color}-100 flex items-center justify-center`}><Icon className={`h-5 w-5 text-${color}-600`} /></div>
-                <div><p className="text-2xl font-bold text-slate-900">{value}</p><p className="text-sm text-slate-500">{label}</p></div>
+                <div><p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p><p className="text-sm text-slate-500 dark:text-slate-400">{label}</p></div>
               </div>
             </CardContent>
           </Card>
@@ -148,7 +148,7 @@ const Analytics = () => {
 
         {/* Lead Analytics Tab */}
         <TabsContent value="leads" className="mt-6 space-y-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader><CardTitle>Lead Source Performance</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -175,20 +175,20 @@ const Analytics = () => {
             </CardContent>
           </Card>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Conversion by Lead Source</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <BarChart data={leadSourceData}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" /><YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" /><Tooltip /><Legend /><Bar dataKey="leads" fill="#2563EB" radius={[4, 4, 0, 0]} name="Total Leads" /><Bar dataKey="converted" fill="#16A34A" radius={[4, 4, 0, 0]} name="Converted" /></BarChart>
+                  <BarChart data={leadSourceData}><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" /><YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" /><Tooltip /><Legend /><Bar dataKey="leads" fill="#2563EB" radius={[4, 4, 0, 0]} name="Total Leads" /><Bar dataKey="converted" fill="#16A34A" radius={[4, 4, 0, 0]} name="Converted" /></BarChart>
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Top Referral Partners</CardTitle></CardHeader>
               <CardContent>
                 {referralData.length === 0 ? <div className="text-center py-8 text-slate-500"><Users className="h-12 w-12 mx-auto text-slate-300 mb-4" /><p>No referral data available</p></div> : (
                   <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                    <BarChart data={referralData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `£${v/1000}k`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" width={100} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="revenue" fill="#DC2626" radius={[0, 4, 4, 0]} name="Revenue" /></BarChart>
+                    <BarChart data={referralData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `£${v/1000}k`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" width={100} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="revenue" fill="#DC2626" radius={[0, 4, 4, 0]} name="Revenue" /></BarChart>
                   </ResponsiveContainer></div>
                 )}
               </CardContent>
@@ -200,11 +200,11 @@ const Analytics = () => {
         <TabsContent value="mortgage-types" className="mt-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {mortgageTypes?.types?.map((t) => (
-              <Card key={t.mortgage_type} className="border-slate-200">
+              <Card key={t.mortgage_type} className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                 <CardContent className="p-5">
                   <p className="text-sm text-slate-500 mb-1">{fmtSrc(t.mortgage_type)}</p>
-                  <p className="text-3xl font-bold text-slate-900">{t.case_count}</p>
-                  <p className="text-sm text-slate-500">{t.percentage}% of total</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white">{t.case_count}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t.percentage}% of total</p>
                   <div className="mt-2 pt-2 border-t border-slate-100">
                     <p className="text-xs text-slate-500">Commission: <span className="font-medium text-slate-700">{fmt(t.total_commission)}</span></p>
                     <p className="text-xs text-slate-500">Avg Loan: <span className="font-medium text-slate-700">{fmt(t.avg_loan)}</span></p>
@@ -214,7 +214,7 @@ const Analytics = () => {
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Mortgage Type Distribution</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -222,11 +222,11 @@ const Analytics = () => {
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Commission by Mortgage Type</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <BarChart data={mtBarData}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" /><YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><Tooltip formatter={(v) => fmt(v)} /><Legend /><Bar dataKey="commission" fill="#DC2626" radius={[4, 4, 0, 0]} name="Commission" /><Bar dataKey="avgLoan" fill="#2563EB" radius={[4, 4, 0, 0]} name="Avg Loan Size" /></BarChart>
+                  <BarChart data={mtBarData}><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" /><YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><Tooltip formatter={(v) => fmt(v)} /><Legend /><Bar dataKey="commission" fill="#DC2626" radius={[4, 4, 0, 0]} name="Commission" /><Bar dataKey="avgLoan" fill="#2563EB" radius={[4, 4, 0, 0]} name="Avg Loan Size" /></BarChart>
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
@@ -236,7 +236,7 @@ const Analytics = () => {
         {/* Commission Analytics Tab */}
         <TabsContent value="commission-analytics" className="mt-6 space-y-6">
           {/* Filters */}
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-3 items-end">
                 <div className="space-y-1"><Label className="text-xs">Start Date</Label><Input type="date" value={commFilters.start_date} onChange={(e) => setCommFilters({ ...commFilters, start_date: e.target.value })} className="w-40" /></div>
@@ -270,10 +270,10 @@ const Analytics = () => {
               { label: 'Total Client Fees', value: fmt(commAnalytics?.summary?.total_client_fees) },
               { label: 'Avg per Case', value: fmt(commAnalytics?.summary?.avg_commission) },
             ].map(({ label, value }) => (
-              <Card key={label} className="border-slate-200">
+              <Card key={label} className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                 <CardContent className="p-4 text-center">
                   <p className="text-xs text-slate-500">{label}</p>
-                  <p className="text-xl font-bold text-slate-900 mt-1">{value}</p>
+                  <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -281,23 +281,23 @@ const Analytics = () => {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Commission by Month</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <BarChart data={commByMonth}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" /><YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><Tooltip formatter={(v) => fmt(v)} /><Legend /><Bar dataKey="commission" fill="#DC2626" radius={[4, 4, 0, 0]} name="Commission" /><Bar dataKey="proc_fees" fill="#2563EB" radius={[4, 4, 0, 0]} name="Proc Fees" /></BarChart>
+                  <BarChart data={commByMonth}><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" /><YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><Tooltip formatter={(v) => fmt(v)} /><Legend /><Bar dataKey="commission" fill="#DC2626" radius={[4, 4, 0, 0]} name="Commission" /><Bar dataKey="proc_fees" fill="#2563EB" radius={[4, 4, 0, 0]} name="Proc Fees" /></BarChart>
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Commission by Lender</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <BarChart data={commByLender} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" width={100} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="value" fill="#DC2626" radius={[0, 4, 4, 0]} name="Commission" /></BarChart>
+                  <BarChart data={commByLender} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" width={100} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="value" fill="#DC2626" radius={[0, 4, 4, 0]} name="Commission" /></BarChart>
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Commission by Product Type</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -305,11 +305,11 @@ const Analytics = () => {
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Commission by Lead Source</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <BarChart data={commByLeadSrc} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" width={80} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="value" fill="#2563EB" radius={[0, 4, 4, 0]} name="Commission" /></BarChart>
+                  <BarChart data={commByLeadSrc} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" width={80} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="value" fill="#2563EB" radius={[0, 4, 4, 0]} name="Commission" /></BarChart>
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
@@ -317,7 +317,7 @@ const Analytics = () => {
 
           {/* Commission by Advisor Table */}
           {commByAdvisor.length > 0 && (
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Commission by Advisor</CardTitle></CardHeader>
               <CardContent>
                 <Table>
@@ -336,7 +336,7 @@ const Analytics = () => {
         {/* Revenue Tab */}
         <TabsContent value="revenue" className="mt-6 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Revenue by Lender</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -344,11 +344,11 @@ const Analytics = () => {
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Revenue by Lead Source</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <BarChart data={revenueBySource} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `£${v/1000}k`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" width={80} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="value" fill="#2563EB" radius={[0, 4, 4, 0]} name="Revenue" /></BarChart>
+                  <BarChart data={revenueBySource} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `£${v/1000}k`} /><YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" width={80} /><Tooltip formatter={(v) => fmt(v)} /><Bar dataKey="value" fill="#2563EB" radius={[0, 4, 4, 0]} name="Revenue" /></BarChart>
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
@@ -358,7 +358,7 @@ const Analytics = () => {
         {/* Pipeline Tab */}
         <TabsContent value="pipeline" className="mt-6 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Pipeline Stage Distribution</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -366,7 +366,7 @@ const Analytics = () => {
                 </ResponsiveContainer></div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle>Completion vs Lost Ratio</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px] flex items-center justify-center">
@@ -376,7 +376,7 @@ const Analytics = () => {
                       <div className="text-4xl text-slate-300">vs</div>
                       <div><p className="text-5xl font-bold text-red-600">{stats?.lost_cases || 0}</p><p className="text-slate-500 mt-2">Lost</p></div>
                     </div>
-                    <div className="mt-8"><p className="text-3xl font-bold text-slate-900">{stats?.conversion_rate || 0}%</p><p className="text-slate-500">Overall Conversion Rate</p></div>
+                    <div className="mt-8"><p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white">{stats?.conversion_rate || 0}%</p><p className="text-slate-500">Overall Conversion Rate</p></div>
                   </div>
                 </div>
               </CardContent>
@@ -386,15 +386,15 @@ const Analytics = () => {
 
         {/* Retention Tab */}
         <TabsContent value="retention" className="mt-6 space-y-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader><CardTitle>Products Expiring by Month</CardTitle></CardHeader>
             <CardContent>
               <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <AreaChart data={retentionByMonth}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" /><YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#94a3b8" /><YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `£${v/1000}k`} /><Tooltip formatter={(v, name) => name === 'value' ? fmt(v) : v} /><Legend /><Area yAxisId="left" type="monotone" dataKey="count" stroke="#2563EB" fill="#2563EB" fillOpacity={0.3} name="Cases Expiring" /><Area yAxisId="right" type="monotone" dataKey="value" stroke="#DC2626" fill="#DC2626" fillOpacity={0.3} name="Loan Value" /></AreaChart>
+                <AreaChart data={retentionByMonth}><CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" /><YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#94a3b8" /><YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `£${v/1000}k`} /><Tooltip formatter={(v, name) => name === 'value' ? fmt(v) : v} /><Legend /><Area yAxisId="left" type="monotone" dataKey="count" stroke="#2563EB" fill="#2563EB" fillOpacity={0.3} name="Cases Expiring" /><Area yAxisId="right" type="monotone" dataKey="value" stroke="#DC2626" fill="#DC2626" fillOpacity={0.3} name="Loan Value" /></AreaChart>
               </ResponsiveContainer></div>
             </CardContent>
           </Card>
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader><CardTitle>Products Expiring This Month</CardTitle></CardHeader>
             <CardContent>
               {retention?.expiring_this_month?.length === 0 ? (
@@ -402,8 +402,8 @@ const Analytics = () => {
               ) : (
                 <div className="space-y-3">
                   {retention?.expiring_this_month?.map((i) => (
-                    <div key={i.case_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                      <div><p className="font-medium">{i.client_name}</p><p className="text-sm text-slate-500">{i.lender_name} · Expires: {i.product_expiry_date}</p></div>
+                    <div key={i.case_id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                      <div><p className="font-medium">{i.client_name}</p><p className="text-sm text-slate-500 dark:text-slate-400">{i.lender_name} · Expires: {i.product_expiry_date}</p></div>
                       <p className="font-bold text-slate-900">{fmt(i.loan_amount)}</p>
                     </div>
                   ))}
@@ -423,7 +423,7 @@ const Analytics = () => {
                 { title: 'Most Used Lenders - Buy To Let', data: lenderUsage.buy_to_let, color: 'amber' },
                 { title: 'Most Used Lenders - Residential', data: lenderUsage.residential, color: 'green' },
               ].map((section) => (
-                <Card key={section.title} className="border-slate-200">
+                <Card key={section.title} className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                   <CardHeader><CardTitle className="text-base">{section.title}</CardTitle></CardHeader>
                   <CardContent>
                     {section.data && section.data.length > 0 ? (
