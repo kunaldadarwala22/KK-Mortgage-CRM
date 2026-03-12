@@ -348,14 +348,14 @@ const CaseDetail = () => {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>
                 {caseData.client_name || 'Case Details'}
               </h1>
               <Badge className={getStatusColor(caseData.status)}>
                 {formatStatus(caseData.status)}
               </Badge>
             </div>
-            <p className="text-slate-500 mt-1">
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
               {formatStatus(caseData.product_type)} •{' '}
               {isInsurance ? (caseData.insurance_provider || 'No provider') : (caseData.lender_name || 'No lender')}{' '}
               • {caseData.case_id}
@@ -386,10 +386,10 @@ const CaseDetail = () => {
       </div>
 
       {/* Quick Status Change */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
         <CardContent className="p-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600">Update Status:</span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Update Status:</span>
             <div className="flex gap-2 flex-wrap">
               {CASE_STATUSES.map((status) => (
                 <Button
@@ -423,7 +423,7 @@ const CaseDetail = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Product Information */}
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Briefcase className="h-5 w-5 text-slate-500" />
@@ -521,11 +521,11 @@ const CaseDetail = () => {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-slate-500">Product Type</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Product Type</p>
                         <p className="font-medium">{formatStatus(caseData.product_type)}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">
                           {isInsurance ? 'Insurance Type' : 'Mortgage Type'}
                         </p>
                         <p className="font-medium">
@@ -534,18 +534,18 @@ const CaseDetail = () => {
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">{isInsurance ? 'Provider' : 'Lender'}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{isInsurance ? 'Provider' : 'Lender'}</p>
                       <p className="font-medium flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-slate-400" />
                         {isInsurance ? (caseData.insurance_provider || '-') : (caseData.lender_name || '-')}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">{isInsurance ? 'Policy Reference Number' : 'Case Reference Number'}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{isInsurance ? 'Policy Reference Number' : 'Case Reference Number'}</p>
                       <p className="font-medium">{isInsurance ? (caseData.insurance_reference || '-') : (caseData.case_reference || '-')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Account Manager</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Account Manager</p>
                       <p className="font-medium flex items-center gap-2">
                         <User className="h-4 w-4 text-slate-400" />
                         Kunal Kapadia
@@ -558,7 +558,7 @@ const CaseDetail = () => {
 
             {/* ── MORTGAGE: Loan Details ── */}
             {!isInsurance && (
-              <Card className="border-slate-200">
+              <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <PoundSterling className="h-5 w-5 text-slate-500" />
@@ -627,49 +627,49 @@ const CaseDetail = () => {
                   ) : (
                     <>
                       <div>
-                        <p className="text-sm text-slate-500">Loan Amount</p>
-                        <p className="text-2xl font-bold text-slate-900">{formatCurrency(caseData.loan_amount)}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Loan Amount</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(caseData.loan_amount)}</p>
                       </div>
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <p className="text-sm text-slate-500">Deposit</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Deposit</p>
                           <p className="font-medium">{formatCurrency(caseData.deposit)}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-500">Deposit Source</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Deposit Source</p>
                           <p className="font-medium">{caseData.deposit_source || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-500">Property Value</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Property Value</p>
                           <p className="font-medium">{formatCurrency(caseData.property_value)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-slate-500">Term</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Term</p>
                           <p className="font-medium">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-500">LTV</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">LTV</p>
                           <p className="font-medium">{caseData.ltv ? `${caseData.ltv}%` : '-'}</p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">Interest Rate</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Interest Rate</p>
                         <p className="font-medium">{caseData.interest_rate ? `${caseData.interest_rate}%` : '-'}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-slate-500">Interest Rate Type</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Interest Rate Type</p>
                           <p className="font-medium">{caseData.interest_rate_type ? formatStatus(caseData.interest_rate_type) : '-'}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-500">Initial Product Term</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Initial Product Term</p>
                           <p className="font-medium">{caseData.initial_product_term ? `${caseData.initial_product_term} years` : '-'}</p>
                         </div>
                       </div>
                       {monthlyPayment && (
-                        <div className="p-3 bg-green-50 rounded-lg">
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                           <p className="text-sm text-green-700">Estimated Monthly Payment</p>
                           <p className="text-xl font-bold text-green-800">{formatCurrency(monthlyPayment)}</p>
                         </div>
@@ -682,7 +682,7 @@ const CaseDetail = () => {
 
             {/* ── INSURANCE: Policy Details ── */}
             {isInsurance && (
-              <Card className="border-blue-200 bg-blue-50/30">
+              <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-900/10">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5 text-blue-600" />
@@ -754,35 +754,35 @@ const CaseDetail = () => {
                   ) : (
                     <>
                       <div>
-                        <p className="text-sm text-slate-500">Reference Number</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Reference Number</p>
                         <p className="font-medium">{caseData.insurance_reference || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">Type of Cover</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Type of Cover</p>
                         <p className="font-medium">{formatStatus(caseData.insurance_cover_type)}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-slate-500">Monthly Premium</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Monthly Premium</p>
                           <p className="text-2xl font-bold text-blue-700">{formatCurrency(caseData.monthly_premium)}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-500">Sum Assured</p>
-                          <p className="text-2xl font-bold text-slate-900">{formatCurrency(caseData.sum_assured)}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Sum Assured</p>
+                          <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(caseData.sum_assured)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-slate-500">Guaranteed or Reviewable</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Guaranteed or Reviewable</p>
                           <p className="font-medium">{formatStatus(caseData.guaranteed_or_reviewable)}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-500">Term</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Term</p>
                           <p className="font-medium">{caseData.term_years ? `${caseData.term_years} years` : '-'}</p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">In Trust</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">In Trust</p>
                         <p className="font-medium">
                           {caseData.in_trust === true ? 'Yes' : caseData.in_trust === false ? 'No' : '-'}
                         </p>
@@ -794,7 +794,7 @@ const CaseDetail = () => {
             )}
 
             {/* Client Information */}
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5 text-slate-500" />
@@ -808,14 +808,14 @@ const CaseDetail = () => {
                     <div>
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Applicant 1 (Primary)</p>
                       <div
-  className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+  className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
   onClick={() => navigate(`/clients/${client.client_id}`)}
 >
   <p className="font-medium text-lg">{client.first_name} {client.last_name}</p>
-  {client.email && <p className="text-sm text-slate-500">{client.email}</p>}
-  {client.phone && <p className="text-sm text-slate-500">{client.phone}</p>}
-  {client.dob && <p className="text-sm text-slate-500">DOB: {formatDate(client.dob)}</p>}
-  {client.employment_type && <p className="text-sm text-slate-500">{client.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>}
+  {client.email && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{client.email}</p>}
+  {client.phone && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{client.phone}</p>}
+  {client.dob && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">DOB: {formatDate(client.dob)}</p>}
+  {client.employment_type && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{client.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>}
 </div>
                     </div>
                     {/* Additional Applicants */}
@@ -824,12 +824,12 @@ const CaseDetail = () => {
                         {client.additional_applicants.map((ap, idx) => (
                           <div key={idx}>
                             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Applicant {idx + 2}</p>
-                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100">
                               <p className="font-medium">{ap.first_name} {ap.last_name}</p>
-                              {ap.email && <p className="text-sm text-slate-500">{ap.email}</p>}
-                              {ap.phone && <p className="text-sm text-slate-500">{ap.phone}</p>}
-                              {ap.dob && <p className="text-sm text-slate-500">DOB: {formatDate(ap.dob)}</p>}
-                              {ap.employment_type && <p className="text-sm text-slate-500">{ap.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>}
+                              {ap.email && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{ap.email}</p>}
+                              {ap.phone && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{ap.phone}</p>}
+                              {ap.dob && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">DOB: {formatDate(ap.dob)}</p>}
+                              {ap.employment_type && <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{ap.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>}
                             </div>
                           </div>
                         ))}
@@ -846,7 +846,7 @@ const CaseDetail = () => {
             </Card>
 
             {/* Notes */}
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-slate-500" />
@@ -862,7 +862,7 @@ const CaseDetail = () => {
                     rows={5}
                   />
                 ) : (
-                  <p className="text-slate-600 whitespace-pre-wrap">
+                  <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
                     {caseData.notes || 'No notes added'}
                   </p>
                 )}
@@ -874,7 +874,7 @@ const CaseDetail = () => {
         {/* Commission Tab */}
         <TabsContent value="commission" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <PoundSterling className="h-5 w-5 text-slate-500" />
@@ -893,7 +893,7 @@ const CaseDetail = () => {
                       <Input type="number" step="0.01" placeholder="e.g. 35" value={editedCase.commission_percentage || ''} onChange={(e) => setEditedCase({ ...editedCase, commission_percentage: e.target.value })} data-testid="commission-pct-input" />
                     </div>
                     {editedCase.proc_fee_total && editedCase.commission_percentage && (
-                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200">
                         <p className="text-sm text-green-700">Your Commission (auto-calculated)</p>
                         <p className="text-2xl font-bold text-green-800">
                           {formatCurrency(Math.round((parseFloat(editedCase.proc_fee_total) * parseFloat(editedCase.commission_percentage) / 100) * 100) / 100)}
@@ -911,14 +911,14 @@ const CaseDetail = () => {
                 ) : (
                   <>
                     <div>
-                      <p className="text-sm text-slate-500">Proc Fee (from lender)</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Proc Fee (from lender)</p>
                       <p className="text-2xl font-bold text-blue-600">{formatCurrency(caseData.proc_fee_total)}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Your Commission Rate</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Your Commission Rate</p>
                       <p className="font-medium">{caseData.commission_percentage ? `${caseData.commission_percentage}%` : '-'}</p>
                     </div>
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200">
                       <p className="text-sm text-green-700">Your Commission</p>
                       <p className="text-2xl font-bold text-green-800">{formatCurrency(caseData.gross_commission)}</p>
                       {caseData.proc_fee_total && caseData.commission_percentage && (
@@ -928,7 +928,7 @@ const CaseDetail = () => {
                       )}
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Client Fee</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Client Fee</p>
                       <p className="text-2xl font-bold text-purple-600">{formatCurrency(caseData.client_fee)}</p>
                     </div>
                   </>
@@ -940,7 +940,7 @@ const CaseDetail = () => {
               <CardHeader><CardTitle>Commission Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-slate-600">Current Status:</span>
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Current Status:</span>
                   <Badge className={getCommissionStatusColor(caseData.commission_status)}>
                     {COMMISSION_STATUSES.find(s => s.key === caseData.commission_status)?.label || caseData.commission_status}
                   </Badge>
@@ -952,8 +952,8 @@ const CaseDetail = () => {
                     </Button>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <Label className="text-sm font-medium text-slate-600">Commission Paid Date</Label>
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Commission Paid Date</Label>
                   <div className="flex items-center gap-3 mt-2">
                     <Input type="date" className="w-48" max="9999-12-31" defaultValue={caseData.commission_paid_date || ''}
                       onBlur={async (e) => {
@@ -981,7 +981,7 @@ const CaseDetail = () => {
               <CardHeader><CardTitle>Client Fee Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-slate-600">Current Status:</span>
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Current Status:</span>
                   <Badge className={getCommissionStatusColor(caseData.client_fee_status || 'pending')}>
                     {COMMISSION_STATUSES.find(s => s.key === (caseData.client_fee_status || 'pending'))?.label || caseData.client_fee_status}
                   </Badge>
@@ -993,8 +993,8 @@ const CaseDetail = () => {
                     </Button>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <Label className="text-sm font-medium text-slate-600">Client Fee Paid Date</Label>
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Client Fee Paid Date</Label>
                   <div className="flex items-center gap-3 mt-2">
                     <Input type="date" className="w-48" max="9999-12-31" defaultValue={caseData.client_fee_paid_date || ''}
                       onBlur={async (e) => {
@@ -1022,7 +1022,7 @@ const CaseDetail = () => {
 
         {/* Compliance Tab */}
         <TabsContent value="compliance" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
@@ -1031,10 +1031,10 @@ const CaseDetail = () => {
                 </CardTitle>
                 {complianceChecklist.length > 0 && (
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-slate-600">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
                       {complianceChecklist.filter(i => i.completed).length}/{complianceChecklist.length} completed
                     </span>
-                    <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -1058,14 +1058,14 @@ const CaseDetail = () => {
                   <p>No compliance checklist available for this case type.</p>
                 </div>
               ) : (
-                <div className={`rounded-lg border ${complianceChecklist.every(i => i.completed) ? 'border-green-300 bg-green-50' : 'border-slate-200'}`}>
+                <div className={`rounded-lg border dark:border-slate-700 ${complianceChecklist.every(i => i.completed) ? 'border-green-300 bg-green-50' : 'border-slate-200'}`}>
                   {complianceChecklist.every(i => i.completed) && (
                     <div className="flex items-center gap-2 px-4 py-3 bg-green-100 rounded-t-lg border-b border-green-200" data-testid="compliance-complete-banner">
                       <CircleCheck className="h-5 w-5 text-green-600" />
                       <span className="text-sm font-semibold text-green-700">All compliance items completed</span>
                     </div>
                   )}
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-700">
                     {complianceChecklist.map((item, index) => (
                       <div
                         key={index}
@@ -1096,13 +1096,13 @@ const CaseDetail = () => {
 
         {/* Fact Find Tab */}
         <TabsContent value="factfind" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-slate-500" />
                 Fact Find Summary
               </CardTitle>
-              <p className="text-sm text-slate-500">Quick reference for conversations</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Quick reference for conversations</p>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Client Details */}
@@ -1175,7 +1175,7 @@ const CaseDetail = () => {
 
         {/* Dates Tab */}
         <TabsContent value="dates" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-slate-500" />
@@ -1193,12 +1193,12 @@ const CaseDetail = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="p-4 bg-slate-50 rounded-lg"><p className="text-sm text-slate-500 mb-1">Application Submitted</p><p className="font-medium text-lg">{formatDate(caseData.date_application_submitted)}</p></div>
-                  <div className="p-4 bg-blue-50 rounded-lg"><p className="text-sm text-blue-600 mb-1">Expected Completion</p><p className="font-medium text-lg">{formatDate(caseData.expected_completion_date)}</p></div>
-                  <div className="p-4 bg-green-50 rounded-lg"><p className="text-sm text-green-600 mb-1">Product Start Date</p><p className="font-medium text-lg">{formatDate(caseData.product_start_date)}</p></div>
-                  <div className="p-4 bg-yellow-50 rounded-lg"><p className="text-sm text-yellow-600 mb-1">Product Review Date</p><p className="font-medium text-lg">{formatDate(caseData.product_review_date)}</p></div>
-                  <div className="p-4 bg-red-50 rounded-lg"><p className="text-sm text-red-600 mb-1">Product Expiry Date</p><p className="font-medium text-lg">{formatDate(caseData.product_expiry_date)}</p></div>
-                  <div className="p-4 bg-slate-50 rounded-lg"><p className="text-sm text-slate-500 mb-1">Case Created</p><p className="font-medium text-lg">{formatDate(caseData.created_at)}</p></div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg"><p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Application Submitted</p><p className="font-medium text-lg">{formatDate(caseData.date_application_submitted)}</p></div>
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg"><p className="text-sm text-blue-600 mb-1">Expected Completion</p><p className="font-medium text-lg">{formatDate(caseData.expected_completion_date)}</p></div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg"><p className="text-sm text-green-600 mb-1">Product Start Date</p><p className="font-medium text-lg">{formatDate(caseData.product_start_date)}</p></div>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg"><p className="text-sm text-yellow-600 mb-1">Product Review Date</p><p className="font-medium text-lg">{formatDate(caseData.product_review_date)}</p></div>
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg"><p className="text-sm text-red-600 mb-1">Product Expiry Date</p><p className="font-medium text-lg">{formatDate(caseData.product_expiry_date)}</p></div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg"><p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Case Created</p><p className="font-medium text-lg">{formatDate(caseData.created_at)}</p></div>
                 </div>
               )}
             </CardContent>
@@ -1207,7 +1207,7 @@ const CaseDetail = () => {
 
         {/* Tasks Tab */}
         <TabsContent value="tasks" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <CheckSquare className="h-5 w-5 text-slate-500" />
@@ -1231,7 +1231,7 @@ const CaseDetail = () => {
                         <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task)} />
                         <div className={task.completed ? 'line-through text-slate-400' : ''}>
                           <p className="font-medium">{task.title}</p>
-                          <p className="text-sm text-slate-500">Due: {task.due_date} • {task.assigned_to_name || 'Unassigned'}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Due: {task.due_date} • {task.assigned_to_name || 'Unassigned'}</p>
                         </div>
                       </div>
                       <Badge className={task.priority === 'high' ? 'bg-red-100 text-red-800' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
