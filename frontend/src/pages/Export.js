@@ -87,7 +87,7 @@ const generateClientPDF = (client, cases, tasks, documents, sections) => {
 
   // Client Details
   if (sections.clientDetails) {
-    html += `<div class="section"><div class="section-title">Client Details</div><div class="grid-3">
+    html += `<div class="section"><div class="section-title">Client Details — Primary Applicant</div><div class="grid-3">
       <div class="field"><div class="label">Full Name</div><div class="value">${client.first_name} ${client.last_name}</div></div>
       <div class="field"><div class="label">Date of Birth</div><div class="value">${formatDate(client.dob)}</div></div>
       <div class="field"><div class="label">Email</div><div class="value">${client.email || '-'}</div></div>
@@ -95,11 +95,24 @@ const generateClientPDF = (client, cases, tasks, documents, sections) => {
       <div class="field"><div class="label">Postcode</div><div class="value">${client.postcode || '-'}</div></div>
       <div class="field"><div class="label">Employment</div><div class="value">${fmtStatus(client.employment_type)}</div></div>
       <div class="field"><div class="label">Income</div><div class="value">${formatCurrency(client.income)}</div></div>
-      <div class="field"><div class="label">Lead Source</div><div class="value">${fmtStatus(client.lead_source)}</div></div>
-      <div class="field"><div class="label">Advice Type</div><div class="value">${fmtStatus(client.advice_type)}</div></div>
     </div>
     ${client.current_address ? `<div class="field" style="margin-top:8px"><div class="label">Current Address</div><div class="value">${client.current_address}</div></div>` : ''}
     </div>`;
+
+    // Additional Applicants
+    const additionalApplicants = client.additional_applicants || [];
+    if (additionalApplicants.length > 0) {
+      additionalApplicants.forEach((app, idx) => {
+        html += `<div class="section"><div class="section-title">Additional Applicant ${idx + 1}</div><div class="grid-3">
+          <div class="field"><div class="label">Full Name</div><div class="value">${app.first_name || ''} ${app.last_name || ''}</div></div>
+          <div class="field"><div class="label">Date of Birth</div><div class="value">${formatDate(app.dob)}</div></div>
+          <div class="field"><div class="label">Email</div><div class="value">${app.email || '-'}</div></div>
+          <div class="field"><div class="label">Phone</div><div class="value">${app.phone || '-'}</div></div>
+          <div class="field"><div class="label">Employment</div><div class="value">${fmtStatus(app.employment_type)}</div></div>
+          <div class="field"><div class="label">Income</div><div class="value">${formatCurrency(app.income)}</div></div>
+        </div></div>`;
+      });
+    }
   }
 
   // Cases
@@ -114,15 +127,19 @@ const generateClientPDF = (client, cases, tasks, documents, sections) => {
         </div>
         <div class="grid-3">
           <div class="field"><div class="label">Case ID</div><div class="value">${c.case_id}</div></div>
+          <div class="field"><div class="label">Case Reference</div><div class="value">${c.case_reference || '-'}</div></div>
           <div class="field"><div class="label">Type</div><div class="value">${fmtStatus(isInsurance ? c.insurance_type : c.mortgage_type)}</div></div>
           <div class="field"><div class="label">Status</div><div class="value">${fmtStatus(c.status)}</div></div>
           ${!isInsurance ? `
           <div class="field"><div class="label">Loan Amount</div><div class="value">${formatCurrency(c.loan_amount)}</div></div>
-          <div class="field"><div class="label">Interest Rate</div><div class="value">${c.interest_rate ? c.interest_rate + '%' : '-'}</div></div>
-          <div class="field"><div class="label">Term</div><div class="value">${c.term_years ? c.term_years + ' years' : '-'}</div></div>
-          <div class="field"><div class="label">LTV</div><div class="value">${c.ltv ? c.ltv + '%' : '-'}</div></div>
           <div class="field"><div class="label">Property Value</div><div class="value">${formatCurrency(c.property_value)}</div></div>
           <div class="field"><div class="label">Deposit</div><div class="value">${formatCurrency(c.deposit)}</div></div>
+          <div class="field"><div class="label">LTV</div><div class="value">${c.ltv ? c.ltv + '%' : '-'}</div></div>
+          <div class="field"><div class="label">Interest Rate</div><div class="value">${c.interest_rate ? c.interest_rate + '%' : '-'}</div></div>
+          <div class="field"><div class="label">Interest Rate Type</div><div class="value">${fmtStatus(c.interest_rate_type)}</div></div>
+          <div class="field"><div class="label">Term</div><div class="value">${c.term_years ? c.term_years + ' years' : '-'}</div></div>
+          <div class="field"><div class="label">Initial Product Term</div><div class="value">${c.initial_product_term ? c.initial_product_term + ' years' : '-'}</div></div>
+          <div class="field"><div class="label">Security Address</div><div class="value">${c.security_address || '-'}</div></div>
           ` : `
           <div class="field"><div class="label">Monthly Premium</div><div class="value">${formatCurrency(c.monthly_premium)}</div></div>
           <div class="field"><div class="label">Sum Assured</div><div class="value">${formatCurrency(c.sum_assured)}</div></div>
