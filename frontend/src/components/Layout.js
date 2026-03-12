@@ -266,14 +266,14 @@ const Layout = ({ children }) => {
 
             {/* Search Results Dropdown */}
             {searchOpen && searchResults && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-slate-200 z-50 max-h-96 overflow-y-auto" data-testid="search-results">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 max-h-96 overflow-y-auto" data-testid="search-results">
                 {searchResults.clients?.length > 0 && (
                   <div>
-                    <div className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-50">CLIENTS</div>
+                    <div className="px-3 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900">CLIENTS</div>
                     {searchResults.clients.map((c) => (
                       <button
                         key={c.client_id}
-                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-left"
                         data-testid={`search-result-client-${c.client_id}`}
                         onClick={() => handleSearchSelect('client', c.client_id)}
                       >
@@ -288,11 +288,11 @@ const Layout = ({ children }) => {
                 )}
                 {searchResults.cases?.length > 0 && (
                   <div>
-                    <div className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-50">CASES</div>
+                    <div className="px-3 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900">CASES</div>
                     {searchResults.cases.map((c) => (
                       <button
                         key={c.case_id}
-                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-left"
                         data-testid={`search-result-case-${c.case_id}`}
                         onClick={() => handleSearchSelect('case', c.case_id)}
                       >
