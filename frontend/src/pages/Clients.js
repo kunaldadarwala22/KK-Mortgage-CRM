@@ -171,9 +171,9 @@ const Clients = () => {
   const formatStatus = (s) => s?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
 
   const getRowBg = (client) => {
-    if (client.case_status === 'lost_case') return 'bg-red-50 hover:bg-red-100';
-    if (client.expiring_soon) return 'bg-amber-50 hover:bg-amber-100';
-    return 'hover:bg-slate-50';
+    if (client.case_status === 'lost_case') return 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-slate-100';
+    if (client.expiring_soon) return 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 dark:text-slate-100';
+    return 'hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-100';
   };
 
   const clearFilters = () => setFilters({ lead_source: '', postcode: '' });
@@ -190,8 +190,8 @@ const Clients = () => {
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="clients-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Clients</h1>
-          <p className="text-slate-500 mt-1">Manage your client database</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>Clients</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your client database</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExportClients} disabled={exporting} data-testid="export-clients-btn">
@@ -249,8 +249,8 @@ const Clients = () => {
           {clients.length === 0 ? (
             <div className="text-center py-12" data-testid="no-clients-message">
               <Users className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-              <h3 className="text-lg font-medium text-slate-700 mb-2">No clients found</h3>
-              <p className="text-slate-500 mb-4">Get started by adding your first client.</p>
+              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">No clients found</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-4">Get started by adding your first client.</p>
               <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowAddDialog(true)}><Plus className="h-4 w-4 mr-2" />Add Client</Button>
             </div>
           ) : (
@@ -417,7 +417,7 @@ const Clients = () => {
                 </Button>
               </div>
               {newClient.additional_applicants.map((ap, idx) => (
-                <div key={idx} className="p-3 mb-3 bg-slate-50 border border-slate-200 rounded-lg" data-testid={`new-applicant-${idx}`}>
+                <div key={idx} className="p-3 mb-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg" data-testid={`new-applicant-${idx}`}>
                   <div className="flex items-center justify-between mb-2">
                     <Badge variant="outline" className="text-xs">Applicant {idx + 2}</Badge>
                     <Button
