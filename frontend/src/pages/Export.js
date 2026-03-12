@@ -356,14 +356,14 @@ const Export = () => {
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="export-page">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>
           Export Data
         </h1>
-        <p className="text-slate-500 mt-1">Download your CRM data in Excel or PDF format</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Download your CRM data in Excel or PDF format</p>
       </div>
 
       {/* ── CLIENT REPORT ─────────────────────────────────────────────────── */}
-      <Card className="border-slate-200 max-w-2xl">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 max-w-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
@@ -395,18 +395,18 @@ const Export = () => {
 
             {/* Search results dropdown */}
             {searchResults.length > 0 && !selectedClient && (
-              <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+              <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden dark:bg-slate-800 shadow-sm">
                 {searchResults.map((c) => (
                   <div
                     key={c.client_id}
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 border-b last:border-0 border-slate-100"
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 border-b last:border-0 border-slate-100 dark:border-slate-700"
                     onClick={() => { setSelectedClient(c); setSearchQuery(`${c.first_name} ${c.last_name}`); setSearchResults([]); }}
                   >
                     <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-semibold text-sm flex-shrink-0">
                       {c.first_name?.[0]}{c.last_name?.[0]}
                     </div>
                     <div>
-                      <p className="font-medium text-slate-900 text-sm">{c.first_name} {c.last_name}</p>
+                      <p className="font-medium text-slate-900 dark:text-white dark:text-white text-sm">{c.first_name} {c.last_name}</p>
                       <p className="text-xs text-slate-500">{c.email || '-'} · {c.phone || '-'}</p>
                     </div>
                   </div>
@@ -416,12 +416,12 @@ const Export = () => {
 
             {/* Selected client pill */}
             {selectedClient && (
-              <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                 <div className="h-8 w-8 rounded-full bg-red-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                   {selectedClient.first_name?.[0]}{selectedClient.last_name?.[0]}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-slate-900 text-sm">{selectedClient.first_name} {selectedClient.last_name}</p>
+                  <p className="font-semibold text-slate-900 dark:text-white text-sm">{selectedClient.first_name} {selectedClient.last_name}</p>
                   <p className="text-xs text-slate-500">{selectedClient.email}</p>
                 </div>
                 <Check className="h-5 w-5 text-green-600" />
@@ -434,14 +434,14 @@ const Export = () => {
             <Label className="text-sm font-medium text-slate-700">What to include</Label>
             <div className="space-y-2">
               {sectionOptions.map((opt) => (
-                <div key={opt.key} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                <div key={opt.key} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
                   <Checkbox
                     id={opt.key}
                     checked={sections[opt.key]}
                     onCheckedChange={(v) => setSections({ ...sections, [opt.key]: v })}
                   />
                   <div>
-                    <label htmlFor={opt.key} className="font-medium text-slate-900 text-sm cursor-pointer">{opt.label}</label>
+                    <label htmlFor={opt.key} className="font-medium text-slate-900 dark:text-white dark:text-white text-sm cursor-pointer">{opt.label}</label>
                     <p className="text-xs text-slate-500">{opt.description}</p>
                   </div>
                 </div>
@@ -479,7 +479,7 @@ const Export = () => {
             </Button>
           </div>
 
-          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-xs text-blue-800">
               <strong>PDF:</strong> Opens a print-ready page — select <strong>"Save as PDF"</strong> in the print dialog to save it.
               &nbsp;·&nbsp; <strong>Excel:</strong> Requires the backend <code>/api/export/client/[id]/excel</code> endpoint.
@@ -489,7 +489,7 @@ const Export = () => {
       </Card>
 
       {/* ── BULK EXCEL EXPORT (existing) ──────────────────────────────────── */}
-      <Card className="border-slate-200 max-w-2xl">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 max-w-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
@@ -506,13 +506,13 @@ const Export = () => {
             <h3 className="text-sm font-medium text-slate-700 mb-3">What's included:</h3>
             <div className="space-y-3">
               {exportItems.map((item) => (
-                <div key={item.label} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                <div key={item.label} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
                   <div className="h-8 w-8 rounded bg-white flex items-center justify-center border border-slate-200">
                     <item.icon className="h-4 w-4 text-slate-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">{item.label}</p>
-                    <p className="text-sm text-slate-500">{item.description}</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{item.label}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
                   </div>
                   <Check className="h-5 w-5 text-green-500 ml-auto flex-shrink-0" />
                 </div>
@@ -543,16 +543,16 @@ const Export = () => {
       </Card>
 
       {/* Format Info */}
-      <Card className="border-slate-200 max-w-2xl">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 max-w-2xl">
         <CardHeader>
           <CardTitle className="text-lg">Export Format Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
-            <div><p className="text-sm text-slate-500">File Format</p><p className="font-medium">.xlsx / .pdf</p></div>
-            <div><p className="text-sm text-slate-500">Compatible With</p><p className="font-medium">Excel, Google Sheets, Numbers, Adobe</p></div>
-            <div><p className="text-sm text-slate-500">Data Included</p><p className="font-medium">All records from database</p></div>
-            <div><p className="text-sm text-slate-500">Sensitive Data</p><p className="font-medium">Passwords excluded</p></div>
+            <div><p className="text-sm text-slate-500 dark:text-slate-400">File Format</p><p className="font-medium">.xlsx / .pdf</p></div>
+            <div><p className="text-sm text-slate-500 dark:text-slate-400">Compatible With</p><p className="font-medium">Excel, Google Sheets, Numbers, Adobe</p></div>
+            <div><p className="text-sm text-slate-500 dark:text-slate-400">Data Included</p><p className="font-medium">All records from database</p></div>
+            <div><p className="text-sm text-slate-500 dark:text-slate-400">Sensitive Data</p><p className="font-medium">Passwords excluded</p></div>
           </div>
         </CardContent>
       </Card>
