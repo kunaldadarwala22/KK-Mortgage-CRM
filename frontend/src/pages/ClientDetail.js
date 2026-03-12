@@ -199,7 +199,7 @@ const ClientDetail = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>
               {client.first_name} {client.last_name}
             </h1>
             <div className="flex items-center gap-2 mt-1">
@@ -225,11 +225,11 @@ const ClientDetail = () => {
 
       {/* Client Summary Banner */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="client-summary-banner">
-        <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-slate-900">{cases.length}</p><p className="text-xs text-slate-500">Total Applications</p></CardContent></Card>
-        <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-blue-600">{activeCases.length}</p><p className="text-xs text-slate-500">Active Cases</p></CardContent></Card>
-        <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-600">{fmt(totalCommission)}</p><p className="text-xs text-slate-500">Total Commission</p></CardContent></Card>
-        <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-purple-600">{fmt(totalProcFees)}</p><p className="text-xs text-slate-500">Total Proc Fees</p></CardContent></Card>
-        <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-slate-900">{documents.length}</p><p className="text-xs text-slate-500">Documents</p></CardContent></Card>
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-2xl font-bold text-slate-900 dark:text-white">{cases.length}</p><p className="text-xs text-slate-500 dark:text-slate-400">Total Applications</p></CardContent></Card>
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-2xl font-bold text-blue-600">{activeCases.length}</p><p className="text-xs text-slate-500 dark:text-slate-400">Active Cases</p></CardContent></Card>
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-2xl font-bold text-green-600">{fmt(totalCommission)}</p><p className="text-xs text-slate-500 dark:text-slate-400">Total Commission</p></CardContent></Card>
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-2xl font-bold text-purple-600">{fmt(totalProcFees)}</p><p className="text-xs text-slate-500 dark:text-slate-400">Total Proc Fees</p></CardContent></Card>
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-2xl font-bold text-slate-900 dark:text-white">{documents.length}</p><p className="text-xs text-slate-500 dark:text-slate-400">Documents</p></CardContent></Card>
       </div>
 
       <Tabs defaultValue="details" className="w-full">
@@ -244,7 +244,7 @@ const ClientDetail = () => {
         {/* Details Tab */}
         <TabsContent value="details" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-slate-500" />Personal Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {editing ? (
@@ -263,17 +263,17 @@ const ClientDetail = () => {
                 ) : (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><p className="text-sm text-slate-500">Full Name</p><p className="font-medium">{client.first_name} {client.last_name}</p></div>
-                      <div><p className="text-sm text-slate-500">Date of Birth</p><p className="font-medium">{fmtDate(client.dob)}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Full Name</p><p className="font-medium">{client.first_name} {client.last_name}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Date of Birth</p><p className="font-medium">{fmtDate(client.dob)}</p></div>
                     </div>
                     <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-slate-400" /><span>{client.email || '-'}</span></div>
                     <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" /><span>{client.phone || '-'}</span></div>
                     <div className="flex items-start gap-2">
                       <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
-                      <div><p>{client.current_address || '-'}</p><p className="text-sm text-slate-500">{client.postcode}</p></div>
+                      <div><p>{client.current_address || '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{client.postcode}</p></div>
                     </div>
                     {client.security_property_address && (
-                      <div><p className="text-sm text-slate-500">Security Property</p><p className="font-medium">{client.security_property_address}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Security Property</p><p className="font-medium">{client.security_property_address}</p></div>
                     )}
                   </>
                 )}
@@ -292,12 +292,12 @@ const ClientDetail = () => {
                   <div className="flex items-center gap-2 mb-3">
                     <Badge className="bg-red-100 text-red-800">Applicant 1 (Primary)</Badge>
                   </div>
-                  <div className="p-4 border border-slate-200 rounded-lg bg-white">
+                  <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div><p className="text-xs text-slate-500">Full Name</p><p className="font-medium text-sm">{client.first_name} {client.last_name}</p></div>
-                      <div><p className="text-xs text-slate-500">Date of Birth</p><p className="text-sm">{fmtDate(client.dob)}</p></div>
-                      <div><p className="text-xs text-slate-500">Email</p><p className="text-sm">{client.email || '-'}</p></div>
-                      <div><p className="text-xs text-slate-500">Phone</p><p className="text-sm">{client.phone || '-'}</p></div>
+                      <div><p className="text-xs text-slate-500 dark:text-slate-400">Full Name</p><p className="font-medium text-sm">{client.first_name} {client.last_name}</p></div>
+                      <div><p className="text-xs text-slate-500 dark:text-slate-400">Date of Birth</p><p className="text-sm">{fmtDate(client.dob)}</p></div>
+                      <div><p className="text-xs text-slate-500 dark:text-slate-400">Email</p><p className="text-sm">{client.email || '-'}</p></div>
+                      <div><p className="text-xs text-slate-500 dark:text-slate-400">Phone</p><p className="text-sm">{client.phone || '-'}</p></div>
                     </div>
                   </div>
                 </div>
@@ -312,15 +312,15 @@ const ClientDetail = () => {
                             <Trash2 className="h-3.5 w-3.5 mr-1" />Remove
                           </Button>
                         </div>
-                        <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                        <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900">
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div><p className="text-xs text-slate-500">First Name</p><p className="font-medium text-sm">{ap.first_name || ap.full_name || '-'}</p></div>
-                            <div><p className="text-xs text-slate-500">Surname</p><p className="font-medium text-sm">{ap.last_name || '-'}</p></div>
-                            <div><p className="text-xs text-slate-500">Date of Birth</p><p className="text-sm">{fmtDate(ap.dob)}</p></div>
-                            <div><p className="text-xs text-slate-500">Email</p><p className="text-sm">{ap.email || '-'}</p></div>
-                            <div><p className="text-xs text-slate-500">Phone</p><p className="text-sm">{ap.phone || '-'}</p></div>
-                            <div><p className="text-xs text-slate-500">Income</p><p className="text-sm">{ap.income ? fmt(ap.income) : '-'}</p></div>
-                            <div><p className="text-xs text-slate-500">Employment Type</p><p className="text-sm">{ap.employment_type ? ap.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p></div>
+                            <div><p className="text-xs text-slate-500 dark:text-slate-400">First Name</p><p className="font-medium text-sm">{ap.first_name || ap.full_name || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500 dark:text-slate-400">Surname</p><p className="font-medium text-sm">{ap.last_name || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500 dark:text-slate-400">Date of Birth</p><p className="text-sm">{fmtDate(ap.dob)}</p></div>
+                            <div><p className="text-xs text-slate-500 dark:text-slate-400">Email</p><p className="text-sm">{ap.email || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500 dark:text-slate-400">Phone</p><p className="text-sm">{ap.phone || '-'}</p></div>
+                            <div><p className="text-xs text-slate-500 dark:text-slate-400">Income</p><p className="text-sm">{ap.income ? fmt(ap.income) : '-'}</p></div>
+                            <div><p className="text-xs text-slate-500 dark:text-slate-400">Employment Type</p><p className="text-sm">{ap.employment_type ? ap.employment_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</p></div>
                           </div>
                         </div>
                       </div>
@@ -328,12 +328,12 @@ const ClientDetail = () => {
                   </div>
                 )}
                 {(!client.additional_applicants || client.additional_applicants.length === 0) && (
-                  <p className="text-sm text-slate-500 text-center py-2 mt-2">No additional applicants. Click "Add Additional Applicant" for joint applications.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-2 mt-2">No additional applicants. Click "Add Additional Applicant" for joint applications.</p>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle className="flex items-center gap-2"><PoundSterling className="h-5 w-5 text-slate-500" />Financial Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {editing ? (
@@ -357,24 +357,24 @@ const ClientDetail = () => {
                 ) : (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><p className="text-sm text-slate-500">Income</p><p className="font-medium">{fmt(client.income)}</p></div>
-                      <div><p className="text-sm text-slate-500">Employment</p><p className="font-medium">{fmtStatus(client.employment_type)}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Income</p><p className="font-medium">{fmt(client.income)}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Employment</p><p className="font-medium">{fmtStatus(client.employment_type)}</p></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><p className="text-sm text-slate-500">Property Price</p><p className="font-medium">{fmt(client.property_price)}</p></div>
-                      <div><p className="text-sm text-slate-500">Loan Amount</p><p className="font-medium">{fmt(client.loan_amount)}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Property Price</p><p className="font-medium">{fmt(client.property_price)}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Loan Amount</p><p className="font-medium">{fmt(client.loan_amount)}</p></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><p className="text-sm text-slate-500">Deposit</p><p className="font-medium">{fmt(client.deposit)}</p></div>
-                      <div><p className="text-sm text-slate-500">LTV</p><p className="font-medium">{client.loan_amount && client.property_price ? `${((client.loan_amount / client.property_price) * 100).toFixed(1)}%` : '-'}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Deposit</p><p className="font-medium">{fmt(client.deposit)}</p></div>
+                      <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">LTV</p><p className="font-medium">{client.loan_amount && client.property_price ? `${((client.loan_amount / client.property_price) * 100).toFixed(1)}%` : '-'}</p></div>
                     </div>
-                    {client.credit_issues && <div className="p-3 bg-red-50 rounded-lg"><p className="text-sm font-medium text-red-800">Credit Issues</p><p className="text-sm text-red-600">{client.credit_issues_notes || 'No details'}</p></div>}
+                    {client.credit_issues && <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg"><p className="text-sm font-medium text-red-800">Credit Issues</p><p className="text-sm text-red-600">{client.credit_issues_notes || 'No details'}</p></div>}
                   </>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-slate-500" />Compliance</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {editing ? (
@@ -394,19 +394,19 @@ const ClientDetail = () => {
                   <>
                     <div className="flex items-center gap-2"><div className={`h-3 w-3 rounded-full ${client.fact_find_complete ? 'bg-green-500' : 'bg-slate-300'}`} /><span>Fact Find Complete</span></div>
                     <div className="flex items-center gap-2"><div className={`h-3 w-3 rounded-full ${client.vulnerable_customer ? 'bg-orange-500' : 'bg-slate-300'}`} /><span>Vulnerable Customer</span></div>
-                    <div><p className="text-sm text-slate-500">Advice Type</p><p className="font-medium">{fmtStatus(client.advice_type)}</p></div>
-                    <div><p className="text-sm text-slate-500">GDPR Consent Date</p><p className="font-medium">{fmtDate(client.gdpr_consent_date)}</p></div>
+                    <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Advice Type</p><p className="font-medium">{fmtStatus(client.advice_type)}</p></div>
+                    <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">GDPR Consent Date</p><p className="font-medium">{fmtDate(client.gdpr_consent_date)}</p></div>
                   </>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
               <CardHeader><CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5 text-slate-500" />Lead Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div><p className="text-sm text-slate-500">Lead Source</p><p className="font-medium">{fmtStatus(client.lead_source)}</p></div>
-                {client.referral_partner_name && <div><p className="text-sm text-slate-500">Referral Partner</p><p className="font-medium">{client.referral_partner_name}</p></div>}
-                <div><p className="text-sm text-slate-500">Account Manager</p><p className="font-medium">Kunal Kapadia</p></div>
+                <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Lead Source</p><p className="font-medium">{fmtStatus(client.lead_source)}</p></div>
+                {client.referral_partner_name && <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Referral Partner</p><p className="font-medium">{client.referral_partner_name}</p></div>}
+                <div><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Account Manager</p><p className="font-medium">Kunal Kapadia</p></div>
               </CardContent>
             </Card>
           </div>
@@ -414,11 +414,11 @@ const ClientDetail = () => {
 
         {/* Applications / Cases Tab */}
         <TabsContent value="cases" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Linked Applications</CardTitle>
-                <p className="text-sm text-slate-500 mt-1">All mortgage and insurance applications for {client.first_name}. Client details are shared across all applications.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400 mt-1">All mortgage and insurance applications for {client.first_name}. Client details are shared across all applications.</p>
               </div>
               <Button className="bg-red-600 hover:bg-red-700" onClick={openNewCaseDialog} data-testid="add-case-btn">
                 <Plus className="h-4 w-4 mr-2" />New Application
@@ -428,14 +428,14 @@ const ClientDetail = () => {
               {cases.length === 0 ? (
                 <div className="text-center py-8">
                   <Briefcase className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                  <h3 className="text-lg font-medium text-slate-700">No applications yet</h3>
+                  <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No applications yet</h3>
                   <p className="text-slate-500 mb-4">Create the first application for this client. Their details will be automatically linked.</p>
                   <Button className="bg-red-600 hover:bg-red-700" onClick={openNewCaseDialog}><Plus className="h-4 w-4 mr-2" />New Application</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {cases.map((c, idx) => (
-                    <div key={c.case_id} className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-card-${idx}`}>
+                    <div key={c.case_id} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-card-${idx}`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <Badge className={statusColor(c.status)}>{fmtStatus(c.status)}</Badge>
@@ -479,15 +479,15 @@ const ClientDetail = () => {
               <div className="space-y-6">
                 {/* Portfolio Summary */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Total Properties</p><p className="text-2xl font-bold text-slate-900">{mortgageCases.length}</p></CardContent></Card>
-                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Total Loan Amount</p><p className="text-2xl font-bold text-slate-900">{fmtCurrency(totalLoan)}</p></CardContent></Card>
-                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Total Property Value</p><p className="text-2xl font-bold text-slate-900">{fmtCurrency(totalPropValue)}</p></CardContent></Card>
-                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Average LTV</p><p className="text-2xl font-bold text-slate-900">{avgLtv}%</p></CardContent></Card>
-                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Residential</p><p className="text-2xl font-bold text-blue-700">{residential}</p></CardContent></Card>
-                  <Card className="border-slate-200"><CardContent className="p-4 text-center"><p className="text-xs text-slate-500">Buy-To-Let</p><p className="text-2xl font-bold text-amber-700">{btl}</p></CardContent></Card>
+                  <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-xs text-slate-500 dark:text-slate-400">Total Properties</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{mortgageCases.length}</p></CardContent></Card>
+                  <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-xs text-slate-500 dark:text-slate-400">Total Loan Amount</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{fmtCurrency(totalLoan)}</p></CardContent></Card>
+                  <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-xs text-slate-500 dark:text-slate-400">Total Property Value</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{fmtCurrency(totalPropValue)}</p></CardContent></Card>
+                  <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-xs text-slate-500 dark:text-slate-400">Average LTV</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{avgLtv}%</p></CardContent></Card>
+                  <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-xs text-slate-500 dark:text-slate-400">Residential</p><p className="text-2xl font-bold text-blue-700">{residential}</p></CardContent></Card>
+                  <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800"><CardContent className="p-4 text-center dark:bg-slate-800"><p className="text-xs text-slate-500 dark:text-slate-400">Buy-To-Let</p><p className="text-2xl font-bold text-amber-700">{btl}</p></CardContent></Card>
                 </div>
                 {/* Portfolio Table */}
-                <Card className="border-slate-200">
+                <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5 text-slate-500" />Mortgage Portfolio</CardTitle>
                   </CardHeader>
@@ -515,10 +515,10 @@ const ClientDetail = () => {
                           </TableHeader>
                           <TableBody>
                             {mortgageCases.map((c) => (
-                              <TableRow key={c.case_id} className={isExpiringSoon(c.product_expiry_date) ? 'bg-amber-50' : ''}>
+                              <TableRow key={c.case_id} className={isExpiringSoon(c.product_expiry_date) ? 'bg-amber-50 dark:bg-amber-900/20' : ''}>
                                 <TableCell className="font-medium text-sm max-w-[180px]">
                                   <div>{c.security_address || '-'}</div>
-                                  {c.security_postcode && <div className="text-xs text-slate-500">{c.security_postcode}</div>}
+                                  {c.security_postcode && <div className="text-xs text-slate-500 dark:text-slate-400">{c.security_postcode}</div>}
                                 </TableCell>
                                 <TableCell><Badge variant="outline" className="text-xs">{c.property_type === 'buy_to_let' ? 'BTL' : 'Res'}</Badge></TableCell>
                                 <TableCell className="text-sm">{c.lender_name || '-'}</TableCell>
@@ -536,7 +536,7 @@ const ClientDetail = () => {
                                     </div>
                                   ) : '-'}
                                 </TableCell>
-                                <TableCell><Badge className={c.status === 'completed' ? 'bg-green-100 text-green-700' : c.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}>{fmtStatus(c.status)}</Badge></TableCell>
+                                <TableCell><Badge className={c.status === 'completed' ? 'bg-green-100 text-green-700' : c.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700 dark:text-slate-300'}>{fmtStatus(c.status)}</Badge></TableCell>
                                 <TableCell>
                                   <div className="flex gap-1">
                                     <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`portfolio-view-${c.case_id}`}>View</Button>
@@ -557,11 +557,11 @@ const ClientDetail = () => {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Documents</CardTitle>
-                <p className="text-sm text-slate-500 mt-1">Documents are linked to {client.first_name}'s profile and accessible across all applications.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400 mt-1">Documents are linked to {client.first_name}'s profile and accessible across all applications.</p>
               </div>
               <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowDocDialog(true)} data-testid="add-document-btn"><Upload className="h-4 w-4 mr-2" />Upload Document</Button>
             </CardHeader>
@@ -570,8 +570,8 @@ const ClientDetail = () => {
                 <div className="text-center py-8"><FileText className="h-12 w-12 mx-auto text-slate-300 mb-4" /><p className="text-slate-500">No documents uploaded</p></div>
               ) : (
                 <div className="space-y-3">{documents.map((doc) => (
-                  <div key={doc.document_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                    <div className="flex items-center gap-3"><FileText className="h-8 w-8 text-slate-400" /><div><p className="font-medium">{doc.file_name}</p><p className="text-sm text-slate-500">{fmtStatus(doc.document_type)} · {fmtDate(doc.uploaded_at)}</p></div></div>
+                  <div key={doc.document_id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                    <div className="flex items-center gap-3"><FileText className="h-8 w-8 text-slate-400" /><div><p className="font-medium">{doc.file_name}</p><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{fmtStatus(doc.document_type)} · {fmtDate(doc.uploaded_at)}</p></div></div>
                     <Button variant="ghost" size="icon" onClick={() => { documentsAPI.delete(doc.document_id).then(() => { toast.success('Deleted'); loadData(); }).catch(() => toast.error('Failed')); }} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}</div>
@@ -582,7 +582,7 @@ const ClientDetail = () => {
 
         {/* Tasks Tab */}
         <TabsContent value="tasks" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Tasks</CardTitle>
               <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowTaskDialog(true)} data-testid="add-task-btn"><Plus className="h-4 w-4 mr-2" />Add Task</Button>
@@ -595,7 +595,7 @@ const ClientDetail = () => {
                   <div key={task.task_id} className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${task.completed ? 'bg-slate-50 border-slate-200' : 'border-slate-200'}`}>
                     <div className="flex items-center gap-3">
                       <Checkbox checked={task.completed} onCheckedChange={() => tasksAPI.update(task.task_id, { completed: !task.completed }).then(() => loadData())} />
-                      <div className={task.completed ? 'line-through text-slate-400' : ''}><p className="font-medium">{task.title}</p><p className="text-sm text-slate-500">Due: {fmtDate(task.due_date)}</p></div>
+                      <div className={task.completed ? 'line-through text-slate-400' : ''}><p className="font-medium">{task.title}</p><p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">Due: {fmtDate(task.due_date)}</p></div>
                     </div>
                     <Badge className={task.priority === 'high' ? 'bg-red-100 text-red-800' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>{task.priority}</Badge>
                   </div>
