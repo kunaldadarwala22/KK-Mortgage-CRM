@@ -79,6 +79,11 @@ const Clients = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
 
+  // Bulk delete state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   useEffect(() => {
     if (location.state?.openAddDialog) {
       setShowAddDialog(true);
@@ -86,7 +91,7 @@ const Clients = () => {
     }
   }, [location.state]);
 
-  useEffect(() => { loadClients(); }, [filters]);
+  useEffect(() => { loadClients(); }, [filters]); // eslint-disable-line
 
   const loadClients = async () => {
     try {
@@ -95,6 +100,7 @@ const Clients = () => {
       if (search) params.search = search;
       const data = await clientsAPI.getAll(params);
       setClients(data.clients || []);
+      setSelectedIds(new Set()); // clear selection on reload
     } catch (err) {
       console.error('Failed to load clients:', err);
       toast.error('Failed to load clients');
@@ -132,6 +138,44 @@ const Clients = () => {
     } catch (err) {
       toast.error(err.message || 'Failed to delete client');
     }
+  };
+
+  // Bulk selection helpers
+  const allSelected = clients.length > 0 && clients.every(c => selectedIds.has(c.client_id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(clients.map(c => c.client_id)));
+    }
+  };
+
+  const toggleSelectOne = (id) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of selectedIds) {
+      try {
+        await clientsAPI.delete(id);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteDialogOpen(false);
+    if (successCount > 0) toast.success(`${successCount} client${successCount > 1 ? 's' : ''} deleted`);
+    if (failCount > 0) toast.error(`${failCount} client${failCount > 1 ? 's' : ''} could not be deleted`);
+    loadClients();
   };
 
   const handleExportClients = async () => {
@@ -237,13 +281,38 @@ const Clients = () => {
         </CardContent>
       </Card>
 
-      {/* Row Legend */}
-      <div className="flex gap-4 text-xs text-slate-500">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block" /> Lost Case</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 inline-block" /> Expiring Soon</span>
+      {/* Row Legend + Bulk Delete Bar */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-4 text-xs text-slate-500">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block" /> Lost Case</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 inline-block" /> Expiring Soon</span>
+        </div>
+        {someSelected && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <span className="text-sm font-medium text-red-700 dark:text-red-400">
+              {selectedIds.size} client{selectedIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-slate-500 hover:text-slate-700 h-7 px-2"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />Deselect
+            </Button>
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 h-7"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              data-testid="bulk-delete-clients-btn"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" />Delete Selected
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Client Table - Only client info, no case metrics */}
+      {/* Client Table */}
       <Card className="border-slate-200">
         <CardContent className="p-0">
           {clients.length === 0 ? (
@@ -258,6 +327,14 @@ const Clients = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[44px] pl-4">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all clients"
+                        data-testid="select-all-clients"
+                      />
+                    </TableHead>
                     <TableHead>Client Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
@@ -271,7 +348,20 @@ const Clients = () => {
                 </TableHeader>
                 <TableBody>
                   {clients.map((c) => (
-                    <TableRow key={c.client_id} className={`cursor-pointer transition-colors ${getRowBg(c)}`} onClick={() => navigate(`/clients/${c.client_id}`)} data-testid={`client-row-${c.client_id}`}>
+                    <TableRow
+                      key={c.client_id}
+                      className={`cursor-pointer transition-colors ${selectedIds.has(c.client_id) ? 'bg-red-50/60 dark:bg-red-900/10' : getRowBg(c)}`}
+                      onClick={() => navigate(`/clients/${c.client_id}`)}
+                      data-testid={`client-row-${c.client_id}`}
+                    >
+                      <TableCell className="pl-4" onClick={(e) => { e.stopPropagation(); toggleSelectOne(c.client_id); }}>
+                        <Checkbox
+                          checked={selectedIds.has(c.client_id)}
+                          onCheckedChange={() => toggleSelectOne(c.client_id)}
+                          aria-label={`Select ${c.first_name} ${c.last_name}`}
+                          data-testid={`select-client-${c.client_id}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <p className="font-medium">{c.first_name} {c.last_name}</p>
                       </TableCell>
@@ -314,7 +404,7 @@ const Clients = () => {
         </CardContent>
       </Card>
 
-      {/* Add Client Dialog - Removed: Security Address, Property Price, Loan Amount, Deposit */}
+      {/* Add Client Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -330,7 +420,6 @@ const Clients = () => {
           </DialogHeader>
           <div className="pb-2">
             <ScreenshotImport type="client" onExtracted={(data) => {
-              // Handle multi-applicant format
               const applicants = data.applicants || [data];
               const primary = applicants[0] || {};
               setNewClient(prev => ({
@@ -463,7 +552,7 @@ const Clients = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Single Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -475,6 +564,24 @@ const Clients = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteClient} data-testid="confirm-delete-btn">Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} Client{selectedIds.size > 1 ? 's' : ''}</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedIds.size} selected client{selectedIds.size > 1 ? 's' : ''}? This will also delete all associated cases, documents, and tasks. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)} disabled={bulkDeleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting} data-testid="confirm-bulk-delete-clients-btn">
+              {bulkDeleting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting...</> : `Delete ${selectedIds.size} Client${selectedIds.size > 1 ? 's' : ''}`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
