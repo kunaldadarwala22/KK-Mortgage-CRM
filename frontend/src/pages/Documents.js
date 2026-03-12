@@ -170,10 +170,10 @@ const Documents = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>
             Documents
           </h1>
-          <p className="text-slate-500 mt-1">Manage client documents and compliance files</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage client documents and compliance files</p>
         </div>
         <Button 
           className="bg-red-600 hover:bg-red-700"
@@ -186,7 +186,7 @@ const Documents = () => {
       </div>
 
       {/* Filters */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
         <CardContent className="p-4">
           <div className="flex gap-4">
             <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
@@ -196,7 +196,7 @@ const Documents = () => {
           </div>
 
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Client</Label>
                 <Select
@@ -246,11 +246,11 @@ const Documents = () => {
 
       {/* Documents Grid */}
       {documents.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="py-12">
             <div className="text-center">
               <FileText className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-              <h3 className="text-lg font-medium text-slate-700 mb-2">No documents found</h3>
+              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">No documents found</h3>
               <p className="text-slate-500 mb-4">Upload your first document to get started.</p>
               <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowUploadDialog(true)}>
                 <Upload className="h-4 w-4 mr-2" />
@@ -262,12 +262,12 @@ const Documents = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {documents.map((doc) => (
-            <Card key={doc.document_id} className="border-slate-200 hover:shadow-md transition-shadow">
+            <Card key={doc.document_id} className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
                   {getFileIcon(doc.file_name)}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900 truncate">{doc.file_name}</p>
+                    <p className="font-medium text-slate-900 dark:text-white truncate">{doc.file_name}</p>
                     <p 
                       className="text-sm text-red-600 hover:underline cursor-pointer"
                       onClick={() => navigate(`/clients/${doc.client_id}`)}
