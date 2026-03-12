@@ -32,6 +32,28 @@
         --chart-5: 27 87% 67%;
         --radius: 0.5rem;
     }
+
+    .dark {
+        --background: 222 47% 8%;
+        --foreground: 210 40% 98%;
+        --card: 222 47% 11%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222 47% 11%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 0 72% 51%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 217 33% 18%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217 33% 18%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 217 33% 18%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 217 33% 20%;
+        --input: 217 33% 20%;
+        --ring: 0 72% 51%;
+    }
 }
 
 * {
@@ -46,6 +68,19 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background-color: #F8FAFC;
     color: #0F172A;
+}
+
+.dark body {
+    background-color: #0F172A;
+    color: #F1F5F9;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
 }
 
 h1, h2, h3, h4, h5, h6 {
