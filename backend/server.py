@@ -1243,12 +1243,8 @@ async def export_client_data(client_id: str, request: Request):
 
     def auto_width(ws):
         for col in ws.columns:
-            try:
-                max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
-                col_letter = col[0].column_letter
-                ws.column_dimensions[col_letter].width = min(max_length + 4, 50)
-            except AttributeError:
-                pass
+            max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
+            ws.column_dimensions[col[0].column_letter].width = min(max_length + 4, 50)
 
     client_name = f"{client.get('first_name', '')} {client.get('last_name', '')}".strip()
 
@@ -1275,9 +1271,6 @@ async def export_client_data(client_id: str, request: Request):
         ("LTV %", client.get("ltv", "")),
         ("Credit Issues", "Yes" if client.get("credit_issues") else "No"),
         ("Credit Issues Notes", client.get("credit_issues_notes", "")),
-        ("Lead Source", (client.get("lead_source") or "").replace("_", " ").title()),
-        ("Referral Partner", client.get("referral_partner_name", "")),
-        ("Advice Type", (client.get("advice_type") or "").replace("_", " ").title()),
         ("Fact Find Complete", "Yes" if client.get("fact_find_complete") else "No"),
         ("Vulnerable Customer", "Yes" if client.get("vulnerable_customer") else "No"),
         ("GDPR Consent Date", client.get("gdpr_consent_date", "")),
@@ -1297,12 +1290,47 @@ async def export_client_data(client_id: str, request: Request):
     ws1.column_dimensions['A'].width = 25
     ws1.column_dimensions['B'].width = 45
 
+    # ── Sheet 1b: Additional Applicants (appended below main details) ─────────
+    additional_applicants = client.get("additional_applicants") or []
+    if additional_applicants:
+        current_row = len(details) + 3
+        for idx, app in enumerate(additional_applicants):
+            # Section title
+            ws1.merge_cells(f'A{current_row}:B{current_row}')
+            title_cell = ws1.cell(row=current_row, column=1, value=f"Additional Applicant {idx + 1}")
+            title_cell.font = Font(bold=True, size=11, color="FFFFFF")
+            title_cell.fill = PatternFill(start_color="475569", end_color="475569", fill_type="solid")
+            title_cell.alignment = Alignment(horizontal='left')
+            current_row += 1
+
+            app_details = [
+                ("First Name", app.get("first_name", "")),
+                ("Last Name", app.get("last_name", "")),
+                ("Date of Birth", app.get("dob", "")),
+                ("Email", app.get("email", "")),
+                ("Phone", app.get("phone", "")),
+                ("Employment Type", (app.get("employment_type") or "").replace("_", " ").title()),
+                ("Annual Income", app.get("income", "")),
+            ]
+            for label, value in app_details:
+                label_cell = ws1.cell(row=current_row, column=1, value=label)
+                label_cell.font = Font(bold=True)
+                label_cell.fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+                label_cell.border = thin_border
+                value_cell = ws1.cell(row=current_row, column=2, value=value)
+                value_cell.border = thin_border
+                if label == "Annual Income" and isinstance(value, (int, float)):
+                    value_cell.number_format = '£#,##0'
+                current_row += 1
+            current_row += 1  # blank row between applicants
+
     # ── Sheet 2: Cases ────────────────────────────────────────────────────────
     ws2 = wb.create_sheet("Cases")
     case_headers = [
-        "Case ID", "Product Type", "Mortgage Type", "Insurance Type", "Status",
+        "Case ID", "Case Reference", "Product Type", "Mortgage Type", "Insurance Type", "Status",
         "Lender / Provider", "Loan Amount", "Property Value", "Deposit", "LTV %",
-        "Term (Years)", "Interest Rate", "Rate Type", "Repayment Type",
+        "Term (Years)", "Initial Product Term", "Interest Rate", "Interest Rate Type", "Repayment Type",
+        "Security Address", "Security Postcode",
         "Application Ref", "Application Date", "Expected Completion",
         "Product Start", "Product Expiry",
         "Proc Fee Total", "Commission %", "Gross Commission", "Your Share",
@@ -1318,6 +1346,7 @@ async def export_client_data(client_id: str, request: Request):
         is_insurance = case.get("product_type") == "insurance"
         row = [
             case.get("case_id", ""),
+            case.get("case_reference", ""),
             (case.get("product_type") or "").replace("_", " ").title(),
             (case.get("mortgage_type") or "").replace("_", " ").title(),
             (case.get("insurance_type") or "").replace("_", " ").title(),
@@ -1328,9 +1357,12 @@ async def export_client_data(client_id: str, request: Request):
             case.get("deposit", ""),
             case.get("ltv", ""),
             case.get("term_years", ""),
+            case.get("initial_product_term", ""),
             case.get("interest_rate", ""),
             (case.get("interest_rate_type") or "").replace("_", " ").title(),
             (case.get("repayment_type") or "").replace("_", " ").title(),
+            case.get("security_address", ""),
+            case.get("security_postcode", ""),
             case.get("application_reference", ""),
             case.get("date_application_submitted", ""),
             case.get("expected_completion_date", ""),
@@ -1351,8 +1383,8 @@ async def export_client_data(client_id: str, request: Request):
         ]
         ws2.append(row)
 
-        # Format currency columns
-        currency_cols = [7, 8, 9, 20, 22, 23, 24, 27, 28]  # 1-indexed
+        # Format currency columns (1-indexed): loan, property, deposit, proc fee, commission, share, client fee, premium, sum assured
+        currency_cols = [8, 9, 10, 24, 26, 27, 28, 31, 32]
         last_row = ws2.max_row
         for col_idx in currency_cols:
             cell = ws2.cell(row=last_row, column=col_idx)
