@@ -157,10 +157,10 @@ const Tasks = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>
             Tasks
           </h1>
-          <p className="text-slate-500 mt-1">Manage your daily tasks and reminders</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your daily tasks and reminders</p>
         </div>
         <Button 
           className="bg-red-600 hover:bg-red-700"
@@ -174,7 +174,7 @@ const Tasks = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -182,12 +182,12 @@ const Tasks = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">{todayCount}</p>
-                <p className="text-sm text-slate-500">Due Today</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Due Today</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -195,12 +195,12 @@ const Tasks = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
-                <p className="text-sm text-slate-500">Overdue</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Overdue</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
@@ -208,12 +208,12 @@ const Tasks = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">{upcomingCount}</p>
-                <p className="text-sm text-slate-500">Upcoming</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Upcoming</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -221,7 +221,7 @@ const Tasks = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">{tasks.filter(t => t.completed).length}</p>
-                <p className="text-sm text-slate-500">Completed</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Completed</p>
               </div>
             </div>
           </CardContent>
@@ -229,7 +229,7 @@ const Tasks = () => {
       </div>
 
       {/* Tasks List */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
         <CardHeader className="pb-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
@@ -249,7 +249,7 @@ const Tasks = () => {
           {getFilteredTasks().length === 0 ? (
             <div className="text-center py-12">
               <CheckSquare className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-              <h3 className="text-lg font-medium text-slate-700 mb-2">No tasks</h3>
+              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">No tasks</h3>
               <p className="text-slate-500">
                 {activeTab === 'overdue' ? 'Great! No overdue tasks.' : 'Create a task to get started.'}
               </p>
@@ -261,9 +261,9 @@ const Tasks = () => {
                   key={task.task_id}
                   className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
                     task.completed 
-                      ? 'bg-slate-50 border-slate-200' 
+                      ? 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700' 
                       : task.due_date < today 
-                        ? 'bg-red-50 border-red-200' 
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' 
                         : 'border-slate-200 hover:border-slate-300'
                   }`}
                   data-testid={`task-${task.task_id}`}
@@ -275,8 +275,8 @@ const Tasks = () => {
                       data-testid={`task-checkbox-${task.task_id}`}
                     />
                     <div className={task.completed ? 'line-through text-slate-400' : ''}>
-                      <p className="font-medium text-slate-900">{task.title}</p>
-                      <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{task.title}</p>
+                      <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-1">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {task.due_date}
@@ -298,7 +298,7 @@ const Tasks = () => {
                         )}
                       </div>
                       {task.description && (
-                        <p className="text-sm text-slate-500 mt-1">{task.description}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{task.description}</p>
                       )}
                     </div>
                   </div>
