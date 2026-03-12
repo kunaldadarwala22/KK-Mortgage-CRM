@@ -74,8 +74,8 @@ const Dashboard = () => {
       {/* Welcome Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Dashboard</h1>
-          <p className="text-slate-500 mt-1">Welcome back, Kunal. Here's your business overview.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>Dashboard</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Welcome back, Kunal. Here's your business overview.</p>
         </div>
         <Button className="bg-red-600 hover:bg-red-700" onClick={() => navigate('/clients', { state: { openAddDialog: true } })} data-testid="add-client-btn">
           Add New Client
@@ -183,12 +183,12 @@ const Dashboard = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
               {recentClients.map((c) => (
-                <div key={c.client_id} className="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors border border-slate-100" onClick={() => navigate(`/clients/${c.client_id}`)}>
+                <div key={c.client_id} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors border border-slate-100 dark:border-slate-700" onClick={() => navigate(`/clients/${c.client_id}`)}>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 text-sm font-bold">
                       {c.first_name?.[0]}{c.last_name?.[0]}
                     </div>
-                    <p className="font-medium text-sm text-slate-900 truncate">{c.first_name} {c.last_name}</p>
+                    <p className="font-medium text-sm text-slate-900 dark:text-white truncate">{c.first_name} {c.last_name}</p>
                   </div>
                   {c.case_status && <Badge className={`text-xs ${statusColor(c.case_status)}`}>{fmtStatus(c.case_status)}</Badge>}
                   {c.loan_amount && <p className="text-xs text-slate-500 mt-1">{fmt(c.loan_amount)}</p>}
@@ -217,12 +217,12 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-2">
               {upcomingTasks.map((task) => (
-                <div key={task.task_id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                <div key={task.task_id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={`h-2.5 w-2.5 rounded-full ${task.priority === 'high' ? 'bg-red-500' : task.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`} />
                     <div>
-                      <p className="font-medium text-slate-900">{task.title}</p>
-                      <p className="text-sm text-slate-500">{task.client_name || 'No client'}</p>
+                      <p className="font-medium text-slate-900 dark:text-white">{task.title}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{task.client_name || 'No client'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -241,7 +241,7 @@ const Dashboard = () => {
         <Card className="stat-card border-slate-200" data-testid="kpi-clients">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div><p className="text-sm text-slate-500">Total Clients</p><p className="text-3xl font-bold text-slate-900 mt-1">{stats?.total_clients || 0}</p></div>
+              <div><p className="text-sm text-slate-500 dark:text-slate-400">Total Clients</p><p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{stats?.total_clients || 0}</p></div>
               <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center"><Users className="h-6 w-6 text-blue-600" /></div>
             </div>
           </CardContent>
@@ -249,7 +249,7 @@ const Dashboard = () => {
         <Card className="stat-card border-slate-200" data-testid="kpi-pipeline">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div><p className="text-sm text-slate-500">Pipeline Value</p><p className="text-3xl font-bold text-slate-900 mt-1">{fmt(stats?.total_pipeline_value)}</p></div>
+              <div><p className="text-sm text-slate-500 dark:text-slate-400">Pipeline Value</p><p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{fmt(stats?.total_pipeline_value)}</p></div>
               <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center"><PoundSterling className="h-6 w-6 text-green-600" /></div>
             </div>
           </CardContent>
@@ -257,7 +257,7 @@ const Dashboard = () => {
         <Card className="stat-card border-slate-200" data-testid="kpi-commission">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div><p className="text-sm text-slate-500">Total Commission</p><p className="text-3xl font-bold text-slate-900 mt-1">{fmt(stats?.total_commission)}</p></div>
+              <div><p className="text-sm text-slate-500 dark:text-slate-400">Total Commission</p><p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{fmt(stats?.total_commission)}</p></div>
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-purple-600" /></div>
             </div>
           </CardContent>
@@ -265,7 +265,7 @@ const Dashboard = () => {
         <Card className="stat-card border-slate-200" data-testid="kpi-conversion">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div><p className="text-sm text-slate-500">Conversion Rate</p><p className="text-3xl font-bold text-slate-900 mt-1">{stats?.conversion_rate || 0}%</p></div>
+              <div><p className="text-sm text-slate-500 dark:text-slate-400">Conversion Rate</p><p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{stats?.conversion_rate || 0}%</p></div>
               <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center"><Percent className="h-6 w-6 text-red-600" /></div>
             </div>
           </CardContent>
@@ -275,17 +275,17 @@ const Dashboard = () => {
       {/* Secondary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { v: stats?.total_cases || 0, l: 'Total Cases', c: 'text-slate-900' },
+          { v: stats?.total_cases || 0, l: 'Total Cases', c: 'text-slate-900 dark:text-white' },
           { v: stats?.completed_cases || 0, l: 'Completed', c: 'text-green-600' },
           { v: stats?.lost_cases || 0, l: 'Lost Cases', c: 'text-red-600' },
-          { v: fmt(stats?.avg_loan_size), l: 'Avg Loan Size', c: 'text-slate-900' },
+          { v: fmt(stats?.avg_loan_size), l: 'Avg Loan Size', c: 'text-slate-900 dark:text-white' },
           { v: stats?.expiring_products || 0, l: 'Expiring (90d)', c: 'text-orange-600' },
           { v: stats?.overdue_tasks || 0, l: 'Overdue Tasks', c: 'text-yellow-600' },
         ].map(({ v, l, c }) => (
           <Card key={l} className="border-slate-200">
             <CardContent className="p-4 text-center">
               <p className={`text-2xl font-bold ${c}`}>{v}</p>
-              <p className="text-sm text-slate-500">{l}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{l}</p>
             </CardContent>
           </Card>
         ))}
@@ -304,8 +304,8 @@ const Dashboard = () => {
                 <Calendar className={`h-5 w-5 text-${color}-600`} />
                 <p className={`text-sm font-medium text-${color}-700`}>{l}</p>
               </div>
-              <p className="text-2xl font-bold text-slate-900">{fmt(forecast?.[k]?.amount)}</p>
-              <p className="text-sm text-slate-500">{forecast?.[k]?.cases || 0} cases expected</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{fmt(forecast?.[k]?.amount)}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{forecast?.[k]?.cases || 0} cases expected</p>
             </CardContent>
           </Card>
         ))}
@@ -362,11 +362,11 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-2">
               {recentCases.map((c) => (
-                <div key={c.case_id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors" onClick={() => navigate(`/cases/${c.case_id}`)}>
-                  <div>
-                    <p className="font-medium text-slate-900">{c.client_name}</p>
-                    <p className="text-sm text-slate-500">{c.lender_name || 'No lender'} · {fmt(c.loan_amount)}</p>
-                  </div>
+                <div key={c.case_id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors" onClick={() => navigate(`/cases/${c.case_id}`)}>
+  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">{c.client_name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{c.lender_name || 'No lender'} · {fmt(c.loan_amount)}</p>
+  </div>
                   <Badge className={statusColor(c.status)}>{fmtStatus(c.status)}</Badge>
                 </div>
               ))}
