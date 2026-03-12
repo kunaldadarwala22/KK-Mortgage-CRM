@@ -18,6 +18,7 @@ import Documents from './pages/Documents';
 import Export from './pages/Export';
 import Reports from './pages/Reports';
 import './App.css';
+import { DarkModeProvider } from './context/DarkModeContext';
 
 // Router component that handles auth callback detection
 const AppRouter = () => {
@@ -173,8 +174,10 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRouter />
-        <Toaster position="top-right" richColors />
+        <DarkModeProvider>
+          <AppRouter />
+          <Toaster position="top-right" richColors />
+        </DarkModeProvider>
       </AuthProvider>
     </BrowserRouter>
   );
