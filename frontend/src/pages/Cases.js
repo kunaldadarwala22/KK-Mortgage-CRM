@@ -263,8 +263,8 @@ const Cases = () => {
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="cases-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Cases</h1>
-          <p className="text-slate-500 mt-1">Manage mortgage and insurance cases</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>Cases</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage mortgage and insurance cases</p>
         </div>
         <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowAddDialog(true)} data-testid="add-case-btn">
           <Plus className="h-4 w-4 mr-2" />New Case
@@ -352,9 +352,9 @@ const Cases = () => {
                     </TableHeader>
                     <TableBody>
                       {mortgageCases.map((c) => (
-                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
-                          <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
-                          <TableCell>{formatStatus(c.mortgage_type)}</TableCell>
+                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-slate-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-slate-100' : 'hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-100'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
+                                  <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
+                                  <TableCell>{formatStatus(c.mortgage_type)}</TableCell>
                           <TableCell>{c.lender_name || '-'}</TableCell>
                           <TableCell>{formatCurrency(c.loan_amount)}</TableCell>
                           <TableCell>{formatCurrency(c.property_value)}</TableCell>
@@ -404,9 +404,9 @@ const Cases = () => {
                     </TableHeader>
                     <TableBody>
                       {insuranceCases.map((c) => (
-                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
-                          <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
-                          <TableCell>{formatStatus(c.insurance_type)}</TableCell>
+                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-slate-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-slate-100' : 'hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-100'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
+                                  <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
+                                  <TableCell>{formatStatus(c.insurance_type)}</TableCell>
                           <TableCell>{c.insurance_provider || c.lender_name || '-'}</TableCell>
                           <TableCell>{formatStatus(c.insurance_cover_type)}</TableCell>
                           <TableCell>{formatCurrency(c.monthly_premium)}</TableCell>
