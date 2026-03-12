@@ -1243,8 +1243,12 @@ async def export_client_data(client_id: str, request: Request):
 
     def auto_width(ws):
         for col in ws.columns:
-            max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
-            ws.column_dimensions[col[0].column_letter].width = min(max_length + 4, 50)
+            try:
+                max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
+                col_letter = col[0].column_letter
+                ws.column_dimensions[col_letter].width = min(max_length + 4, 50)
+            except AttributeError:
+                pass
 
     client_name = f"{client.get('first_name', '')} {client.get('last_name', '')}".strip()
 
