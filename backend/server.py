@@ -1258,27 +1258,24 @@ async def export_client_data(client_id: str, request: Request):
 
     style_title_row(ws1, 1, 2, f"Client Report — {client_name}")
 
+   def fmt_date(d):
+        if not d:
+            return ""
+        try:
+            parts = d.split('T')[0].split('-')
+            return f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else d
+        except:
+            return d
+
     details = [
-        ("Client ID", client.get("client_id", "")),
-        ("First Name", client.get("first_name", "")),
-        ("Last Name", client.get("last_name", "")),
-        ("Date of Birth", client.get("dob", "")),
+        ("Full Name", f"{client.get('first_name', '')} {client.get('last_name', '')}".strip()),
+        ("Date of Birth", fmt_date(client.get("dob", ""))),
         ("Email", client.get("email", "")),
         ("Phone", client.get("phone", "")),
         ("Current Address", client.get("current_address", "")),
         ("Postcode", client.get("postcode", "")),
         ("Employment Type", (client.get("employment_type") or "").replace("_", " ").title()),
         ("Annual Income", client.get("income", "")),
-        ("Deposit", client.get("deposit", "")),
-        ("Property Price", client.get("property_price", "")),
-        ("Loan Amount", client.get("loan_amount", "")),
-        ("LTV %", client.get("ltv", "")),
-        ("Credit Issues", "Yes" if client.get("credit_issues") else "No"),
-        ("Credit Issues Notes", client.get("credit_issues_notes", "")),
-        ("Fact Find Complete", "Yes" if client.get("fact_find_complete") else "No"),
-        ("Vulnerable Customer", "Yes" if client.get("vulnerable_customer") else "No"),
-        ("GDPR Consent Date", client.get("gdpr_consent_date", "")),
-        ("Created At", client.get("created_at", "")),
     ]
 
     for row_num, (label, value) in enumerate(details, start=2):
@@ -1288,7 +1285,7 @@ async def export_client_data(client_id: str, request: Request):
         label_cell.border = thin_border
         value_cell = ws1.cell(row=row_num, column=2, value=value)
         value_cell.border = thin_border
-        if label in ("Annual Income", "Deposit", "Property Price", "Loan Amount") and isinstance(value, (int, float)):
+        if label == "Annual Income" and isinstance(value, (int, float)):
             value_cell.number_format = '£#,##0'
 
     ws1.column_dimensions['A'].width = 25
@@ -1308,9 +1305,8 @@ async def export_client_data(client_id: str, request: Request):
             current_row += 1
 
             app_details = [
-                ("First Name", app.get("first_name", "")),
-                ("Last Name", app.get("last_name", "")),
-                ("Date of Birth", app.get("dob", "")),
+                ("Full Name", f"{app.get('first_name', '')} {app.get('last_name', '')}".strip()),
+                ("Date of Birth", fmt_date(app.get("dob", ""))),
                 ("Email", app.get("email", "")),
                 ("Phone", app.get("phone", "")),
                 ("Employment Type", (app.get("employment_type") or "").replace("_", " ").title()),
