@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useDarkMode } from '../context/DarkModeContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
@@ -32,6 +33,8 @@ import {
   AlertTriangle,
   Clock,
   X,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Input } from './ui/input';
 
@@ -55,6 +58,7 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { darkMode, toggleDarkMode } = useDarkMode();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
