@@ -919,14 +919,11 @@ async def get_retention_data(request: Request):
     await get_current_user(request)
     today = datetime.now(timezone.utc)
     today_str = today.strftime("%Y-%m-%d")
-    month_end = (today.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
-    month_end_str = month_end.strftime("%Y-%m-%d")
-    six_months_for_list = (today + timedelta(days=183)).strftime("%Y-%m-%d")
-expiring_this_month = await db.cases.find({"product_expiry_date": {"$gte": today_str, "$lte": six_months_for_list}, "status": CaseStatus.COMPLETED}, {"_id": 0}).sort("product_expiry_date", 1).to_list(100)
-for case in expiring_this_month:
-    client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
-    case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
     six_months_str = (today + timedelta(days=183)).strftime("%Y-%m-%d")
+    expiring_this_month = await db.cases.find({"product_expiry_date": {"$gte": today_str, "$lte": six_months_str}, "status": CaseStatus.COMPLETED}, {"_id": 0}).sort("product_expiry_date", 1).to_list(100)
+    for case in expiring_this_month:
+        client = await db.clients.find_one({"client_id": case["client_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+        case["client_name"] = f"{client['first_name']} {client['last_name']}" if client else None
     expiring_by_month = await db.cases.aggregate([{"$match": {"product_expiry_date": {"$gte": today_str, "$lte": six_months_str}, "status": CaseStatus.COMPLETED}}, {"$addFields": {"expiry_month": {"$substr": ["$product_expiry_date", 0, 7]}}}, {"$group": {"_id": "$expiry_month", "count": {"$sum": 1}, "value": {"$sum": "$loan_amount"}}}, {"$sort": {"_id": 1}}, {"$limit": 12}]).to_list(12)
     retention_value = await db.cases.aggregate([{"$match": {"product_expiry_date": {"$gte": today_str, "$lte": six_months_str}, "status": CaseStatus.COMPLETED}}, {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}}}]).to_list(1)
     return {"expiring_this_month": expiring_this_month, "expiring_by_month": expiring_by_month, "retention_pipeline_value": retention_value[0]["total"] if retention_value else 0}
