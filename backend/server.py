@@ -1258,7 +1258,7 @@ async def export_client_data(client_id: str, request: Request):
 
     style_title_row(ws1, 1, 2, f"Client Report — {client_name}")
 
-   def fmt_date(d):
+    def fmt_date(d):
         if not d:
             return ""
         try:
