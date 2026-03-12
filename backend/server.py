@@ -611,7 +611,14 @@ async def delete_client(client_id: str, request: Request):
 @api_router.post("/cases")
 async def create_case(case: CaseCreate, request: Request):
     current_user = await get_current_user(request)
-    case_id = generate_id("case_")
+    last_case = await db.cases.find_one({}, {"case_id": 1}, sort=[("created_at", -1)])
+last_num = 0
+if last_case:
+    try:
+        last_num = int(last_case["case_id"].replace("CASE-", ""))
+    except:
+        last_num = await db.cases.count_documents({})
+case_id = f"CASE-{(last_num + 1):04d}"
     case_doc = {
         "case_id": case_id,
         **case.model_dump(),
