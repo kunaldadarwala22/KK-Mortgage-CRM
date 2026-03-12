@@ -40,9 +40,9 @@ const Pipeline = () => {
   const [cases, setCases] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    advisor_id: '',
-    product_type: '',
+ const [filters, setFilters] = useState({
+    advisor_id: 'all',
+    product_type: 'all',
     lender_name: '',
   });
   const [showFilters, setShowFilters] = useState(false);
@@ -55,8 +55,13 @@ const Pipeline = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      const apiFilters = {
+        ...(filters.advisor_id && filters.advisor_id !== 'all' && { advisor_id: filters.advisor_id }),
+        ...(filters.product_type && filters.product_type !== 'all' && { product_type: filters.product_type }),
+        ...(filters.lender_name && { lender_name: filters.lender_name }),
+      };
       const [casesData, usersData] = await Promise.all([
-        casesAPI.getAll(filters),
+        casesAPI.getAll(apiFilters),
         usersAPI.getAll(),
       ]);
       setCases(casesData.cases || []);
@@ -115,7 +120,7 @@ const Pipeline = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ advisor_id: '', product_type: '', lender_name: '' });
+    setFilters({ advisor_id: 'all', product_type: 'all', lender_name: '' });
   };
 
   if (loading) {
@@ -161,7 +166,7 @@ const Pipeline = () => {
                     <SelectValue placeholder="All advisors" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All advisors</SelectItem>
+                    <SelectItem value="all">All advisors</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.user_id} value={user.user_id}>
                         {user.name}
@@ -180,7 +185,7 @@ const Pipeline = () => {
                     <SelectValue placeholder="All products" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All products</SelectItem>
+                    <SelectItem value="all">All products</SelectItem>
                     <SelectItem value="mortgage">Mortgage</SelectItem>
                     <SelectItem value="insurance">Insurance</SelectItem>
                   </SelectContent>
