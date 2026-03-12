@@ -98,8 +98,8 @@ const Reports = () => {
   return (
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="reports-page">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Custom Business Reports</h1>
-        <p className="text-slate-500 mt-1">Generate detailed reports for any date range</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>Custom Business Reports</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Generate detailed reports for any date range</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setCasesReport(null); setCommReport(null); setFeeReport(null); setBothReport(null); }}>
@@ -145,33 +145,33 @@ const Reports = () => {
             <div className="space-y-4 mt-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Total Cases</p>
-                    <p className="text-3xl font-bold text-slate-900" data-testid="report-total-cases">{casesReport.summary.total_cases}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Cases</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white" data-testid="report-total-cases">{casesReport.summary.total_cases}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-green-50 dark:from-green-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Total Loan Value</p>
-                    <p className="text-3xl font-bold text-slate-900">{fmt(casesReport.summary.total_loan_value)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Loan Value</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">{fmt(casesReport.summary.total_loan_value)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-red-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-red-50 dark:from-red-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Total Commission</p>
-                    <p className="text-3xl font-bold text-slate-900">{fmt(casesReport.summary.total_commission)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Commission</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">{fmt(casesReport.summary.total_commission)}</p>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Table */}
-              <Card className="border-slate-200">
+              <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                 <CardContent className="p-0">
                   {casesReport.cases.length === 0 ? (
                     <div className="text-center py-12" data-testid="no-report-results">
                       <FileText className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                      <h3 className="text-lg font-medium text-slate-700">No Results Found</h3>
+                      <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No Results Found</h3>
                       <p className="text-slate-500">No completed cases found in the selected date range.</p>
                     </div>
                   ) : (
@@ -214,8 +214,8 @@ const Reports = () => {
           {!casesReport && !loading && (
             <div className="text-center py-16 mt-6">
               <Calendar className="h-16 w-16 mx-auto text-slate-200 mb-4" />
-              <h3 className="text-lg font-medium text-slate-700">Select a Date Range</h3>
-              <p className="text-slate-500 mt-1">Choose start and end dates to generate a report of completed cases.</p>
+              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">Select a Date Range</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">Choose start and end dates to generate a report of completed cases.</p>
             </div>
           )}
         </TabsContent>
@@ -226,39 +226,39 @@ const Reports = () => {
             <div className="space-y-4 mt-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Total Cases</p>
-                    <p className="text-3xl font-bold text-slate-900">{commReport.summary.total_cases}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Cases</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">{commReport.summary.total_cases}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-green-50 dark:from-green-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Commission Paid</p>
-                    <p className="text-3xl font-bold text-slate-900" data-testid="report-commission-paid">{fmt(commReport.summary.total_commission_paid)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Commission Paid</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white" data-testid="report-commission-paid">{fmt(commReport.summary.total_commission_paid)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Proc Fees</p>
-                    <p className="text-3xl font-bold text-slate-900">{fmt(commReport.summary.total_proc_fees)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Proc Fees</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">{fmt(commReport.summary.total_proc_fees)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-red-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-red-50 dark:from-red-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Combined Revenue</p>
-                    <p className="text-3xl font-bold text-slate-900">{fmt(commReport.summary.total_combined_revenue)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Combined Revenue</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">{fmt(commReport.summary.total_combined_revenue)}</p>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Table */}
-              <Card className="border-slate-200">
+              <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                 <CardContent className="p-0">
                   {commReport.cases.length === 0 ? (
                     <div className="text-center py-12" data-testid="no-report-results">
                       <PoundSterling className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                      <h3 className="text-lg font-medium text-slate-700">No Results Found</h3>
+                      <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No Results Found</h3>
                       <p className="text-slate-500">No paid commissions found in the selected date range.</p>
                     </div>
                   ) : (
@@ -299,8 +299,8 @@ const Reports = () => {
           {!commReport && !loading && (
             <div className="text-center py-16 mt-6">
               <PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" />
-              <h3 className="text-lg font-medium text-slate-700">Select a Date Range</h3>
-              <p className="text-slate-500 mt-1">Choose start and end dates to generate a commission report.</p>
+              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">Select a Date Range</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">Choose start and end dates to generate a commission report.</p>
             </div>
           )}
         </TabsContent>
@@ -310,29 +310,29 @@ const Reports = () => {
           {feeReport && (
             <div className="space-y-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Total Cases</p>
-                    <p className="text-3xl font-bold text-slate-900" data-testid="report-fee-total-cases">{feeReport.summary.total_cases}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Cases</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white" data-testid="report-fee-total-cases">{feeReport.summary.total_cases}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Total Client Fees</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Client Fees</p>
                     <p className="text-3xl font-bold text-purple-700" data-testid="report-total-client-fees">{fmt(feeReport.summary.total_client_fees)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-green-50 dark:from-green-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Avg Fee per Case</p>
-                    <p className="text-3xl font-bold text-slate-900">{fmt(feeReport.summary.total_cases > 0 ? feeReport.summary.total_client_fees / feeReport.summary.total_cases : 0)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Avg Fee per Case</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">{fmt(feeReport.summary.total_cases > 0 ? feeReport.summary.total_client_fees / feeReport.summary.total_cases : 0)}</p>
                   </CardContent>
                 </Card>
               </div>
-              <Card className="border-slate-200">
+              <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                 <CardContent className="p-0">
                   {feeReport.cases.length === 0 ? (
-                    <div className="text-center py-12"><PoundSterling className="h-12 w-12 mx-auto text-slate-300 mb-4" /><h3 className="text-lg font-medium text-slate-700">No Results Found</h3><p className="text-slate-500">No client fees found in the selected date range.</p></div>
+                    <div className="text-center py-12"><PoundSterling className="h-12 w-12 mx-auto text-slate-300 mb-4" /><h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No Results Found</h3><p className="text-slate-500">No client fees found in the selected date range.</p></div>
                   ) : (
                     <div className="overflow-x-auto">
                       <Table>
@@ -350,7 +350,7 @@ const Reports = () => {
             </div>
           )}
           {!feeReport && !loading && (
-            <div className="text-center py-16 mt-6"><PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" /><h3 className="text-lg font-medium text-slate-700">Select a Date Range</h3><p className="text-slate-500 mt-1">Choose start and end dates to generate a client fees report.</p></div>
+            <div className="text-center py-16 mt-6"><PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" /><h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">Select a Date Range</h3><p className="text-slate-500 dark:text-slate-400 mt-1">Choose start and end dates to generate a client fees report.</p></div>
           )}
         </TabsContent>
 
@@ -359,35 +359,35 @@ const Reports = () => {
           {bothReport && (
             <div className="space-y-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Total Cases</p>
-                    <p className="text-3xl font-bold text-slate-900" data-testid="report-both-total-cases">{bothReport.summary.total_cases}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Cases</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white" data-testid="report-both-total-cases">{bothReport.summary.total_cases}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-green-50 dark:from-green-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Commission</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Commission</p>
                     <p className="text-3xl font-bold text-green-700">{fmt(bothReport.summary.total_commission_paid)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Client Fees</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Client Fees</p>
                     <p className="text-3xl font-bold text-purple-700">{fmt(bothReport.summary.total_client_fees)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200 bg-gradient-to-br from-slate-100 to-white">
+                <Card className="border-slate-200 bg-gradient-to-br from-slate-100 dark:from-slate-900 to-white dark:to-slate-800">
                   <CardContent className="p-5">
-                    <p className="text-sm text-slate-500">Combined Total</p>
-                    <p className="text-3xl font-bold text-slate-900" data-testid="report-combined-total">{fmt(bothReport.summary.total_combined_revenue)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Combined Total</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white" data-testid="report-combined-total">{fmt(bothReport.summary.total_combined_revenue)}</p>
                   </CardContent>
                 </Card>
               </div>
-              <Card className="border-slate-200">
+              <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
                 <CardContent className="p-0">
                   {bothReport.cases.length === 0 ? (
-                    <div className="text-center py-12"><PoundSterling className="h-12 w-12 mx-auto text-slate-300 mb-4" /><h3 className="text-lg font-medium text-slate-700">No Results Found</h3><p className="text-slate-500">No data found in the selected date range.</p></div>
+                    <div className="text-center py-12"><PoundSterling className="h-12 w-12 mx-auto text-slate-300 mb-4" /><h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No Results Found</h3><p className="text-slate-500">No data found in the selected date range.</p></div>
                   ) : (
                     <div className="overflow-x-auto">
                       <Table>
@@ -405,7 +405,7 @@ const Reports = () => {
             </div>
           )}
           {!bothReport && !loading && (
-            <div className="text-center py-16 mt-6"><PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" /><h3 className="text-lg font-medium text-slate-700">Select a Date Range</h3><p className="text-slate-500 mt-1">Choose start and end dates to generate a combined commission & client fees report.</p></div>
+            <div className="text-center py-16 mt-6"><PoundSterling className="h-16 w-16 mx-auto text-slate-200 mb-4" /><h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">Select a Date Range</h3><p className="text-slate-500 dark:text-slate-400 mt-1">Choose start and end dates to generate a combined commission & client fees report.</p></div>
           )}
         </TabsContent>
       </Tabs>
