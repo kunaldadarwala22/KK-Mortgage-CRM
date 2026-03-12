@@ -16,8 +16,9 @@ import {
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Checkbox } from '../components/ui/checkbox';
 import {
-  Search, Plus, Eye, Briefcase, Home, Shield, Filter, X, Trash2, RotateCcw,
+  Search, Plus, Eye, Briefcase, Home, Shield, Filter, X, Trash2, RotateCcw, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LenderAutocomplete } from '../components/LenderAutocomplete';
@@ -133,6 +134,11 @@ const Cases = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState(null);
 
+  // Bulk delete state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // New case form
   const [newCase, setNewCase] = useState({ product_type: 'mortgage', client_id: '', mortgage_type: '', insurance_type: '', status: 'new_lead' });
   const [clientSearch, setClientSearch] = useState('');
@@ -153,6 +159,7 @@ const Cases = () => {
       if (search) params.search = search;
       const data = await casesAPI.getAll(params);
       setCases(data.cases || []);
+      setSelectedIds(new Set()); // clear selection on reload
     } catch (err) {
       toast.error('Failed to load cases');
     } finally {
@@ -199,7 +206,6 @@ const Cases = () => {
   const handleCreateCase = async () => {
     try {
       const caseData = cleanData({ ...newCase });
-      // Parse numeric fields
       ['loan_amount', 'property_value', 'interest_rate', 'monthly_premium', 'sum_assured', 'proc_fee_total', 'commission_percentage', 'proc_fee_value', 'client_fee', 'deposit'].forEach(f => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseFloat(caseData[f]);
         else caseData[f] = null;
@@ -208,15 +214,12 @@ const Cases = () => {
         if (caseData[f] !== null && caseData[f] !== undefined) caseData[f] = parseInt(caseData[f]);
         else caseData[f] = null;
       });
-      // Auto-calculate commission
       if (caseData.proc_fee_total && caseData.commission_percentage) {
         caseData.gross_commission = Math.round((caseData.proc_fee_total * caseData.commission_percentage / 100) * 100) / 100;
       }
-      // Clean NaN values
       for (const k of Object.keys(caseData)) {
         if (typeof caseData[k] === 'number' && isNaN(caseData[k])) caseData[k] = null;
       }
-
       await casesAPI.create(caseData);
       toast.success('Case created successfully');
       setShowAddDialog(false);
@@ -246,8 +249,49 @@ const Cases = () => {
     setSelectedClient(null);
   };
 
+  // Bulk selection helpers
   const mortgageCases = cases.filter(c => c.product_type === 'mortgage');
   const insuranceCases = cases.filter(c => c.product_type === 'insurance');
+
+  const currentTabCases = activeTab === 'mortgage' ? mortgageCases : insuranceCases;
+  const allTabSelected = currentTabCases.length > 0 && currentTabCases.every(c => selectedIds.has(c.case_id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = () => {
+    const next = new Set(selectedIds);
+    if (allTabSelected) {
+      currentTabCases.forEach(c => next.delete(c.case_id));
+    } else {
+      currentTabCases.forEach(c => next.add(c.case_id));
+    }
+    setSelectedIds(next);
+  };
+
+  const toggleSelectOne = (id) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of selectedIds) {
+      try {
+        await casesAPI.delete(id);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteDialogOpen(false);
+    if (successCount > 0) toast.success(`${successCount} case${successCount > 1 ? 's' : ''} deleted`);
+    if (failCount > 0) toast.error(`${failCount} case${failCount > 1 ? 's' : ''} could not be deleted`);
+    loadCases();
+  };
 
   const clearFilters = () => setFilters({ status: '', product_type: '', commission_status: '' });
 
@@ -314,8 +358,33 @@ const Cases = () => {
         </CardContent>
       </Card>
 
+      {/* Bulk Delete Bar */}
+      {someSelected && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <span className="text-sm font-medium text-red-700 dark:text-red-400">
+            {selectedIds.size} case{selectedIds.size > 1 ? 's' : ''} selected
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-slate-500 hover:text-slate-700 h-7 px-2"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            <X className="h-3.5 w-3.5 mr-1" />Deselect
+          </Button>
+          <Button
+            size="sm"
+            className="bg-red-600 hover:bg-red-700 h-7"
+            onClick={() => setBulkDeleteDialogOpen(true)}
+            data-testid="bulk-delete-cases-btn"
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />Delete Selected
+          </Button>
+        </div>
+      )}
+
       {/* Tabs: Mortgage / Insurance */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(tab) => { setActiveTab(tab); }}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="mortgage" className="flex items-center gap-2" data-testid="mortgage-tab">
             <Home className="h-4 w-4" />Mortgage ({mortgageCases.length})
@@ -339,6 +408,14 @@ const Cases = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[44px] pl-4">
+                          <Checkbox
+                            checked={allTabSelected}
+                            onCheckedChange={toggleSelectAll}
+                            aria-label="Select all mortgage cases"
+                            data-testid="select-all-mortgage"
+                          />
+                        </TableHead>
                         <TableHead>Client</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Lender</TableHead>
@@ -352,9 +429,22 @@ const Cases = () => {
                     </TableHeader>
                     <TableBody>
                       {mortgageCases.map((c) => (
-                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-slate-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-slate-100' : 'hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-100'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
-                                  <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
-                                  <TableCell>{formatStatus(c.mortgage_type)}</TableCell>
+                        <TableRow
+                          key={c.case_id}
+                          className={`cursor-pointer transition-colors ${selectedIds.has(c.case_id) ? 'bg-red-50/60 dark:bg-red-900/10' : c.status === 'completed' ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-slate-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-slate-100' : 'hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-100'}`}
+                          onClick={() => navigate(`/cases/${c.case_id}`)}
+                          data-testid={`case-row-${c.case_id}`}
+                        >
+                          <TableCell className="pl-4" onClick={(e) => { e.stopPropagation(); toggleSelectOne(c.case_id); }}>
+                            <Checkbox
+                              checked={selectedIds.has(c.case_id)}
+                              onCheckedChange={() => toggleSelectOne(c.case_id)}
+                              aria-label={`Select case ${c.case_id}`}
+                              data-testid={`select-case-${c.case_id}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
+                          <TableCell>{formatStatus(c.mortgage_type)}</TableCell>
                           <TableCell>{c.lender_name || '-'}</TableCell>
                           <TableCell>{formatCurrency(c.loan_amount)}</TableCell>
                           <TableCell>{formatCurrency(c.property_value)}</TableCell>
@@ -391,6 +481,14 @@ const Cases = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[44px] pl-4">
+                          <Checkbox
+                            checked={allTabSelected}
+                            onCheckedChange={toggleSelectAll}
+                            aria-label="Select all insurance cases"
+                            data-testid="select-all-insurance"
+                          />
+                        </TableHead>
                         <TableHead>Client</TableHead>
                         <TableHead>Insurance Type</TableHead>
                         <TableHead>Provider</TableHead>
@@ -404,9 +502,22 @@ const Cases = () => {
                     </TableHeader>
                     <TableBody>
                       {insuranceCases.map((c) => (
-                        <TableRow key={c.case_id} className={`cursor-pointer transition-colors ${c.status === 'completed' ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-slate-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-slate-100' : 'hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-100'}`} onClick={() => navigate(`/cases/${c.case_id}`)} data-testid={`case-row-${c.case_id}`}>
-                                  <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
-                                  <TableCell>{formatStatus(c.insurance_type)}</TableCell>
+                        <TableRow
+                          key={c.case_id}
+                          className={`cursor-pointer transition-colors ${selectedIds.has(c.case_id) ? 'bg-red-50/60 dark:bg-red-900/10' : c.status === 'completed' ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-slate-100' : c.status === 'lost_case' ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-slate-100' : 'hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-100'}`}
+                          onClick={() => navigate(`/cases/${c.case_id}`)}
+                          data-testid={`case-row-${c.case_id}`}
+                        >
+                          <TableCell className="pl-4" onClick={(e) => { e.stopPropagation(); toggleSelectOne(c.case_id); }}>
+                            <Checkbox
+                              checked={selectedIds.has(c.case_id)}
+                              onCheckedChange={() => toggleSelectOne(c.case_id)}
+                              aria-label={`Select case ${c.case_id}`}
+                              data-testid={`select-case-ins-${c.case_id}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{c.client_name || '-'}</TableCell>
+                          <TableCell>{formatStatus(c.insurance_type)}</TableCell>
                           <TableCell>{c.insurance_provider || c.lender_name || '-'}</TableCell>
                           <TableCell>{formatStatus(c.insurance_cover_type)}</TableCell>
                           <TableCell>{formatCurrency(c.monthly_premium)}</TableCell>
@@ -430,7 +541,7 @@ const Cases = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Delete Case Confirmation */}
+      {/* Single Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -442,6 +553,24 @@ const Cases = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteCase} data-testid="confirm-delete-case-btn">Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} Case{selectedIds.size > 1 ? 's' : ''}</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedIds.size} selected case{selectedIds.size > 1 ? 's' : ''}? This will also delete all associated tasks. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)} disabled={bulkDeleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting} data-testid="confirm-bulk-delete-cases-btn">
+              {bulkDeleting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting...</> : `Delete ${selectedIds.size} Case${selectedIds.size > 1 ? 's' : ''}`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -465,7 +594,6 @@ const Cases = () => {
             <ScreenshotImport type="case" onExtracted={(data) => {
               setNewCase(prev => ({
                 ...prev,
-                // Mortgage fields
                 lender_name: data.lender_name || prev.lender_name,
                 loan_amount: data.loan_amount ? String(data.loan_amount) : prev.loan_amount,
                 property_value: data.property_value ? String(data.property_value) : prev.property_value,
@@ -483,7 +611,6 @@ const Cases = () => {
                 ltv: data.ltv ? String(data.ltv) : prev.ltv,
                 deposit: data.deposit ? String(data.deposit) : prev.deposit,
                 deposit_source: data.deposit_source || prev.deposit_source,
-                // Insurance fields
                 insurance_type: data.insurance_type || prev.insurance_type,
                 insurance_provider: data.insurance_provider || prev.insurance_provider,
                 insurance_reference: data.insurance_reference || prev.insurance_reference,
