@@ -313,6 +313,11 @@ const Layout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Dark Mode Toggle */}
+            <Button variant="ghost" size="icon" onClick={toggleDarkMode} title="Toggle dark mode">
+              {darkMode ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5 text-slate-500" />}
+            </Button>
+
             {/* Notification Bell */}
             <div className="relative" ref={notifRef}>
               <Button
@@ -329,9 +334,9 @@ const Layout = ({ children }) => {
               </Button>
 
               {notifOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-xl border border-slate-200 z-50 max-h-[420px] overflow-y-auto" data-testid="notifications-dropdown">
-                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-800">Notifications</h3>
+                <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 max-h-[420px] overflow-y-auto" data-testid="notifications-dropdown">
+                  <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-100">Notifications</h3>
                     <span className="text-xs text-slate-500">{notifCount} items</span>
                   </div>
                   {notifications.length === 0 ? (
@@ -340,7 +345,7 @@ const Layout = ({ children }) => {
                     notifications.map((n, idx) => (
                       <button
                         key={idx}
-                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 text-left border-b border-slate-50 last:border-0"
+                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 text-left border-b border-slate-50 dark:border-slate-700 last:border-0"
                         data-testid={`notification-${idx}`}
                         onClick={() => { if (n.link) navigate(n.link); setNotifOpen(false); }}
                       >
@@ -363,7 +368,7 @@ const Layout = ({ children }) => {
                     <AvatarImage src={user?.picture} />
                     <AvatarFallback className="bg-red-600 text-white text-xs">{getInitials(user?.name)}</AvatarFallback>
                   </Avatar>
-                  <span className="font-medium text-slate-700">{user?.name}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-200">{user?.name}</span>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </Button>
               </DropdownMenuTrigger>
