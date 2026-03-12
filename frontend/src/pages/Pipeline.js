@@ -136,10 +136,10 @@ const Pipeline = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>
             Pipeline
           </h1>
-          <p className="text-slate-500 mt-1">Drag and drop cases to update their status</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Drag and drop cases to update their status</p>
         </div>
         <Button
           variant="outline"
@@ -153,11 +153,11 @@ const Pipeline = () => {
 
       {/* Filters */}
       {showFilters && (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Advisor</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Advisor</label>
                 <Select
                   value={filters.advisor_id}
                   onValueChange={(value) => setFilters({ ...filters, advisor_id: value })}
@@ -176,7 +176,7 @@ const Pipeline = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Product Type</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Product Type</label>
                 <Select
                   value={filters.product_type}
                   onValueChange={(value) => setFilters({ ...filters, product_type: value })}
@@ -192,7 +192,7 @@ const Pipeline = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Lender</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Lender</label>
                 <Input
                   value={filters.lender_name}
                   onChange={(e) => setFilters({ ...filters, lender_name: e.target.value })}
@@ -221,7 +221,7 @@ const Pipeline = () => {
               onDrop={(e) => handleDrop(e, status.key)}
               data-testid={`column-${status.key}`}
             >
-              <div className={`kanban-column ${
+              <div className={`kanban-column dark:bg-slate-800/50 dark:border-slate-700 ${
                 status.key === 'completed' ? 'bg-green-50/50 border-green-200' :
                 status.key === 'lost_case' ? 'bg-red-50/50 border-red-200' : ''
               }`}>
@@ -237,7 +237,7 @@ const Pipeline = () => {
                 </div>
 
                 {/* Column Total */}
-                <div className="px-4 py-2 text-sm text-slate-500 border-b border-slate-200/60">
+                <div className="px-4 py-2 text-sm text-slate-500 border-b border-slate-200 dark:border-slate-700/60">
                   Total: {formatCurrency(getColumnTotal(status.key))}
                 </div>
 
@@ -253,7 +253,7 @@ const Pipeline = () => {
                         key={caseItem.case_id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, caseItem)}
-                        className={`kanban-card ${
+                        className={`kanban-card dark:bg-slate-800 dark:border-slate-700 dark:hover:border-slate-500 ${
                           draggedCase?.case_id === caseItem.case_id ? 'opacity-50' : ''
                         }`}
                         onClick={() => navigate(`/cases/${caseItem.case_id}`)}
@@ -262,7 +262,7 @@ const Pipeline = () => {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <GripVertical className="h-4 w-4 text-slate-300 cursor-grab" />
-                            <span className="font-medium text-slate-900 truncate max-w-[180px]">
+                            <span className="font-medium text-slate-900 dark:text-white truncate max-w-[180px]">
                               {caseItem.client_name}
                             </span>
                           </div>
@@ -273,12 +273,12 @@ const Pipeline = () => {
                         
                         <div className="space-y-2 text-sm">
                           {caseItem.lender_name && (
-                            <div className="flex items-center gap-2 text-slate-600">
+                            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                               <Building2 className="h-3 w-3" />
                               <span className="truncate">{caseItem.lender_name}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 text-slate-600">
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                             <PoundSterling className="h-3 w-3" />
                             <span>{formatCurrency(caseItem.loan_amount)}</span>
                           </div>
