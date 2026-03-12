@@ -141,50 +141,50 @@ const Commission = () => {
   return (
     <div className="p-6 space-y-6 animate-fadeIn" data-testid="commission-page">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>Commission & Revenue</h1>
-        <p className="text-slate-500 mt-1">Track your earnings and revenue</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans' }}>Commission & Revenue</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Track your earnings and revenue</p>
       </div>
 
       {/* Summary Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 stat-card">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 stat-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Paid Commission</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="total-paid-commission">{formatCurrency(stats?.total_commission)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Paid Commission</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white mt-1" data-testid="total-paid-commission">{formatCurrency(stats?.total_commission)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center"><PoundSterling className="h-6 w-6 text-green-600" /></div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 stat-card">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 stat-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Proc Fees</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="total-proc-fees">{formatCurrency(monthly?.totals?.total_proc_fees || stats?.total_proc_fees)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Proc Fees</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white mt-1" data-testid="total-proc-fees">{formatCurrency(monthly?.totals?.total_proc_fees || stats?.total_proc_fees)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-blue-600" /></div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 stat-card">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 stat-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Pending Commission</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Pending Commission</p>
                 <p className="text-3xl font-bold text-yellow-700 mt-1" data-testid="pending-commission">{formatCurrency(monthly?.totals?.total_pending)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-yellow-600" /></div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 stat-card">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 stat-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Clawed Back</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Clawed Back</p>
                 <p className="text-3xl font-bold text-red-600 mt-1" data-testid="clawed-back">{formatCurrency(monthly?.totals?.total_clawed_back)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center"><ArrowDownCircle className="h-6 w-6 text-red-600" /></div>
@@ -195,107 +195,107 @@ const Commission = () => {
 
       {/* Commission Paid This Month + Last 30 Days */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-slate-200 bg-gradient-to-br from-green-50 to-white">
+        <Card className="border-slate-200 bg-gradient-to-br from-green-50 dark:from-green-900/20 to-white dark:to-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Calendar className="h-5 w-5 text-green-600" />
               <p className="text-sm font-medium text-green-700">Commission Paid This Month</p>
             </div>
-            <p className="text-3xl font-bold text-slate-900" data-testid="commission-this-month">{formatCurrency(summary?.commission_this_month?.amount)}</p>
-            <p className="text-sm text-slate-500 mt-1">{summary?.commission_this_month?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_this_month?.proc_fees)}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white" data-testid="commission-this-month">{formatCurrency(summary?.commission_this_month?.amount)}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{summary?.commission_this_month?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_this_month?.proc_fees)}</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-gradient-to-br from-blue-50 to-white">
+        <Card className="border-slate-200 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-white dark:to-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Clock className="h-5 w-5 text-blue-600" />
               <p className="text-sm font-medium text-blue-700">Commission Paid in Last 30 Days</p>
             </div>
-            <p className="text-3xl font-bold text-slate-900" data-testid="commission-last-30">{formatCurrency(summary?.commission_last_30_days?.amount)}</p>
-            <p className="text-sm text-slate-500 mt-1">{summary?.commission_last_30_days?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_last_30_days?.proc_fees)}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white" data-testid="commission-last-30">{formatCurrency(summary?.commission_last_30_days?.amount)}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{summary?.commission_last_30_days?.cases || 0} cases &middot; Proc Fees: {formatCurrency(summary?.commission_last_30_days?.proc_fees)}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Client Fees Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="border-slate-200 stat-card">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 stat-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Client Fees (Paid)</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Client Fees (Paid)</p>
                 <p className="text-3xl font-bold text-purple-700 mt-1" data-testid="total-client-fees">{formatCurrency(summary?.total_client_fees_paid)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center"><PoundSterling className="h-6 w-6 text-purple-600" /></div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 stat-card">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 stat-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Client Fee Pending</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Client Fee Pending</p>
                 <p className="text-3xl font-bold text-yellow-700 mt-1" data-testid="client-fee-pending">{formatCurrency(summary?.client_fee_pending)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-yellow-600" /></div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 stat-card bg-gradient-to-br from-slate-50 to-white">
+        <Card className="border-slate-200 stat-card bg-gradient-to-br from-slate-50 dark:from-slate-900 to-white dark:to-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Commission + Client Fees</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="total-commission-and-fees">{formatCurrency((stats?.total_commission || 0) + (summary?.total_client_fees_paid || 0))}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Commission + Client Fees</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white mt-1" data-testid="total-commission-and-fees">{formatCurrency((stats?.total_commission || 0) + (summary?.total_client_fees_paid || 0))}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-slate-200 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-slate-600" /></div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+        <Card className="border-slate-200 bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-white dark:to-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Calendar className="h-5 w-5 text-purple-600" />
               <p className="text-sm font-medium text-purple-700">Client Fees Paid This Month</p>
             </div>
-            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-this-month">{formatCurrency(summary?.client_fees_paid_this_month)}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white" data-testid="client-fees-this-month">{formatCurrency(summary?.client_fees_paid_this_month)}</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-gradient-to-br from-indigo-50 to-white">
+        <Card className="border-slate-200 bg-gradient-to-br from-indigo-50 dark:from-indigo-900/20 to-white dark:to-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-2">
               <Clock className="h-5 w-5 text-indigo-600" />
               <p className="text-sm font-medium text-indigo-700">Client Fees Paid Last 30 Days</p>
             </div>
-            <p className="text-3xl font-bold text-slate-900" data-testid="client-fees-last-30">{formatCurrency(summary?.client_fees_paid_last_30_days)}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white" data-testid="client-fees-last-30">{formatCurrency(summary?.client_fees_paid_last_30_days)}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Mortgage vs Insurance Split */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="p-6">
-            <p className="text-sm text-slate-500">Mortgage Commission</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(monthly?.totals?.total_mortgage || stats?.mortgage_commission)}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Mortgage Commission</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(monthly?.totals?.total_mortgage || stats?.mortgage_commission)}</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="p-6">
-            <p className="text-sm text-slate-500">Insurance Commission</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(monthly?.totals?.total_insurance || stats?.insurance_commission)}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Insurance Commission</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(monthly?.totals?.total_insurance || stats?.insurance_commission)}</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="p-6">
-            <p className="text-sm text-slate-500">Grand Total (All)</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(monthly?.totals?.grand_total)}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Grand Total (All)</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(monthly?.totals?.grand_total)}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Monthly Revenue View */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Monthly Commission Breakdown</CardTitle>
           <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ const Commission = () => {
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={monthlyChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                 <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
@@ -335,13 +335,13 @@ const Commission = () => {
       </Card>
 
       {/* Revenue by Type Chart */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
         <CardHeader><CardTitle>Monthly Revenue: Mortgage vs Insurance vs Proc Fees</CardTitle></CardHeader>
         <CardContent>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={monthlyBreakdownData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                 <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
@@ -356,7 +356,7 @@ const Commission = () => {
       </Card>
 
       {/* Monthly Detail Table */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
         <CardHeader><CardTitle>Monthly Detail</CardTitle></CardHeader>
         <CardContent>
           {monthly?.monthly?.length > 0 ? (
@@ -389,7 +389,7 @@ const Commission = () => {
                       <TableCell className="text-right font-bold">{formatCurrency(m.total_commission)}</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-slate-50 font-bold">
+                  <TableRow className="bg-slate-50 dark:bg-slate-900 font-bold">
                     <TableCell>TOTAL</TableCell>
                     <TableCell className="text-right text-yellow-700">{formatCurrency(monthly?.totals?.total_pending)}</TableCell>
                     <TableCell className="text-right text-blue-700">{formatCurrency(monthly?.totals?.total_submitted)}</TableCell>
@@ -413,7 +413,7 @@ const Commission = () => {
       </Card>
 
       {/* Commission Tracker */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Commission Tracker</CardTitle>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -434,10 +434,10 @@ const Commission = () => {
           ) : (
             <div className="space-y-3">
               {getFilteredCases().map((c) => (
-                <div key={c.case_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-testid={`commission-row-${c.case_id}`}>
+                <div key={c.case_id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" data-testid={`commission-row-${c.case_id}`}>
                   <div>
                     <p className="font-medium text-slate-900">{c.client_name}</p>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
                       {c.lender_name || c.insurance_provider || 'No provider'} &middot; {formatStatus(c.product_type)}
                       {c.commission_paid_date && <span className="ml-2 text-green-600">Paid: {formatDate(c.commission_paid_date)}</span>}
                     </p>
