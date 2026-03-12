@@ -1198,7 +1198,216 @@ async def export_all_data(request: Request):
     output.seek(0)
     filename = f"KK_Mortgage_CRM_Export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f"attachment; filename={filename}"})
+@api_router.get("/export/client/{client_id}/excel")
+async def export_client_data(client_id: str, request: Request):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
 
+    current_user = await get_current_user(request)
+
+    # Fetch client
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Fetch related data
+    cases = await db.cases.find({"client_id": client_id}, {"_id": 0}).to_list(1000)
+    tasks = await db.tasks.find({"client_id": client_id}, {"_id": 0}).to_list(1000)
+    documents = await db.documents.find({"client_id": client_id}, {"_id": 0, "file_data": 0}).to_list(1000)
+
+    wb = Workbook()
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
+    title_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+
+    def style_header_row(ws, row_num, num_cols):
+        for col in range(1, num_cols + 1):
+            cell = ws.cell(row=row_num, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='center')
+
+    def style_title_row(ws, row_num, num_cols, title_text):
+        ws.merge_cells(f'A{row_num}:{get_column_letter(num_cols)}{row_num}')
+        cell = ws.cell(row=row_num, column=1, value=title_text)
+        cell.font = Font(bold=True, size=13, color="FFFFFF")
+        cell.fill = title_fill
+        cell.alignment = Alignment(horizontal='center')
+
+    def auto_width(ws):
+        for col in ws.columns:
+            max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
+            ws.column_dimensions[col[0].column_letter].width = min(max_length + 4, 50)
+
+    client_name = f"{client.get('first_name', '')} {client.get('last_name', '')}".strip()
+
+    # ── Sheet 1: Client Details ───────────────────────────────────────────────
+    ws1 = wb.active
+    ws1.title = "Client Details"
+
+    style_title_row(ws1, 1, 2, f"Client Report — {client_name}")
+
+    details = [
+        ("Client ID", client.get("client_id", "")),
+        ("First Name", client.get("first_name", "")),
+        ("Last Name", client.get("last_name", "")),
+        ("Date of Birth", client.get("dob", "")),
+        ("Email", client.get("email", "")),
+        ("Phone", client.get("phone", "")),
+        ("Current Address", client.get("current_address", "")),
+        ("Postcode", client.get("postcode", "")),
+        ("Employment Type", (client.get("employment_type") or "").replace("_", " ").title()),
+        ("Annual Income", client.get("income", "")),
+        ("Deposit", client.get("deposit", "")),
+        ("Property Price", client.get("property_price", "")),
+        ("Loan Amount", client.get("loan_amount", "")),
+        ("LTV %", client.get("ltv", "")),
+        ("Credit Issues", "Yes" if client.get("credit_issues") else "No"),
+        ("Credit Issues Notes", client.get("credit_issues_notes", "")),
+        ("Lead Source", (client.get("lead_source") or "").replace("_", " ").title()),
+        ("Referral Partner", client.get("referral_partner_name", "")),
+        ("Advice Type", (client.get("advice_type") or "").replace("_", " ").title()),
+        ("Fact Find Complete", "Yes" if client.get("fact_find_complete") else "No"),
+        ("Vulnerable Customer", "Yes" if client.get("vulnerable_customer") else "No"),
+        ("GDPR Consent Date", client.get("gdpr_consent_date", "")),
+        ("Created At", client.get("created_at", "")),
+    ]
+
+    for row_num, (label, value) in enumerate(details, start=2):
+        label_cell = ws1.cell(row=row_num, column=1, value=label)
+        label_cell.font = Font(bold=True)
+        label_cell.fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+        label_cell.border = thin_border
+        value_cell = ws1.cell(row=row_num, column=2, value=value)
+        value_cell.border = thin_border
+        if label in ("Annual Income", "Deposit", "Property Price", "Loan Amount") and isinstance(value, (int, float)):
+            value_cell.number_format = '£#,##0'
+
+    ws1.column_dimensions['A'].width = 25
+    ws1.column_dimensions['B'].width = 45
+
+    # ── Sheet 2: Cases ────────────────────────────────────────────────────────
+    ws2 = wb.create_sheet("Cases")
+    case_headers = [
+        "Case ID", "Product Type", "Mortgage Type", "Insurance Type", "Status",
+        "Lender / Provider", "Loan Amount", "Property Value", "Deposit", "LTV %",
+        "Term (Years)", "Interest Rate", "Rate Type", "Repayment Type",
+        "Application Ref", "Application Date", "Expected Completion",
+        "Product Start", "Product Expiry",
+        "Proc Fee Total", "Commission %", "Gross Commission", "Your Share",
+        "Client Fee", "Commission Status",
+        "Insurance Cover Type", "Monthly Premium", "Sum Assured", "In Trust",
+        "Notes", "Created At"
+    ]
+    style_title_row(ws2, 1, len(case_headers), f"Cases — {client_name}")
+    ws2.append(case_headers)
+    style_header_row(ws2, 2, len(case_headers))
+
+    for case in cases:
+        is_insurance = case.get("product_type") == "insurance"
+        row = [
+            case.get("case_id", ""),
+            (case.get("product_type") or "").replace("_", " ").title(),
+            (case.get("mortgage_type") or "").replace("_", " ").title(),
+            (case.get("insurance_type") or "").replace("_", " ").title(),
+            (case.get("status") or "").replace("_", " ").title(),
+            case.get("insurance_provider" if is_insurance else "lender_name", ""),
+            case.get("loan_amount", ""),
+            case.get("property_value", ""),
+            case.get("deposit", ""),
+            case.get("ltv", ""),
+            case.get("term_years", ""),
+            case.get("interest_rate", ""),
+            (case.get("interest_rate_type") or "").replace("_", " ").title(),
+            (case.get("repayment_type") or "").replace("_", " ").title(),
+            case.get("application_reference", ""),
+            case.get("date_application_submitted", ""),
+            case.get("expected_completion_date", ""),
+            case.get("product_start_date", ""),
+            case.get("product_expiry_date", ""),
+            case.get("proc_fee_total", ""),
+            case.get("commission_percentage", ""),
+            case.get("gross_commission", ""),
+            case.get("your_commission_share", ""),
+            case.get("client_fee", ""),
+            (case.get("commission_status") or "").replace("_", " ").title(),
+            (case.get("insurance_cover_type") or "").replace("_", " ").title(),
+            case.get("monthly_premium", ""),
+            case.get("sum_assured", ""),
+            "Yes" if case.get("in_trust") else ("No" if case.get("in_trust") is False else ""),
+            case.get("notes", ""),
+            case.get("created_at", ""),
+        ]
+        ws2.append(row)
+
+        # Format currency columns
+        currency_cols = [7, 8, 9, 20, 22, 23, 24, 27, 28]  # 1-indexed
+        last_row = ws2.max_row
+        for col_idx in currency_cols:
+            cell = ws2.cell(row=last_row, column=col_idx)
+            if isinstance(cell.value, (int, float)):
+                cell.number_format = '£#,##0'
+
+    auto_width(ws2)
+
+    # ── Sheet 3: Tasks ────────────────────────────────────────────────────────
+    ws3 = wb.create_sheet("Tasks")
+    task_headers = ["Task ID", "Title", "Description", "Due Date", "Priority", "Status", "Completed At", "Created At"]
+    style_title_row(ws3, 1, len(task_headers), f"Tasks — {client_name}")
+    ws3.append(task_headers)
+    style_header_row(ws3, 2, len(task_headers))
+
+    for task in tasks:
+        ws3.append([
+            task.get("task_id", ""),
+            task.get("title", ""),
+            task.get("description", ""),
+            task.get("due_date", ""),
+            (task.get("priority") or "").title(),
+            "Completed" if task.get("completed") else "Pending",
+            task.get("completed_at", ""),
+            task.get("created_at", ""),
+        ])
+    auto_width(ws3)
+
+    # ── Sheet 4: Documents ────────────────────────────────────────────────────
+    ws4 = wb.create_sheet("Documents")
+    doc_headers = ["Document ID", "Document Type", "File Name", "Notes", "Uploaded At"]
+    style_title_row(ws4, 1, len(doc_headers), f"Documents — {client_name}")
+    ws4.append(doc_headers)
+    style_header_row(ws4, 2, len(doc_headers))
+
+    for doc in documents:
+        ws4.append([
+            doc.get("document_id", ""),
+            (doc.get("document_type") or "").replace("_", " ").title(),
+            doc.get("file_name", ""),
+            doc.get("notes", ""),
+            doc.get("uploaded_at", ""),
+        ])
+    auto_width(ws4)
+
+    await create_audit_log("export", "client", client_id, current_user["user_id"])
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    safe_name = f"{client.get('first_name', 'Client')}_{client.get('last_name', '')}".replace(" ", "_")
+    filename = f"KK_{safe_name}_Report_{datetime.now(timezone.utc).strftime('%Y%m%d')}.xlsx"
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 @api_router.post("/extract/client")
 async def extract_client_from_screenshots(request: Request, files: List[UploadFile] = File(...)):
     await get_current_user(request)
